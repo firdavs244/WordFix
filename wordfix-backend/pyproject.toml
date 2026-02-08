@@ -1,0 +1,83 @@
+[tool.poetry]
+name = "wordfix-backend"
+version = "1.0.0"
+description = "WordFix - AI-powered English vocabulary learning platform"
+authors = ["WordFix Team"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+django = "^5.1"
+djangorestframework = "^3.15"
+django-cors-headers = "^4.6"
+django-filter = "^24.3"
+django-celery-beat = "^2.7"
+djangorestframework-simplejwt = "^5.3"
+psycopg2-binary = "^2.9"
+redis = "^5.2"
+django-redis = "^5.4"
+celery = {version = "^5.4", extras = ["redis"]}
+gunicorn = "^23.0"
+python-decouple = "^3.8"
+whitenoise = "^6.8"
+structlog = "^24.4"
+drf-spectacular = ">=0.27.0"
+groq = ">=0.12.0"
+openai = ">=1.50.0"
+gTTS = ">=2.5.0"
+Pillow = ">=10.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-django = "^4.9"
+pytest-cov = "^6.0"
+factory-boy = "^3.3"
+faker = "^33.0"
+black = "^24.10"
+isort = "^5.13"
+flake8 = "^7.1"
+mypy = "^1.13"
+django-stubs = "^5.1"
+djangorestframework-stubs = "^3.15"
+django-debug-toolbar = "^4.4"
+ipython = "^8.30"
+freezegun = "^1.4"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+known_django = ["django", "rest_framework"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["apps", "core", "tests"]
+addopts = "-v --tb=short --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::django.utils.deprecation.RemovedInDjango60Warning",
+    "ignore::ResourceWarning",
+]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

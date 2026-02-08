@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode colors */
+    --background: 240 20% 98%;
+    --foreground: 192 6% 21%;
+    --card: 0 0% 100%;
+    --card-foreground: 192 6% 21%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 192 6% 21%;
+    --primary: 249 80% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 179 100% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 45 98% 71%;
+    --accent-foreground: 192 6% 21%;
+    --destructive: 0 84% 71%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 249 80% 64%;
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 192 6% 21%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-accent: 249 80% 97%;
+    --sidebar-accent-foreground: 249 80% 64%;
+  }
+
+  .dark {
+    /* Dark mode colors */
+    --background: 240 33% 7%;
+    --foreground: 0 0% 96%;
+    --card: 240 33% 12%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 33% 12%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 249 80% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 179 100% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 10% 20%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 45 98% 71%;
+    --accent-foreground: 192 6% 21%;
+    --destructive: 0 84% 71%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 20%;
+    --input: 240 10% 20%;
+    --ring: 249 80% 64%;
+
+    /* Sidebar */
+    --sidebar-background: 240 33% 10%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-border: 240 10% 20%;
+    --sidebar-accent: 249 80% 15%;
+    --sidebar-accent-foreground: 249 80% 75%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Space Grotesk", sans-serif;
+  }
+}
+
+/* Custom scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #6c5ce7, #a29bfe, #00cec9);
+  }
+
+  /* Glass morphism */
+  .glass {
+    @apply bg-white/80 dark:bg-card/80 backdrop-blur-lg;
+  }
+}

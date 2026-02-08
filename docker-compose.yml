@@ -1,0 +1,150 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: wordfix-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: wordfix
+      POSTGRES_USER: wordfix_user
+      POSTGRES_PASSWORD: wordfix_pass
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wordfix_user -d wordfix"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: wordfix-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  web:
+    build:
+      context: ./wordfix-backend
+      dockerfile: docker/Dockerfile
+    container_name: wordfix-web
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./wordfix-backend:/app
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - POSTGRES_DB=wordfix
+      - POSTGRES_USER=wordfix_user
+      - POSTGRES_PASSWORD=wordfix_pass
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    command: python manage.py runserver 0.0.0.0:8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/health/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  celery_worker:
+    build:
+      context: ./wordfix-backend
+      dockerfile: docker/Dockerfile
+    container_name: wordfix-celery-worker
+    command: celery -A config worker -l info
+    volumes:
+      - ./wordfix-backend:/app
+      - media_data:/app/media
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - POSTGRES_DB=wordfix
+      - POSTGRES_USER=wordfix_user
+      - POSTGRES_PASSWORD=wordfix_pass
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  celery_beat:
+    build:
+      context: ./wordfix-backend
+      dockerfile: docker/Dockerfile
+    container_name: wordfix-celery-beat
+    command: >
+      bash -c "sleep 15 && celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - ./wordfix-backend:/app
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - POSTGRES_DB=wordfix
+      - POSTGRES_USER=wordfix_user
+      - POSTGRES_PASSWORD=wordfix_pass
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  frontend:
+    build:
+      context: ./wordfix-frontend
+      dockerfile: Dockerfile
+    container_name: wordfix-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./wordfix-frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    command: npm run dev -- --host 0.0.0.0
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+
+networks:
+  wordfix-network:
+    driver: bridge
