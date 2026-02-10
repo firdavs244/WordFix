@@ -63,6 +63,7 @@ export function useCreateWord() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: wordKeys.lists() });
       queryClient.invalidateQueries({ queryKey: wordKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: ['daily-challenges'] });
       toast.success('Word added successfully!');
     },
     onError: () => {

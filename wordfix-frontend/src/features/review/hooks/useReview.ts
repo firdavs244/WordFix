@@ -106,6 +106,7 @@ export function useSubmitAnswer(sessionId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.session(sessionId) });
       queryClient.invalidateQueries({ queryKey: reviewKeys.dailyProgress() });
+      queryClient.invalidateQueries({ queryKey: ['daily-challenges'] });
     },
     onError: () => {
       toast.error('Failed to submit answer.');
@@ -120,6 +121,7 @@ export function useCompleteSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.all });
       queryClient.invalidateQueries({ queryKey: wordKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['daily-challenges'] });
       toast.success('Review session completed!');
     },
     onError: () => {

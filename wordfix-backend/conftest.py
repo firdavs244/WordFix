@@ -108,3 +108,88 @@ def sample_words(user, word_category):
         )
         words.append(w)
     return words
+
+
+@pytest.fixture
+def confusing_pair(user, sample_words):
+    """Create a confusing pair between two sample words."""
+    from apps.words.infrastructure.models import ConfusingPair
+    word_1, word_2 = sample_words[0], sample_words[1]
+    # Ensure consistent ordering (smaller UUID first)
+    if str(word_1.id) > str(word_2.id):
+        word_1, word_2 = word_2, word_1
+    return ConfusingPair.objects.create(
+        user=user,
+        word_1=word_1,
+        word_2=word_2,
+        confusion_count=3,
+    )
+
+
+@pytest.fixture
+def daily_challenge(user):
+    """Create a daily challenge for today."""
+    from apps.words.infrastructure.models import DailyChallenge
+    from datetime import date
+    challenge, _ = DailyChallenge.objects.get_or_create(
+        user=user,
+        date=date.today(),
+        defaults={
+            "challenges": [
+                {"type": "review_words", "target": 5, "current": 0, "completed": False,
+                 "xp_reward": 20, "title": "Review 5 words", "icon": "book"},
+                {"type": "add_words", "target": 3, "current": 0, "completed": False,
+                 "xp_reward": 20, "title": "Add 3 new words", "icon": "plus"},
+                {"type": "play_game", "target": 1, "current": 0, "completed": False,
+                 "xp_reward": 15, "title": "Play any game", "icon": "gamepad"},
+            ],
+        },
+    )
+    return challenge
+
+
+@pytest.fixture
+def word_with_distractors(sample_word):
+    """Create a word with pre-generated distractors."""
+    from apps.words.infrastructure.models import WordDistractor
+    distractor = WordDistractor.objects.create(
+        word=sample_word,
+        distractors=["goodbye", "sorry", "thanks"],
+        language="en",
+        generated_by="fallback",
+    )
+    return sample_word, distractor
+
+
+@pytest.fixture
+def review_session(user):
+    """Create a review session for testing."""
+    from apps.words.infrastructure.models import ReviewSession
+    return ReviewSession.objects.create(
+        user=user,
+        session_type="review",
+        total_words=0,
+    )
+
+
+@pytest.fixture
+def test_session(user):
+    """Create a test session for testing."""
+    from apps.words.infrastructure.models import TestSession
+    return TestSession.objects.create(
+        user=user,
+        test_type="mixed",
+        difficulty="adaptive",
+        total_questions=5,
+    )
+
+
+@pytest.fixture
+def game_session(user):
+    """Create a game session for testing."""
+    from apps.words.infrastructure.models import GameSession
+    return GameSession.objects.create(
+        user=user,
+        game_type="speed_round",
+        max_score=10,
+    )

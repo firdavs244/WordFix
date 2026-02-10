@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, CheckCircle2, XCircle, Star, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Trophy, CheckCircle2, XCircle, Star, RotateCcw, ArrowLeft, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageTransition } from '@/components/animations/PageTransition';
@@ -22,6 +22,8 @@ export function GameResultPage() {
     xp_earned: number;
     correct_answers: number;
     total_questions: number;
+    max_combo?: number;
+    combo_xp_bonus?: number;
   } | null;
 
   if (!state) {
@@ -82,6 +84,22 @@ export function GameResultPage() {
                 <p className="text-sm text-muted-foreground">XP Earned</p>
                 <p className="text-2xl font-bold text-primary">+{state.xp_earned}</p>
               </div>
+
+              {/* Combo Stats */}
+              {(state.max_combo ?? 0) >= 2 && (
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-1.5 rounded-lg bg-orange-500/10 px-3 py-1.5">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-bold text-orange-500">Max Combo: {state.max_combo}</span>
+                  </div>
+                  {(state.combo_xp_bonus ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5">
+                      <Zap className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-bold text-primary">+{state.combo_xp_bonus} XP Bonus</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

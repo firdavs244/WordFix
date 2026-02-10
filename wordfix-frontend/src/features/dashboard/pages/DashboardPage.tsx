@@ -13,6 +13,7 @@ import { StreakWidget, DailyProgressWidget } from '@/features/review/components'
 import { useReviewSummary } from '@/features/review/hooks/useReview';
 import { LevelProgress } from '@/features/progress/components/LevelProgress';
 import { XPChart } from '@/features/progress/components/XPChart';
+import { DailyChallengesWidget } from '@/features/challenges/components/DailyChallengesWidget';
 
 const difficultyColors = {
   easy: 'success' as const,
@@ -92,6 +93,9 @@ export function DashboardPage() {
           <StreakWidget />
           <DailyProgressWidget />
         </div>
+
+        {/* Daily Challenges */}
+        <DailyChallengesWidget />
 
         {/* XP Chart */}
         <XPChart />

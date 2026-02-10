@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { useStartSpeedRound, useSubmitSpeedRound } from '../hooks/useGames';
+import { ComboIndicator } from '@/features/review/components';
 import type { SpeedRoundWord, SpeedRoundAnswer } from '@/types';
 
 export function SpeedRoundPage() {
@@ -23,6 +24,9 @@ export function SpeedRoundPage() {
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [flash, setFlash] = useState<'correct' | 'wrong' | null>(null);
+  const [combo, setCombo] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [wrongCount, setWrongCount] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -73,6 +77,8 @@ export function SpeedRoundPage() {
               xp_earned: res.data.xp_earned,
               correct_answers: res.data.correct_answers,
               total_questions: res.data.total_questions,
+              max_combo: res.data.max_combo,
+              combo_xp_bonus: res.data.combo_xp_bonus,
             },
           });
         },
@@ -87,6 +93,14 @@ export function SpeedRoundPage() {
       setFlash(correct ? 'correct' : 'wrong');
       setAnswers((a) => [...a, { word_id: currentWord.word_id, selected_answer: option }]);
 
+      if (correct) {
+        setCombo((c) => c + 1);
+        setCorrectCount((c) => c + 1);
+      } else {
+        setCombo(0);
+        setWrongCount((c) => c + 1);
+      }
+
       setTimeout(() => {
         setFlash(null);
         if (currentIndex + 1 < words.length) {
@@ -94,7 +108,7 @@ export function SpeedRoundPage() {
         } else {
           setFinished(true);
         }
-      }, 300);
+      }, 200);
     },
     [currentIndex, currentWord, finished, words.length],
   );
@@ -128,11 +142,12 @@ export function SpeedRoundPage() {
         {/* Timer */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-1 text-muted-foreground">
+            <span className={`flex items-center gap-1 ${timeLeft <= 10 ? 'text-red-500 animate-pulse font-bold' : 'text-muted-foreground'}`}>
               <Clock className="h-4 w-4" /> {timeLeft}s
             </span>
+            <ComboIndicator combo={combo} multiplier={combo >= 20 ? 5 : combo >= 10 ? 3 : combo >= 5 ? 2 : combo >= 2 ? 1.5 : 1} isActive={combo >= 2} />
             <span className="text-muted-foreground">
-              {currentIndex + 1}/{words.length}
+              <span className="text-green-500">{correctCount} ✓</span> / <span className="text-red-500">{wrongCount} ✗</span>
             </span>
           </div>
           <Progress value={(timeLeft / timeLimit) * 100} className="h-2" />

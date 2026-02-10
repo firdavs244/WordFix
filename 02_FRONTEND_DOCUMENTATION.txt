@@ -1,0 +1,1007 @@
+================================================================================
+                    WORDFIX FRONTEND — TO'LIQ HUJJAT
+================================================================================
+Loyiha:      WordFix Frontend
+Versiya:     1.0.0
+Framework:   React 19 + TypeScript 5.6
+Bundler:     Vite 6.0
+State:       Zustand (client) + TanStack React Query (server)
+Styling:     Tailwind CSS 3.4 + Radix UI
+Animatsiya:  Framer Motion 12
+================================================================================
+
+
+================================================================================
+1. TEXNOLOGIYALAR VA KUTUBXONALAR
+================================================================================
+
+ASOSIY KUTUBXONALAR:
+  - React 19.0.0               — UI framework
+  - TypeScript 5.6             — Tip xavfsizligi
+  - Vite 6.0                   — Build tool va dev server
+  - React Router DOM 7.1       — Client-side routing
+  - TanStack React Query 5.62  — Server state management
+  - Zustand 5.0                — Client state management
+  - Axios 1.7                  — HTTP client
+  - Tailwind CSS 3.4           — Utility-first CSS
+  - Framer Motion 12.0         — Animatsiyalar
+  - Lucide React 0.469         — Icon kutubxonasi
+  - Sonner 1.7                 — Toast bildirishnomalar
+
+UI KOMPONENTLAR:
+  - @radix-ui/react-avatar     — Avatar
+  - @radix-ui/react-dialog     — Modal dialog
+  - @radix-ui/react-dropdown-menu — Dropdown menyu
+  - @radix-ui/react-label      — Form label
+  - @radix-ui/react-popover    — Popover
+  - @radix-ui/react-select     — Select input
+  - @radix-ui/react-separator  — Separator
+  - @radix-ui/react-slot       — Slot
+  - @radix-ui/react-switch     — Toggle switch
+  - @radix-ui/react-tabs       — Tablar
+  - @radix-ui/react-tooltip    — Tooltip
+
+YORDAMCHI KUTUBXONALAR:
+  - date-fns 4.1               — Sana utilitalari
+  - cmdk 1.0                   — Command palette
+  - canvas-confetti 1.9        — Confetti effekt
+  - class-variance-authority    — Komponent variantlari
+  - clsx + tailwind-merge       — CSS class birlashtirish
+
+FONTLAR:
+  - Inter (400, 500, 600, 700)       — Asosiy matn
+  - Space Grotesk (500, 600, 700)    — Sarlavhalar
+
+DEV KUTUBXONALAR:
+  - @tanstack/react-query-devtools — DevTools
+  - eslint + typescript-eslint     — Linting
+  - postcss + autoprefixer         — CSS post-processing
+
+
+================================================================================
+2. LOYIHA KONFIGURATSIYASI
+================================================================================
+
+VITE CONFIG (vite.config.ts):
+  - Path alias: @/ → ./src/
+  - Dev proxy: /api → http://web:8000
+  - React plugin
+
+TSCONFIG:
+  - Target: ES2020
+  - Strict mode: true
+  - Path alias: @/* → src/*
+
+TAILWIND CONFIG:
+  - Dark mode: class-based
+  - Custom CSS o'zgaruvchilar (HSL)
+  - tailwindcss-animate plugin
+
+DOCKER:
+  - Base: node:20-alpine
+  - Port: 5173
+  - Command: npm run dev -- --host 0.0.0.0
+  - Environment: VITE_API_URL=http://localhost:8000/api/v1
+
+
+================================================================================
+3. DASTUR BOSHLANG'ICH NUQTASI
+================================================================================
+
+BOOTSTRAP ZANJIRI (main.tsx):
+  StrictMode
+    → BrowserRouter
+      → ThemeProvider (storageKey="wordfix-theme")
+        → QueryProvider (staleTime=5min, retry=1)
+          → App
+          → Toaster (position="top-right", richColors)
+
+App.tsx:
+  Faqat <AppRoutes /> ni render qiladi
+
+
+================================================================================
+4. ROUTING TIZIMI (src/routes/index.tsx)
+================================================================================
+
+ROUTE GUARD'LAR:
+  ProtectedRoute — useAuthStore().isAuthenticated tekshiradi, /login ga
+                   redirect qiladi
+  PublicRoute    — Autentifikatsiya qilingan foydalanuvchilarni / ga
+                   redirect qiladi
+
+LAZY LOADING:
+  Barcha sahifalar React.lazy() orqali yuklanadi
+  Suspense fallback: <LoadingScreen />
+
+BARCHA MARSHRYTLAR:
+
+  OMMAVIY (Public):
+    /welcome              — LandingPage (landing sahifa)
+    /login                — LoginPage (AuthLayout)
+    /register             — RegisterPage (AuthLayout)
+
+  HIMOYALANGAN (Protected, RootLayout ichida):
+    /                     — DashboardPage (bosh sahifa)
+    /words                — WordsPage (so'zlar ro'yxati)
+    /review               — ReviewPage (ko'rib chiqish)
+    /review/session/:id   — ReviewSessionPage (ko'rib chiqish sessiyasi)
+    /review/complete/:id  — ReviewCompletePage (yakunlash sahifasi)
+    /review/history       — ReviewHistoryPage (tarix)
+    /profile              — ProfilePage (profil)
+    /tests                — TestPage (testlar)
+    /tests/session/:id    — TestSessionPage (test sessiyasi)
+    /tests/result/:id     — TestResultPage (natijalar)
+    /games                — GamesPage (o'yinlar)
+    /games/speed-round    — SpeedRoundPage
+    /games/word-match     — WordMatchPage
+    /games/word-context   — WordContextPage
+    /games/result/:id     — GameResultPage (natija)
+    /badges               — BadgesPage (badgelar)
+    /notifications        — NotificationsPage (bildirishnomalar)
+    /import               — ImportPage (import)
+    /chat                 — ChatPage (chat)
+    /chat/session/:id     — ChatSessionPage (chat sessiyasi)
+    /chat/history         — ChatHistoryPage (chat tarixi)
+    /analytics            — AnalyticsPage (analitika)
+    *                     — 404 sahifa
+
+
+================================================================================
+5. API QATLAMI
+================================================================================
+
+API CLIENT (src/api/client.ts):
+  Axios instance:
+    Base URL: VITE_API_URL yoki http://localhost:8000/api/v1
+    Request Interceptor:
+      - localStorage dan access_token ni oladi
+      - Authorization: Bearer <token> header qo'shadi
+    Response Interceptor:
+      - 401 → so'rovlar navbatga qo'yiladi, token refresh qilinadi,
+              navbatdagi so'rovlar qayta yuboriladi
+      - 403 → "Access denied" toast
+      - 500 → "Server error" toast
+      - Network error → "Connection error" toast
+
+API ENDPOINTLAR (src/api/endpoints.ts):
+
+  AUTH:
+    /auth/register/           — POST  Ro'yxatdan o'tish
+    /auth/login/              — POST  Kirish
+    /auth/logout/             — POST  Chiqish
+    /auth/token/refresh/      — POST  Token yangilash
+    /auth/profile/            — GET/PUT Profil
+    /auth/change-password/    — POST  Parol almashtirish
+
+  WORDS:
+    /words/                   — GET/POST So'zlar
+    /words/{id}/              — GET/PUT/DELETE So'z detali
+    /words/bulk/              — POST  Ko'p so'z qo'shish
+    /words/stats/             — GET   Statistika
+    /words/review/            — GET   Ko'rib chiqish so'zlari
+    /words/categories/        — GET/POST Kategoriyalar
+    /words/{id}/enrich/       — POST  Boyitish
+    /words/enrichment-status/ — GET   Boyitish holati
+
+  REVIEW:
+    /review/words/                    — GET   So'zlar
+    /review/sessions/                 — POST  Sessiya boshlash
+    /review/sessions/{id}/submit/     — POST  Javob
+    /review/sessions/{id}/complete/   — POST  Tugatish
+    /review/sessions/{id}/summary/    — GET   Xulosa
+    /review/streak/                   — GET   Streak
+    /review/daily-progress/           — GET   Kunlik progress
+
+  TESTS:
+    /tests/generate/          — POST  Test yaratish
+    /tests/                   — GET   Tarix
+    /tests/{id}/              — GET   Detal
+    /tests/{id}/answer/       — POST  Javob
+    /tests/{id}/complete/     — POST  Tugatish
+
+  GAMES:
+    /games/speed-round/start/  — POST  Boshlash
+    /games/speed-round/submit/ — POST  Yuborish
+    /games/word-match/start/   — POST  Boshlash
+    /games/word-match/submit/  — POST  Yuborish
+    /games/word-context/start/ — POST  Boshlash
+    /games/word-context/submit/ — POST Yuborish
+    /games/history/            — GET   Tarix
+    /games/stats/              — GET   Statistika
+
+  PROGRESS:
+    /progress/                — GET   Progress
+    /progress/xp-history/     — GET   XP tarixi
+    /progress/badges/         — GET   Badgelar
+    /progress/badges/all/     — GET   Barcha badgelar
+
+  NOTIFICATIONS:
+    /notifications/           — GET   Ro'yxat
+    /notifications/{id}/read/ — POST  O'qilgan
+    /notifications/unread-count/ — GET Soni
+
+  IMPORT:
+    /import/analyze/          — POST  Matn tahlili
+    /import/add/              — POST  So'z qo'shish
+
+  CHAT:
+    /chat/start/                    — POST  Boshlash
+    /chat/sessions/                 — GET   Tarix
+    /chat/sessions/{id}/            — GET   Detal
+    /chat/sessions/{id}/message/    — POST  Xabar
+    /chat/sessions/{id}/end/        — POST  Tugatish
+
+  ANALYTICS:
+    /analytics/overview/         — GET  Umumiy
+    /analytics/weekly/           — GET  Haftalik
+    /analytics/monthly/          — GET  Oylik
+    /analytics/difficult-words/  — GET  Qiyin so'zlar
+    /analytics/word-progress/    — GET  Progress
+    /analytics/calendar/         — GET  Kalendar
+
+FEATURE API MODULLARI:
+  src/features/auth/api/authApi.ts        — 7 ta funksiya
+  src/features/words/api/wordApi.ts       — 11 ta funksiya
+  src/features/review/api/reviewApi.ts    — 13 ta funksiya (enrichment dahil)
+  src/features/tests/api/testApi.ts       — 5 ta funksiya
+  src/features/games/api/gameApi.ts       — 8 ta funksiya
+  src/features/chat/api/chatApi.ts        — 5 ta funksiya
+  src/features/import/api/importApi.ts    — 2 ta funksiya
+  src/features/analytics/api/analyticsApi.ts — 6 ta funksiya
+  src/features/progress/api/progressApi.ts   — 8 ta funksiya (notification dahil)
+
+
+================================================================================
+6. STATE MANAGEMENT
+================================================================================
+
+ZUSTAND STORELARI (client state):
+
+useAppStore (src/stores/useAppStore.ts):
+  State:
+    sidebarCollapsed: boolean
+  Actions:
+    toggleSidebar()
+    setSidebarCollapsed(collapsed)
+
+useAuthStore (src/stores/useAuthStore.ts):
+  State:
+    user: User | null
+    isAuthenticated: boolean
+    isLoading: boolean
+  Actions:
+    setUser(user)
+    setLoading(loading)
+    login(credentials)    — authApi.login() → token saqlash → profil olish
+    register(data)        — authApi.register() → token saqlash → profil olish
+    logout()              — authApi.logout() → token o'chirish → state reset
+    fetchProfile()        — profil API so'rov
+    initialize()          — localStorage token tekshirish → profil yuklash
+
+useReviewStore (src/stores/useReviewStore.ts):
+  State:
+    currentSession: ReviewSession | null
+    words: Word[]
+    currentIndex: number
+    isFlipped: boolean
+    answers: Map<string, ReviewQuality>
+  Actions:
+    setSession(session)
+    setWords(words)
+    flipCard()
+    setFlipped(flipped)
+    recordAnswer(wordId, quality)
+    nextWord()
+    previousWord()
+    reset()
+  Computed:
+    currentWord()         — hozirgi so'z
+    progress()            — foiz
+    isLastWord()          — oxirgi so'zmi?
+    totalAnswered()       — javob berilganlar soni
+
+REACT QUERY (server state):
+  QueryClient sozlamalari:
+    staleTime: 5 daqiqa
+    retry: 1
+    refetchOnWindowFocus: false
+    mutations retry: 0
+
+
+================================================================================
+7. REACT QUERY HOOKLARI
+================================================================================
+
+Barcha hooklar query key factory pattern dan foydalanadi.
+
+WORDS HOOKS (src/features/words/hooks/useWords.ts):
+  useWords(filters)       — Query ['words','list',filters] keepPreviousData
+  useWord(id)             — Query ['words','detail',id] enabled=!!id
+  useWordStats()          — Query ['words','stats']
+  useReviewWords()        — Query ['words','review']
+  useCategories()         — Query ['words','categories']
+  useCreateWord()         — Mutation → invalidates words lists
+  useUpdateWord()         — Mutation → invalidates words lists + detail
+  useDeleteWord()         — Mutation → invalidates words lists
+  useBulkCreateWords()    — Mutation → invalidates words lists
+  useCreateCategory()     — Mutation → invalidates categories
+  useDeleteCategory()     — Mutation → invalidates categories
+
+REVIEW HOOKS (src/features/review/hooks/useReview.ts):
+  useReviewWords()            — Query
+  useReviewSession(id)        — Query enabled=!!id
+  useReviewSummary(id)        — Query enabled=!!id
+  useReviewHistory()          — Query
+  useStreak()                 — Query
+  useDailyProgress()          — Query
+  usePredictedIntervals(id)   — Query enabled=!!id
+  useEnrichmentStatus()       — Query refetchInterval=3s (processing paytida)
+  useStartSession()           — Mutation → reviewStore.setSession
+  useSubmitAnswer()           — Mutation
+  useCompleteSession()        — Mutation → invalidates review queries
+  useEnrichWord()             — Mutation → invalidates words + enrichment
+  useEnrichAll()              — Mutation → invalidates enrichment
+
+TEST HOOKS (src/features/tests/hooks/useTests.ts):
+  useTestHistory()            — Query
+  useTestDetail(id)           — Query enabled=!!id
+  useGenerateTest()           — Mutation
+  useSubmitTestAnswer()       — Mutation
+  useCompleteTest()           — Mutation → invalidates test queries
+
+GAME HOOKS (src/features/games/hooks/useGames.ts):
+  useGameHistory()            — Query
+  useGameStats()              — Query
+  useStartSpeedRound()        — Mutation
+  useSubmitSpeedRound()       — Mutation → invalidates game queries
+  useStartWordMatch()         — Mutation
+  useSubmitWordMatch()        — Mutation → invalidates game queries
+  useStartWordContext()       — Mutation
+  useSubmitWordContext()      — Mutation → invalidates game queries
+
+CHAT HOOKS (src/features/chat/hooks/useChat.ts):
+  useChatHistory()            — Query
+  useChatSession(id)          — Query enabled=!!id
+  useStartChat()              — Mutation
+  useSendMessage()            — Mutation → optimistic cache update
+  useEndChat()                — Mutation → invalidates chat queries
+
+IMPORT HOOKS (src/features/import/hooks/useImport.ts):
+  useAnalyzeText()            — Mutation
+  useImportWords()            — Mutation → invalidates words
+
+ANALYTICS HOOKS (src/features/analytics/hooks/useAnalytics.ts):
+  useAnalyticsOverview()      — Query ['analytics','overview']
+  useWeeklyStats()            — Query ['analytics','weekly']
+  useMonthlyStats()           — Query ['analytics','monthly']
+  useDifficultWords()         — Query ['analytics','difficultWords']
+  useWordProgress()           — Query ['analytics','wordProgress']
+  useStudyCalendar()          — Query ['analytics','calendar']
+
+PROGRESS HOOKS (src/features/progress/hooks/useProgress.ts):
+  useUserProgress()           — Query
+  useXPHistory()              — Query
+  useUserBadges()             — Query
+  useAllBadges()              — Query
+  useNotifications()          — Query
+  useUnreadNotificationCount() — Query refetchInterval=30s (polling)
+  useMarkNotificationRead()   — Mutation → invalidates notifications
+  useMarkAllNotificationsRead() — Mutation → invalidates notifications
+
+GLOBAL HOOKS:
+  useDebounce<T>(value, delay=300)  — Generic debounce
+  useMediaQuery(query)               — CSS media query match
+  useTheme()                         — {theme, setTheme} ThemeContext dan
+
+
+================================================================================
+8. TIP TIZIMI (Type System)
+================================================================================
+
+Barcha tiplar src/types/ papkada, index.ts orqali re-export qilinadi.
+
+CORE TIPLER (core.ts):
+  Theme              = 'light' | 'dark' | 'system'
+  DifficultyLevel    = 'easy' | 'medium' | 'hard'
+  ProficiencyLevel   = 'beginner' | 'elementary' | 'intermediate' |
+                       'upper_intermediate' | 'advanced' | 'native'
+  ReviewQuality      = 0 | 1 | 2 | 3 | 4 | 5
+  SessionType        = 'review' | 'learn' | 'mixed'
+  EnrichmentStatus   = 'pending' | 'processing' | 'completed' | 'failed'
+  TestType           = 'multiple_choice' | 'fill_blank' | 'context_guess' |
+                       'mixed'
+  TestDifficulty     = 'easy' | 'medium' | 'hard' | 'adaptive'
+  GameType           = 'speed_round' | 'word_match' | 'word_context'
+  BadgeRarity        = 'common' | 'rare' | 'epic' | 'legendary'
+  BadgeCategory      = 'learning' | 'streak' | 'review' | 'social' |
+                       'achievement'
+  NotificationType   = 'badge' | 'streak' | 'reminder' | 'achievement' |
+                       'system'
+
+API TIPLER (api.ts):
+  ApiResponse<T>     — {success, data, message?, errors?, meta?}
+  PaginationMeta     — {count, page, page_size, total_pages, next, previous}
+
+WORD TIPLER (word.ts):
+  Word               — 25+ maydon (id, original_word, translation,
+                       definition, pronunciation, part_of_speech,
+                       difficulty_level, category, notes, synonyms,
+                       antonyms, mnemonic, usage_notes, collocations,
+                       enrichment_status, easiness_factor,
+                       repetition_number, interval_days, next_review_date,
+                       last_reviewed_at, review_count, correct_count,
+                       created_at, updated_at)
+  WordCategory       — {id, name, color?, word_count?}
+  WordCreateData     — yaratish uchun ma'lumotlar
+  WordUpdateData     — yangilash uchun ma'lumotlar
+  BulkWordCreateData — ko'p yaratish
+  WordStats          — {total_words, by_difficulty, by_enrichment,
+                       mastered_count, learning_count, new_count}
+  WordFilters        — {search, difficulty_level, category, ordering,
+                       page, page_size}
+
+USER TIPLER (user.ts):
+  User               — {id, email, username, first_name, last_name,
+                       native_language, learning_language,
+                       proficiency_level, daily_goal, is_premium,
+                       streak_days, total_xp, level, words_learned,
+                       avatar, bio, timezone, date_joined, last_login}
+  AuthTokens         — {access, refresh}
+  LoginCredentials   — {email, password}
+  RegisterData       — ro'yxatdan o'tish ma'lumotlari
+  ChangePasswordData — parol almashtirish
+  UpdateProfileData  — profil yangilash
+
+REVIEW TIPLER (review.ts):
+  ReviewSession      — sessiya ma'lumotlari
+  ReviewAnswer       — {word_id, quality}
+  ReviewAnswerResult — natija + XP + badge
+  ReviewSummary      — xulosa + statistika
+  DailyStreak        — {current_streak, longest_streak, last_review_date,
+                       streak_maintained_today}
+  DailyProgress      — kunlik progress ma'lumotlari
+  EnrichmentStatusResponse — boyitish holati
+  PredictedIntervals — SM-2 bashorat
+
+TEST TIPLER (test.ts):
+  TestQuestion        — savol ma'lumotlari
+  TestSession         — sessiya ma'lumotlari
+  TestGenerateRequest — {test_type, difficulty, question_count}
+  TestGenerateResponse — sessiya + savollar
+  TestAnswerRequest   — {question_id, answer}
+  TestAnswerResponse  — {is_correct, correct_answer, xp_earned, new_badge?}
+
+GAME TIPLER (game.ts):
+  GameSession          — sessiya ma'lumotlari
+  SpeedRoundWord       — {id, original_word, options, correct_answer}
+  SpeedRoundStartResponse — {session_id, words, time_limit}
+  SpeedRoundAnswer     — {word_id, selected_answer, time_taken}
+  WordMatchPair        — {id, original_word, translation}
+  WordContextQuestion  — {id, context, missing_word, options}
+  GameStats            — umumiy o'yin statistikasi
+
+CHAT TIPLER (chat.ts):
+  ChatMessage    — {id, role, content, corrections?, created_at}
+  ChatCorrection — {original, corrected, explanation}
+  ChatSession    — sessiya ma'lumotlari
+  StartChatRequest/Response
+  SendMessageRequest/Response
+
+BADGE TIPLER (badge.ts):
+  BadgeData          — {id, name, description, icon, rarity, category,
+                       earned, earned_at?, progress?, requirement?}
+  UserBadgesResponse — {badges, total_earned, total_available}
+  NewBadgeInfo       — yangi badge ma'lumotlari
+
+PROGRESS TIPLER (progress.ts):
+  UserProgressData   — {level, total_xp, xp_for_next_level, xp_progress,
+                       words_learned, words_mastered, current_streak,
+                       longest_streak, total_reviews, total_tests,
+                       total_games, average_accuracy, badges_earned}
+  XPHistoryEntry     — {date, xp_earned, source, description}
+  XPResult           — {xp_earned, total_xp, level, leveled_up, new_badge?}
+
+NOTIFICATION TIPLER (notification.ts):
+  NotificationData       — {id, type, title, message, is_read, data?,
+                           created_at}
+  NotificationListResponse — {results, count}
+
+SMART IMPORT TIPLER (smart-import.ts):
+  WordSuggestion        — {original_word, translation, definition,
+                          example_sentence, difficulty_level,
+                          context_from_text, confidence}
+  AnalyzeTextRequest    — {text, source_language?, target_language?}
+  AnalyzeTextResponse   — {suggestions, detected_language,
+                          total_words_found}
+  ImportWordsRequest    — {words}
+  ImportWordsResponse   — {imported_count, skipped_count, errors}
+
+ANALYTICS TIPLER (analytics.ts):
+  AnalyticsOverview  — keng ko'lamli umumiy ma'lumotlar
+  DailyStatsEntry    — kunlik statistika
+  DifficultWord      — qiyin so'z (accuracy bilan)
+  WordProgressData   — progress ma'lumotlari
+  CalendarDay        — kalendar kuni (faoliyat darajasi)
+
+
+================================================================================
+9. KOMPONENT ARXITEKTURASI
+================================================================================
+
+LAYOUT KOMPONENTLARI (src/components/layout/):
+
+  RootLayout
+    - TopBar + Sidebar (desktop: ≥1024px, useMediaQuery)
+    - MobileNav (mobil: <1024px)
+    - <Outlet /> (sahifa kontenti)
+
+  AuthLayout
+    - Markazlashtirilgan layout
+    - Logo + <Outlet />
+
+  Sidebar
+    - 10 ta navigatsiya elementi
+    - Framer Motion bilan kengaytirish/yig'ish
+    - useAppStore dan sidebarCollapsed
+
+  TopBar
+    - Qidiruv input
+    - LevelProgress (compact)
+    - StreakWidget (compact)
+    - Tema almashtirgich (light → dark → system)
+    - NotificationBell (dropdown)
+    - Chiqish tugmasi
+    - Foydalanuvchi avatar
+
+  MobileNav
+    - Fixed bottom navigation
+    - 5 ta element: Home, Words, Tests, Games, Profile
+
+  Sidebar navigatsiya elementlari:
+    Home (/), Words (/words), Import (/import), Review (/review),
+    Chat (/chat), Tests (/tests), Games (/games), Analytics (/analytics),
+    Badges (/badges), Profile (/profile)
+
+UMUMIY KOMPONENTLAR (src/components/common/):
+  LoadingScreen    — Animatsiyalangan BookOpen icon + 3 ta sakrash nuqtasi
+  Logo             — {collapsed?} — BookOpen icon + "WordFix" matn
+  EmptyState       — {icon, title, description, action?}
+  ErrorBoundary    — Class component, retry tugma bilan
+
+UI KOMPONENTLARI (src/components/ui/) — shadcn/ui uslubida CVA bilan:
+  badge, button, card (Card/CardHeader/CardTitle/CardDescription/
+  CardContent/CardFooter), checkbox, input, progress, separator,
+  skeleton, switch, textarea
+
+ANIMATSIYA KOMPONENTLARI (src/components/animations/):
+  PageTransition        — motion.div: fade + slide-up
+  listContainerVariants — Bolalar 0.05s interval bilan
+  listItemVariants      — Fade + slide-up
+  cardHoverVariants     — Scale 1.02 + soya hover da
+
+
+================================================================================
+10. FEATURE SAHIFALARI — BATAFSIL
+================================================================================
+
+AUTH FEATURE (src/features/auth/):
+  LoginPage
+    - Email + parol formasi
+    - "Meni esla" checkbox
+    - Register ga havola
+    - useAuthStore().login() → / ga navigatsiya
+
+  RegisterPage
+    - 3 bosqichli wizard:
+      1-bosqich: email, username, parol, parol tasdiqlash
+      2-bosqich: ism/familiya, ona tili, o'rganish tili, daraja
+      3-bosqich: ko'rib chiqish va tasdiqlash
+    - useAuthStore().register() → / ga navigatsiya
+
+DASHBOARD FEATURE (src/features/dashboard/):
+  DashboardPage
+    - Xush kelibsiz xabari (user.first_name)
+    - LevelProgress (to'liq)
+    - StreakWidget (to'liq)
+    - DailyProgressWidget
+    - XPChart
+    - Review CTA (kutayotgan so'zlar soni)
+    - Test va Games tezkor harakatlar
+    - 4 ta statistika karta (Total Words, Mastered, Avg Accuracy,
+      Current Streak)
+    - Oxirgi 5 ta so'z ro'yxati
+
+LANDING FEATURE (src/features/landing/):
+  LandingPage
+    - Hero section: gradient matn + CTA tugmalar
+    - 6 ta xususiyat kartasi: Spaced Repetition, AI Enrichment,
+      Smart Import, Practice Tests, Word Games, Chat Practice
+    - Statistika paneli
+    - Footer CTA
+    - Faqat public sahifa
+
+WORDS FEATURE (src/features/words/):
+  WordsPage
+    - Grid/list ko'rinish almashtirgich
+    - Qidiruv input (debounced)
+    - Qiyinlik filtr dropdown
+    - So'z kartalari (aylantirish = tarjima ko'rish)
+    - Pagination
+    - "So'z qo'shish" → AddWordModal
+    - Har bir so'zda enrichment status
+    - O'chirish tasdiqlash bilan
+
+  AddWordModal
+    - Dialog forma: so'z, tarjima, ta'rif, misol, qiyinlik (select),
+      kategoriya (select + yangi yaratish), eslatmalar (textarea)
+    - useCreateWord() mutation
+
+REVIEW FEATURE (src/features/review/):
+  ReviewPage
+    - Sessiya turi tanlash (review/learn/mixed kartalari)
+    - StreakWidget (to'liq)
+    - DailyProgressWidget
+    - Ko'rib chiqish xulosa statistikasi
+    - Kutayotgan so'zlar oldindan ko'rish
+
+  ReviewSessionPage
+    - FlashCard (3D CSS flip):
+      Old tomon: so'z + talaffuz
+      Orqa tomon: tarjima + ta'rif + misol + mnemonic + sinonimlar +
+                  antonimlar
+    - QualityRating (6 ta tugma):
+      0=Again 😫, 1=Hard 😰, 2=Difficult 😐,
+      3=Good 🙂, 4=Easy 😊, 5=Perfect 🤩
+    - Progress bar
+    - Navigatsiya o'qlari
+    - Yuborish/tugatish tugmalari
+    - useReviewStore (local state) + useSubmitAnswer/useCompleteSession
+
+  ReviewCompletePage
+    - Confetti animatsiya (canvas-confetti)
+    - Sessiya statistikasi (aniqlik, XP, vaqt)
+    - Yangi badgelar ko'rsatish
+    - "Xulosani ko'rish" / "Orqaga" harakatlar
+
+  ReviewHistoryPage
+    - Paginated sessiya ro'yxati
+    - Sessiya turi badge, so'z soni, aniqlik %, XP, sana
+
+TESTS FEATURE (src/features/tests/):
+  TestPage
+    - Tur tanlash: multiple_choice / fill_blank / context_guess / mixed
+    - Qiyinlik tanlash
+    - Savol soni slider (5-30)
+    - Oxirgi test tarixi
+    - useGenerateTest() → sessiya sahifasiga
+
+  TestSessionPage
+    - Savol-savol UI:
+      multiple_choice = variant tugmalari (bosish = avtomatik yuborish)
+      fill_blank = matn input + yuborish
+    - Yashil/qizil feedback
+    - Progress ko'rsatgich
+    - useSubmitTestAnswer(), useCompleteTest()
+
+  TestResultPage
+    - Harf bahosi (A-F)
+    - Foiz ball
+    - XP topilgan
+    - Savol ko'rib chiqish ro'yxati (to'g'ri/noto'g'ri ko'rsatgich)
+
+GAMES FEATURE (src/features/games/):
+  GamesPage
+    - 3 ta o'yin kartasi: Speed Round, Word Match, Word Context
+    - Har bir o'yin turi statistikasi
+    - Oxirgi o'yin tarixi
+
+  SpeedRoundPage
+    - 60 soniya ortga hisoblash taymeri
+    - So'z ko'rsatiladi, 4 ta tarjima varianti
+    - Yashil/qizil flash feedback
+    - Avtomatik keyingisiga o'tish
+    - Ball hisoblagich
+    - useStartSpeedRound() + useSubmitSpeedRound()
+
+  WordMatchPage
+    - Ikki ustun (so'zlar / tarjimalar)
+    - Bosish bilan juft tanlash
+    - Mos juftlar yo'qoladi
+    - Tugatish aniqlash
+    - useStartWordMatch() + useSubmitWordMatch()
+
+  WordContextPage
+    - Kontekst paragraf gap bilan
+    - 4 ta so'z varianti
+    - Har bir savol uchun feedback
+    - Ketma-ket davom etish
+    - useStartWordContext() + useSubmitWordContext()
+
+  GameResultPage
+    - 1-3 yulduz (ball foiziga qarab)
+    - Umumiy ball, XP, aniqlik
+    - "Yana o'ynash" / "Orqaga" tugmalari
+
+CHAT FEATURE (src/features/chat/):
+  ChatPage
+    - 6 ta mavzu taklifi kartasi: Sayohat, Oziq-ovqat, Texnologiya,
+      Sport, Filmlar, Kundalik hayot
+    - Maxsus mavzu input
+    - Oxirgi sessiyalar ro'yxati
+    - useStartChat() → sessiya sahifasiga
+
+  ChatSessionPage
+    - Xabar pufakchalari (user=o'ng/ko'k, assistant=chap/kulrang)
+    - Tuzatishlar inline ko'rsatish (asl→tuzatilgan + izoh)
+    - Maqsadli so'zlar paneli (tepada)
+    - Avtomatik pastga scroll
+    - Xabar input + yuborish tugma
+    - "Chat tugatish" tugma
+    - useSendMessage() (optimistic yangilash) + useEndChat()
+
+  ChatHistoryPage
+    - Paginated sessiya ro'yxati
+    - Mavzu, xabar soni, XP, sana, faol/tugatilgan status badge
+
+IMPORT FEATURE (src/features/import/):
+  ImportPage
+    - 3 bosqichli wizard:
+      1-bosqich: textarea (matn kiritish) + ixtiyoriy til sozlamalari
+      2-bosqich: AI matnni tahlil qiladi (useAnalyzeText()),
+                 so'z takliflari ko'rsatiladi (ishonch darajasi bilan),
+                 checkbox bilan tanlash, all/none
+      3-bosqich: tanlangan so'zlarni import (useImportWords()),
+                 muvaffaqiyat/o'tkazilgan/xato soni
+
+ANALYTICS FEATURE (src/features/analytics/):
+  AnalyticsPage
+    - 8 ta StatCard (Total Words, Mastered, Reviews, Tests, Games,
+      Accuracy, XP, Streak)
+    - WeeklyChart (7 kunlik bar chart)
+    - StudyCalendar (GitHub uslubidagi heatmap)
+    - WordDistribution (confidence + difficulty bo'yicha)
+    - DifficultWordsList (top 10, aniqlik barlari bilan)
+
+PROGRESS FEATURE (src/features/progress/):
+  BadgesPage
+    - Kategoriya filtr tablari (all/learning/streak/review/social/
+      achievement)
+    - BadgeGrid + BadgeCard komponentlari
+    - Nodir rang kodlash: common=kulrang, rare=ko'k, epic=binafsha,
+      legendary=sariq
+    - Olingan/qulflangan holat
+    - Qisman progress bar
+
+  NotificationsPage
+    - "Hammasini o'qilgan" tugma
+    - Paginated bildirishnoma ro'yxati
+    - Har bir bildirishnoma turi icon + o'qilgan/o'qilmagan uslub
+    - Har biriga "O'qilgan" tugma
+
+PROFILE FEATURE (src/features/profile/):
+  ProfilePage
+    - Ko'rsatish rejimi: avatar, ism, email, tillar, daraja, kunlik
+      maqsad, bio, statistika
+    - Tahrirlash rejimi: ism, bio, tillar, daraja, kunlik maqsad,
+      timezone
+    - Parol almashtirish bo'limi (eski + yangi + tasdiqlash)
+    - useAuthStore().fetchProfile() + authApi.updateProfile() +
+      authApi.changePassword()
+
+
+================================================================================
+11. FEATURE ICHKI KOMPONENTLARI
+================================================================================
+
+REVIEW KOMPONENTLARI:
+  FlashCard          — {word, isFlipped, onFlip} — 3D CSS flip karta
+  QualityRating      — {onRate, disabled} — 6 ta emoji tugma
+  StreakWidget        — {compact?} — streak + olov icon, useStreak()
+  DailyProgressWidget — maqsad progress, so'zlar, XP, sessiyalar, aniqlik
+
+PROGRESS KOMPONENTLARI:
+  LevelProgress      — {compact?} — daraja raqami + XP bar
+  XPChart            — 7 kunlik bar chart (framer-motion animatsiya)
+  XPPopup            — XP topilganda suzuvchi bildirishnoma
+  BadgeCard          — {badge} — icon, nom, tavsif, nodir rang, holat
+  BadgeGrid          — {badges, filter?} — responsive grid
+  NotificationBell   — dropdown + o'qilmagan soni badge
+
+ANALYTICS KOMPONENTLARI:
+  StatCard           — {icon, label, value, subtitle?, color?}
+  WeeklyChart        — {data} — animatsiyalangan bar chart
+  StudyCalendar      — {data} — GitHub uslubidagi heatmap grid
+  DifficultWordsList — {words} — top 10 + aniqlik progress barlari
+  WordDistribution   — {byConfidence, byDifficulty} — gorizontal barlar
+
+
+================================================================================
+12. STYLING VA TEMA
+================================================================================
+
+CSS O'ZGARUVCHILARI (src/index.css):
+  HSL asosidagi custom properties:
+    :root (light) va .dark (dark) klasslari:
+    --background, --foreground, --card, --popover, --primary,
+    --secondary, --muted, --accent, --destructive, --border,
+    --input, --ring
+    Har birida -foreground qarshi tomoni
+    --radius: 0.5rem
+
+MAXSUS UTILITALAR:
+  .text-gradient — bg-gradient-to-r from-primary via-purple-500 to-pink-500
+                   bg-clip-text text-transparent
+  .glass         — backdrop-blur-xl bg-white/80 dark:bg-gray-900/80
+                   border bilan
+  Custom scrollbar — yupqa, muted ranglar
+
+TEMA TIZIMI (ThemeProvider):
+  3 ta rejim: light, dark, system
+  localStorage da saqlanadi (kalit: "wordfix-theme")
+  system rejimi: prefers-color-scheme: dark media query tinglaydi
+  <html> ga dark yoki light klass qo'shadi
+
+
+================================================================================
+13. LIB UTILITALARI
+================================================================================
+
+src/lib/utils.ts:
+  cn(...inputs)    — clsx + twMerge (Tailwind class birlashtirish)
+
+src/lib/constants.ts:
+  APP_NAME         = 'WordFix'
+  APP_VERSION      = '1.0.0'
+  THEME_STORAGE_KEY = 'wordfix-theme'
+  BREAKPOINTS      = {sm:640, md:768, lg:1024, xl:1280, 2xl:1536}
+  NAV_ITEMS        = [
+    {label:'Home', path:'/', icon:Home},
+    {label:'Words', path:'/words', icon:BookOpen},
+    {label:'Import', path:'/import', icon:Upload},
+    {label:'Review', path:'/review', icon:RotateCcw},
+    {label:'Chat', path:'/chat', icon:MessageSquare},
+    {label:'Tests', path:'/tests', icon:ClipboardCheck},
+    {label:'Games', path:'/games', icon:Gamepad2},
+    {label:'Analytics', path:'/analytics', icon:BarChart3},
+    {label:'Badges', path:'/badges', icon:Award},
+    {label:'Profile', path:'/profile', icon:User},
+  ]
+
+
+================================================================================
+14. FAYL STRUKTURASI — FRONTEND
+================================================================================
+
+wordfix-frontend/
+├── index.html                 — HTML entry point
+├── package.json               — Loyiha konfiguratsiya + dependencies
+├── vite.config.ts             — Vite build konfiguratsiya
+├── tailwind.config.ts         — Tailwind CSS konfiguratsiya
+├── tsconfig.json              — TypeScript konfiguratsiya
+├── postcss.config.js          — PostCSS konfiguratsiya
+├── components.json            — shadcn/ui konfiguratsiya
+├── Dockerfile                 — Docker build
+├── public/
+│   └── assets/images/         — Statik rasmlar
+├── src/
+│   ├── main.tsx               — Entry point (bootstrap)
+│   ├── App.tsx                — Root component
+│   ├── index.css              — Global CSS + tema o'zgaruvchilar
+│   ├── vite-env.d.ts          — Vite muhit tiplari
+│   ├── api/
+│   │   ├── client.ts          — Axios instance + interceptors
+│   │   └── endpoints.ts       — API endpoint konstantalar
+│   ├── assets/
+│   │   ├── fonts/             — Lokal fontlar
+│   │   └── illustrations/     — Rasmli illyustratsiyalar
+│   ├── components/
+│   │   ├── animations/
+│   │   │   └── PageTransition.tsx
+│   │   ├── common/
+│   │   │   ├── LoadingScreen.tsx
+│   │   │   ├── Logo.tsx
+│   │   │   ├── EmptyState.tsx
+│   │   │   └── ErrorBoundary.tsx
+│   │   ├── layout/
+│   │   │   ├── RootLayout.tsx
+│   │   │   ├── AuthLayout.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── TopBar.tsx
+│   │   │   └── MobileNav.tsx
+│   │   └── ui/
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── checkbox.tsx
+│   │       ├── input.tsx
+│   │       ├── progress.tsx
+│   │       ├── separator.tsx
+│   │       ├── skeleton.tsx
+│   │       ├── switch.tsx
+│   │       └── textarea.tsx
+│   ├── features/
+│   │   ├── analytics/
+│   │   │   ├── api/analyticsApi.ts
+│   │   │   ├── hooks/useAnalytics.ts
+│   │   │   ├── components/ (StatCard, WeeklyChart, StudyCalendar, ...)
+│   │   │   └── pages/AnalyticsPage.tsx
+│   │   ├── auth/
+│   │   │   ├── api/authApi.ts
+│   │   │   └── pages/ (LoginPage, RegisterPage)
+│   │   ├── chat/
+│   │   │   ├── api/chatApi.ts
+│   │   │   ├── hooks/useChat.ts
+│   │   │   └── pages/ (ChatPage, ChatSessionPage, ChatHistoryPage)
+│   │   ├── dashboard/
+│   │   │   └── pages/DashboardPage.tsx
+│   │   ├── games/
+│   │   │   ├── api/gameApi.ts
+│   │   │   ├── hooks/useGames.ts
+│   │   │   └── pages/ (GamesPage, SpeedRoundPage, WordMatchPage,
+│   │   │              WordContextPage, GameResultPage)
+│   │   ├── import/
+│   │   │   ├── api/importApi.ts
+│   │   │   ├── hooks/useImport.ts
+│   │   │   └── pages/ImportPage.tsx
+│   │   ├── landing/
+│   │   │   └── pages/LandingPage.tsx
+│   │   ├── profile/
+│   │   │   └── pages/ProfilePage.tsx
+│   │   ├── progress/
+│   │   │   ├── api/progressApi.ts
+│   │   │   ├── hooks/useProgress.ts
+│   │   │   ├── components/ (LevelProgress, XPChart, BadgeCard, ...)
+│   │   │   └── pages/ (BadgesPage, NotificationsPage)
+│   │   ├── review/
+│   │   │   ├── api/reviewApi.ts
+│   │   │   ├── hooks/useReview.ts
+│   │   │   ├── components/ (FlashCard, QualityRating, StreakWidget, ...)
+│   │   │   └── pages/ (ReviewPage, ReviewSessionPage,
+│   │   │              ReviewCompletePage, ReviewHistoryPage)
+│   │   ├── tests/
+│   │   │   ├── api/testApi.ts
+│   │   │   ├── hooks/useTests.ts
+│   │   │   └── pages/ (TestPage, TestSessionPage, TestResultPage)
+│   │   └── words/
+│   │       ├── api/wordApi.ts
+│   │       ├── hooks/useWords.ts
+│   │       ├── components/ (AddWordModal, ...)
+│   │       └── pages/WordsPage.tsx
+│   ├── hooks/
+│   │   ├── useDebounce.ts
+│   │   ├── useMediaQuery.ts
+│   │   └── useTheme.ts
+│   ├── lib/
+│   │   ├── constants.ts
+│   │   └── utils.ts
+│   ├── providers/
+│   │   ├── QueryProvider.tsx
+│   │   └── ThemeProvider.tsx
+│   ├── routes/
+│   │   └── index.tsx
+│   ├── stores/
+│   │   ├── useAppStore.ts
+│   │   ├── useAuthStore.ts
+│   │   └── useReviewStore.ts
+│   ├── styles/
+│   │   └── globals.css
+│   └── types/
+│       ├── index.ts           — Barchani re-export
+│       ├── core.ts            — Enum/literal tipler
+│       ├── api.ts             — API javob tiplari
+│       ├── word.ts            — So'z tiplari
+│       ├── user.ts            — Foydalanuvchi tiplari
+│       ├── review.ts          — Ko'rib chiqish tiplari
+│       ├── test.ts            — Test tiplari
+│       ├── game.ts            — O'yin tiplari
+│       ├── chat.ts            — Chat tiplari
+│       ├── badge.ts           — Badge tiplari
+│       ├── progress.ts        — Progress tiplari
+│       ├── notification.ts    — Bildirishnoma tiplari
+│       ├── smart-import.ts    — Import tiplari
+│       └── analytics.ts       — Analitika tiplari
+
+================================================================================
+                         HUJJAT TUGADI
+================================================================================

@@ -1,0 +1,42 @@
+import type { DifficultyLevel } from './core';
+
+// ─── Smart Import Types ────────────────────────────────────────────────────────
+
+export interface WordSuggestion {
+  word: string;
+  translation: string;
+  part_of_speech: string;
+  context_sentence: string;
+  difficulty: DifficultyLevel;
+  reason: string;
+  selected?: boolean;
+}
+
+export interface AnalyzeTextRequest {
+  text: string;
+  max_words?: number;
+}
+
+export interface AnalyzeTextResponse {
+  suggestions: WordSuggestion[];
+  total_found: number;
+  already_known: number;
+  text_length: number;
+}
+
+export interface ImportWordsRequest {
+  words: {
+    original_word: string;
+    translation?: string;
+    part_of_speech?: string;
+    difficulty_level?: DifficultyLevel;
+    context_sentence?: string;
+    category_id?: string;
+  }[];
+}
+
+export interface ImportWordsResponse {
+  created: number;
+  skipped: number;
+  errors: { word: string; error: string }[];
+}

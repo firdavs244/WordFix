@@ -3,7 +3,8 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FlashCard, QualityRating } from '../components';
+import { FlashCard, QualityRating, ComboIndicator, ComboBreakEffect } from '../components';
+import { XPGainPopup } from '@/components/common/XPGainPopup';
 import { useReviewStore } from '@/stores/useReviewStore';
 import { useSubmitAnswer, useCompleteSession, useReviewWords } from '../hooks/useReview';
 import type { ReviewQuality, Word } from '@/types';
@@ -14,6 +15,10 @@ export function ReviewSessionPage() {
   const navigate = useNavigate();
   const [showRating, setShowRating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [combo, setCombo] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
+  const [showComboBreak, setShowComboBreak] = useState(false);
+  const [xpPopup, setXpPopup] = useState<{ xp: number; multiplier: number } | null>(null);
 
   const {
     words,
@@ -72,12 +77,30 @@ export function ReviewSessionPage() {
 
       try {
         const startTime = performance.now();
-        await submitAnswer.mutateAsync({
+        const result = await submitAnswer.mutateAsync({
           word_id: currentWord.id,
           quality,
           response_time_ms: Math.round(performance.now() - startTime),
         });
         recordAnswer(currentWord.id, quality);
+
+        // Combo system
+        const answerResult = result.data;
+        if (answerResult.is_correct) {
+          const newCombo = answerResult.combo ?? combo + 1;
+          const newMultiplier = answerResult.multiplier ?? 1;
+          setCombo(newCombo);
+          setMultiplier(newMultiplier);
+          if (answerResult.xp_earned) {
+            setXpPopup({ xp: answerResult.xp_earned, multiplier: newMultiplier });
+          }
+        } else {
+          if (combo >= 2) {
+            setShowComboBreak(true);
+          }
+          setCombo(0);
+          setMultiplier(1);
+        }
 
         if (isLastWord) {
           // Complete session
@@ -98,7 +121,7 @@ export function ReviewSessionPage() {
       }
     },
     [
-      currentWord, sessionId, submitting, submitAnswer, recordAnswer,
+      currentWord, sessionId, submitting, submitAnswer, recordAnswer, combo,
       isLastWord, completeSession, navigate, totalWords, answers, nextWord,
       setShowRating, setFlipped, reset,
     ],
@@ -150,6 +173,25 @@ export function ReviewSessionPage() {
           transition={{ duration: 0.3 }}
         />
       </div>
+
+      {/* Combo Indicator */}
+      <div className="mb-4 flex justify-center">
+        <ComboIndicator combo={combo} multiplier={multiplier} isActive={combo >= 2} />
+      </div>
+
+      {/* Combo Break Effect */}
+      {showComboBreak && (
+        <ComboBreakEffect onComplete={() => setShowComboBreak(false)} />
+      )}
+
+      {/* XP Gain Popup */}
+      {xpPopup && (
+        <XPGainPopup
+          xp={xpPopup.xp}
+          multiplier={xpPopup.multiplier}
+          onComplete={() => setXpPopup(null)}
+        />
+      )}
 
       {/* Card Area */}
       <div className="flex flex-1 flex-col items-center justify-center gap-8">

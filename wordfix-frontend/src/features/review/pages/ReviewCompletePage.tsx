@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ArrowRight, Home, RotateCcw, Trophy, Star } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Home, RotateCcw, Trophy, Star, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageTransition } from '@/components/animations/PageTransition';
@@ -17,6 +17,8 @@ export function ReviewCompletePage() {
   const totalWords = session?.total_words ?? stateData?.totalWords ?? 0;
   const correctCount = session?.correct_count ?? 0;
   const incorrectCount = session?.incorrect_count ?? 0;
+  const maxCombo = session?.max_combo ?? 0;
+  const comboXpBonus = session?.combo_xp_bonus ?? 0;
   const accuracy =
     totalWords > 0
       ? Math.round((correctCount / totalWords) * 100)
@@ -89,6 +91,35 @@ export function ReviewCompletePage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Combo Stats */}
+        {maxCombo >= 2 && (
+          <motion.div
+            className="w-full"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <div className="flex items-center justify-center gap-6">
+              <div className="flex items-center gap-2 rounded-lg bg-orange-500/10 px-4 py-2">
+                <Flame className="h-5 w-5 text-orange-500" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Max Combo</p>
+                  <p className="font-heading text-lg font-bold text-orange-500">{maxCombo}</p>
+                </div>
+              </div>
+              {comboXpBonus > 0 && (
+                <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Combo Bonus</p>
+                    <p className="font-heading text-lg font-bold text-primary">+{comboXpBonus} XP</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* Incorrect note */}
         {incorrectCount > 0 && (

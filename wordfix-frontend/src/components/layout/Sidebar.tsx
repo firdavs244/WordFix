@@ -11,6 +11,9 @@ import {
   Brain,
   ClipboardCheck,
   Award,
+  Upload,
+  MessageCircle,
+  Shuffle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/useAppStore';
@@ -20,11 +23,14 @@ import { Separator } from '@/components/ui/separator';
 const navItems = [
   { label: 'Home', path: '/', icon: Home },
   { label: 'Words', path: '/words', icon: BookOpen },
+  { label: 'Import', path: '/import', icon: Upload },
   { label: 'Review', path: '/review', icon: Brain },
+  { label: 'Chat', path: '/chat', icon: MessageCircle },
   { label: 'Tests', path: '/tests', icon: ClipboardCheck },
+  { label: 'Confusing Pairs', path: '/confusing-pairs', icon: Shuffle },
   { label: 'Games', path: '/games', icon: Gamepad2 },
+  { label: 'Analytics', path: '/analytics', icon: BarChart3 },
   { label: 'Badges', path: '/badges', icon: Award },
-  { label: 'Stats', path: '/stats', icon: BarChart3 },
   { label: 'Profile', path: '/profile', icon: User },
 ];
 

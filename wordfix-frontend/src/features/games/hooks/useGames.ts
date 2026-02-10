@@ -37,6 +37,7 @@ export function useSubmitSpeedRound() {
       gameApi.submitSpeedRound(sessionId, answers, duration),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: gameKeys.all });
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
     },
   });
 }
@@ -55,6 +56,7 @@ export function useSubmitWordMatch() {
       gameApi.submitWordMatch(sessionId, pairs, timeSeconds),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: gameKeys.all });
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
     },
   });
 }
@@ -73,6 +75,7 @@ export function useSubmitWordContext() {
       gameApi.submitWordContext(sessionId, answers),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: gameKeys.all });
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
     },
   });
 }

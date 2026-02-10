@@ -88,6 +88,32 @@ const NotificationsPage = lazy(() =>
     default: m.NotificationsPage,
   })),
 );
+const ImportPage = lazy(() =>
+  import('@/features/import/pages/ImportPage').then((m) => ({ default: m.ImportPage })),
+);
+const ChatPage = lazy(() =>
+  import('@/features/chat/pages/ChatPage').then((m) => ({ default: m.ChatPage })),
+);
+const ChatSessionPage = lazy(() =>
+  import('@/features/chat/pages/ChatSessionPage').then((m) => ({
+    default: m.ChatSessionPage,
+  })),
+);
+const ChatHistoryPage = lazy(() =>
+  import('@/features/chat/pages/ChatHistoryPage').then((m) => ({
+    default: m.ChatHistoryPage,
+  })),
+);
+const AnalyticsPage = lazy(() =>
+  import('@/features/analytics/pages/AnalyticsPage').then((m) => ({
+    default: m.AnalyticsPage,
+  })),
+);
+const ConfusingPairsPage = lazy(() =>
+  import('@/features/confusing-pairs/pages/ConfusingPairsPage').then((m) => ({
+    default: m.ConfusingPairsPage,
+  })),
+);
 
 // ─── Route Guards ──────────────────────────────────────────────────────────────
 
@@ -169,23 +195,17 @@ export function AppRoutes() {
           <Route path="/games/result/:sessionId" element={<GameResultPage />} />
           <Route path="/badges" element={<BadgesPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/stats" element={<PlaceholderPage title="Statistics" />} />
+          <Route path="/import" element={<ImportPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/session/:sessionId" element={<ChatSessionPage />} />
+          <Route path="/chat/history" element={<ChatHistoryPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/confusing-pairs" element={<ConfusingPairsPage />} />
         </Route>
 
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
-  );
-}
-
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <div className="text-center">
-        <h1 className="font-heading text-3xl font-bold text-foreground">{title}</h1>
-        <p className="mt-2 text-muted-foreground">Coming in the next sprint...</p>
-      </div>
-    </div>
   );
 }

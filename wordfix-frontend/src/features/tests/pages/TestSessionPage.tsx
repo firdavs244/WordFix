@@ -8,6 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { useSubmitTestAnswer, useCompleteTest } from '../hooks/useTests';
+import { ComboIndicator, ComboBreakEffect } from '@/features/review/components';
+import { XPGainPopup } from '@/components/common/XPGainPopup';
 import type { TestQuestion, TestSession } from '@/types';
 
 export function TestSessionPage() {
@@ -23,6 +25,10 @@ export function TestSessionPage() {
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; correctAnswer: string; explanation: string } | null>(null);
   const [startTime, setStartTime] = useState(Date.now());
   const [score, setScore] = useState({ correct: 0, total: 0 });
+  const [combo, setCombo] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
+  const [showComboBreak, setShowComboBreak] = useState(false);
+  const [xpPopup, setXpPopup] = useState<{ xp: number; multiplier: number } | null>(null);
 
   const submitAnswer = useSubmitTestAnswer();
   const completeTest = useCompleteTest();
@@ -53,10 +59,24 @@ export function TestSessionPage() {
             correct: s.correct + (res.data.is_correct ? 1 : 0),
             total: s.total + 1,
           }));
+          // Combo system
+          if (res.data.is_correct) {
+            const newCombo = res.data.combo ?? combo + 1;
+            const newMult = res.data.multiplier ?? 1;
+            setCombo(newCombo);
+            setMultiplier(newMult);
+            if (res.data.xp_earned) {
+              setXpPopup({ xp: res.data.xp_earned, multiplier: newMult });
+            }
+          } else {
+            if (combo >= 2) setShowComboBreak(true);
+            setCombo(0);
+            setMultiplier(1);
+          }
         },
       },
     );
-  }, [sessionId, currentQ, isFillBlank, fillAnswer, selectedAnswer, startTime, submitAnswer]);
+  }, [sessionId, currentQ, isFillBlank, fillAnswer, selectedAnswer, startTime, submitAnswer, combo]);
 
   const handleNext = () => {
     setFeedback(null);
@@ -94,6 +114,25 @@ export function TestSessionPage() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
+
+        {/* Combo Indicator */}
+        <div className="flex justify-center">
+          <ComboIndicator combo={combo} multiplier={multiplier} isActive={combo >= 2} />
+        </div>
+
+        {/* Combo Break Effect */}
+        {showComboBreak && (
+          <ComboBreakEffect onComplete={() => setShowComboBreak(false)} />
+        )}
+
+        {/* XP Gain Popup */}
+        {xpPopup && (
+          <XPGainPopup
+            xp={xpPopup.xp}
+            multiplier={xpPopup.multiplier}
+            onComplete={() => setXpPopup(null)}
+          />
+        )}
 
         {/* Question Card */}
         <AnimatePresence mode="wait">
@@ -137,7 +176,7 @@ export function TestSessionPage() {
                         <Button
                           key={opt}
                           variant={!feedback && selectedAnswer === opt ? 'default' : variant}
-                          className="justify-start text-left h-auto py-3 px-4"
+                          className="justify-start text-left h-auto py-3 px-4 transition-all hover:scale-[1.02] hover:border-primary/50 hover:shadow-md"
                           onClick={() => {
                             if (!feedback) {
                               setSelectedAnswer(opt);
@@ -158,6 +197,20 @@ export function TestSessionPage() {
                                       correct: s.correct + (res.data.is_correct ? 1 : 0),
                                       total: s.total + 1,
                                     }));
+                                    // Combo system
+                                    if (res.data.is_correct) {
+                                      const newCombo = res.data.combo ?? combo + 1;
+                                      const newMult = res.data.multiplier ?? 1;
+                                      setCombo(newCombo);
+                                      setMultiplier(newMult);
+                                      if (res.data.xp_earned) {
+                                        setXpPopup({ xp: res.data.xp_earned, multiplier: newMult });
+                                      }
+                                    } else {
+                                      if (combo >= 2) setShowComboBreak(true);
+                                      setCombo(0);
+                                      setMultiplier(1);
+                                    }
                                   },
                                 },
                               );

@@ -5,6 +5,7 @@ import { Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { useStartWordMatch, useSubmitWordMatch } from '../hooks/useGames';
+import { ComboIndicator } from '@/features/review/components';
 import type { WordMatchPair } from '@/types';
 
 export function WordMatchPage() {
@@ -21,6 +22,7 @@ export function WordMatchPage() {
   const [matchedPairs, setMatchedPairs] = useState<WordMatchPair[]>([]);
   const [matchedWordIdxs, setMatchedWordIdxs] = useState<Set<number>>(new Set());
   const [matchedTransIdxs, setMatchedTransIdxs] = useState<Set<number>>(new Set());
+  const [combo, setCombo] = useState(0);
 
   const handleStart = () => {
     startGame.mutate(undefined, {
@@ -43,6 +45,7 @@ export function WordMatchPage() {
     setMatchedTransIdxs((s) => new Set(s).add(transIdx));
     setSelectedWord(null);
     setSelectedTranslation(null);
+    setCombo((c) => c + 1);
 
     // Check if all matched
     if (matchedPairs.length + 1 === words.length) {
@@ -59,6 +62,8 @@ export function WordMatchPage() {
                 xp_earned: res.data.xp_earned,
                 correct_answers: res.data.correct_answers,
                 total_questions: res.data.total_questions,
+                max_combo: res.data.max_combo,
+                combo_xp_bonus: res.data.combo_xp_bonus,
               },
             });
           },
@@ -109,6 +114,11 @@ export function WordMatchPage() {
           <p className="text-sm text-muted-foreground">
             {matchedPairs.length}/{words.length} matched
           </p>
+        </div>
+
+        {/* Combo Indicator */}
+        <div className="flex justify-center">
+          <ComboIndicator combo={combo} multiplier={combo >= 20 ? 5 : combo >= 10 ? 3 : combo >= 5 ? 2 : combo >= 2 ? 1.5 : 1} isActive={combo >= 2} />
         </div>
 
         <div className="grid grid-cols-2 gap-6">

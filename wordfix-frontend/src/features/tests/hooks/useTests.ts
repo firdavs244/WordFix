@@ -38,9 +38,13 @@ export function useGenerateTest() {
 }
 
 export function useSubmitTestAnswer() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ sessionId, data }: { sessionId: string; data: TestAnswerRequest }) =>
       testApi.submitAnswer(sessionId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
+    },
   });
 }
 
@@ -50,6 +54,7 @@ export function useCompleteTest() {
     mutationFn: (sessionId: string) => testApi.complete(sessionId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: testKeys.all });
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
     },
   });
 }

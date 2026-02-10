@@ -5,9 +5,11 @@ Word URL routing.
 from django.urls import path
 
 from .views import (
+    AnalyzeTextView,
     EnrichAllView,
     EnrichmentStatusView,
     EnrichWordView,
+    ImportAddWordsView,
     WordBulkCreateView,
     WordCategoryDeleteView,
     WordCategoryListCreateView,
@@ -25,6 +27,8 @@ urlpatterns = [
     path("stats/", WordStatsView.as_view(), name="word-stats"),
     path("review/", WordReviewView.as_view(), name="word-review"),
     path("enrich-all/", EnrichAllView.as_view(), name="enrich-all"),
+    path("import/analyze/", AnalyzeTextView.as_view(), name="import-analyze"),
+    path("import/add/", ImportAddWordsView.as_view(), name="import-add"),
     path("<uuid:word_id>/", WordDetailView.as_view(), name="word-detail"),
     path("<uuid:word_id>/enrich/", EnrichWordView.as_view(), name="word-enrich"),
     path("<uuid:word_id>/enrichment-status/", EnrichmentStatusView.as_view(), name="word-enrichment-status"),

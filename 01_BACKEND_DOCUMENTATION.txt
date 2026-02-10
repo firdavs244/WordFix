@@ -1,0 +1,1045 @@
+================================================================================
+                    WORDFIX BACKEND — TO'LIQ HUJJAT
+================================================================================
+Loyiha:      WordFix Backend
+Versiya:     1.0.0
+Tavsif:      AI-powered ingliz tili lug'at o'rganish platformasi
+Python:      >=3.11, <4.0
+Django:      5.1+
+Framework:   Django REST Framework 3.15+
+Arxitektura: Clean Architecture (Domain → Application → Infrastructure →
+             Presentation)
+================================================================================
+
+
+================================================================================
+1. TEXNOLOGIYALAR VA KUTUBXONALAR
+================================================================================
+
+PRODUCTION KUTUBXONALAR:
+  - Django 5.1                — Web framework
+  - Django REST Framework 3.15 — REST API
+  - django-cors-headers 4.6   — CORS sozlamalari
+  - django-filter 24.3        — API filtrlash
+  - django-celery-beat 2.7    — Celery beat scheduler
+  - djangorestframework-simplejwt 5.3 — JWT autentifikatsiya
+  - psycopg2-binary 2.9       — PostgreSQL driver
+  - redis 5.2                 — Redis client
+  - django-redis 5.4          — Django cache backend
+  - celery[redis] 5.4         — Task queue
+  - gunicorn 23.0             — Production WSGI server
+  - python-decouple 3.8       — Environment o'zgaruvchilari
+  - whitenoise 6.8            — Statik fayllar
+  - structlog 24.4            — Strukturalangan loglar
+  - drf-spectacular 0.27+     — OpenAPI/Swagger
+  - groq 0.12+                — Groq AI API
+  - openai 1.50+              — OpenAI API
+  - gTTS 2.5+                 — Google Text-to-Speech
+  - Pillow 10.0+              — Rasm ishlash
+
+DEV KUTUBXONALAR:
+  - pytest 8.3                — Test framework
+  - pytest-django 4.9         — Django pytest plugin
+  - pytest-cov 6.0            — Test coverage
+  - factory-boy 3.3           — Test ma'lumotlar factory
+  - faker 33.0                — Fake ma'lumotlar generatori
+  - black 24.10               — Kod formatlash
+  - isort 5.13                — Import tartiblash
+  - flake8 7.1                — Linter
+  - mypy 1.13                 — Type tekshirish
+  - django-stubs 5.1          — Django type stubs
+  - djangorestframework-stubs 3.15 — DRF type stubs
+  - django-debug-toolbar 4.4  — Debug toolbar
+  - freezegun 1.4             — Vaqt muzlatish (testlarda)
+
+
+================================================================================
+2. SOZLAMALAR (Settings)
+================================================================================
+
+INSTALLED_APPS:
+  Django:     admin, auth, contenttypes, sessions, messages, staticfiles
+  Third-party: rest_framework, rest_framework_simplejwt.token_blacklist,
+               corsheaders, django_celery_beat, django_filters, drf_spectacular
+  Local:      apps.common, apps.users, apps.words
+
+MIDDLEWARE (tartib bo'yicha):
+  1. SecurityMiddleware
+  2. WhiteNoiseMiddleware (statik fayllar)
+  3. CorsMiddleware
+  4. SessionMiddleware
+  5. CommonMiddleware
+  6. CsrfViewMiddleware
+  7. AuthenticationMiddleware
+  8. MessageMiddleware
+  9. XFrameOptionsMiddleware
+  10. RequestIDMiddleware (custom — X-Request-ID header)
+
+REST_FRAMEWORK SOZLAMALARI:
+  - Autentifikatsiya:     JWT (Bearer token)
+  - Ruxsat:               IsAuthenticated (default)
+  - Pagination:           StandardResultsPagination (20/sahifa, max 100)
+  - Renderer:             CustomJSONRenderer (standart javob formati)
+  - Filtrlash:            DjangoFilterBackend, SearchFilter, OrderingFilter
+  - Exception Handler:    custom_exception_handler
+  - Throttle:             anon=100/soat, user=1000/soat
+  - Schema:               drf-spectacular AutoSchema
+
+JWT SOZLAMALARI:
+  - Access token:         60 daqiqa
+  - Refresh token:        7 kun
+  - Rotate refresh:       Ha
+  - Blacklist after:      Ha
+  - Auth header:          "Bearer"
+
+MA'LUMOTLAR BAZASI:
+  - Asosiy:  PostgreSQL 16 (db: wordfix, user: wordfix_user)
+  - Test:    SQLite :memory:
+  - Port:    5432 (ichki), 5433 (tashqi)
+
+CACHE:
+  - Asosiy:  Redis (django_redis), prefix: "wordfix"
+  - Test:    LocMemCache
+
+AI PROVIDER SOZLAMALARI:
+  - Default provider:     groq
+  - Groq model:           llama-3.3-70b-versatile
+  - OpenAI model:         gpt-4o-mini
+  - Max retries:          3
+  - Timeout:              30 soniya
+  - Enrichment enabled:   True
+
+CORS:
+  - Development:          Barcha originlarga ruxsat
+  - Production:           localhost:5173, localhost:3000, 127.0.0.1:5173
+  - Credentials:          Ha
+
+SETTINGS VARIANTLARI:
+  development.py — DEBUG=True, ALLOWED_HOSTS=["*"], console email,
+                   CORS_ALLOW_ALL_ORIGINS=True, log level: DEBUG
+  production.py  — DEBUG=False, HTTPS majburiy, HSTS=1 yil,
+                   X_FRAME_OPTIONS="DENY", log level: WARNING/INFO
+  test.py        — SQLite :memory:, MD5 password hasher,
+                   CELERY_TASK_ALWAYS_EAGER=True, throttle o'chirilgan,
+                   enrichment o'chirilgan, InMemoryStorage
+
+
+================================================================================
+3. URL PATTERNS (API Endpointlar)
+================================================================================
+
+ASOSIY URL PREFIXLAR:
+  admin/                         — Django admin panel
+  api/schema/                    — OpenAPI schema (JSON/YAML)
+  api/docs/                      — Swagger UI
+  api/v1/                        — Users API
+  api/v1/words/                  — Words API
+  api/v1/review/                 — Review API
+  api/v1/tests/                  — Tests API
+  api/v1/games/                  — Games API
+  api/v1/chat/                   — Chat API
+  api/v1/analytics/              — Analytics API
+  api/v1/notifications/          — Notifications API
+
+USERS ENDPOINTLARI:
+  GET    api/v1/health/                    — Health check (AllowAny)
+  POST   api/v1/auth/register/             — Ro'yxatdan o'tish
+  POST   api/v1/auth/login/                — Kirish
+  POST   api/v1/auth/logout/               — Chiqish
+  POST   api/v1/auth/token/refresh/        — Token yangilash
+  GET    api/v1/auth/profile/              — Profil olish
+  PUT    api/v1/auth/profile/              — Profil yangilash
+  POST   api/v1/auth/change-password/      — Parol almashtirish
+  GET    api/v1/users/progress/            — Foydalanuvchi progressi
+  GET    api/v1/users/xp-history/          — XP tarixi
+  GET    api/v1/users/badges/              — Foydalanuvchi badgelari
+  GET    api/v1/badges/                    — Barcha badgelar
+
+NOTIFICATION ENDPOINTLARI:
+  GET    api/v1/notifications/             — Bildirishnomalar ro'yxati
+  POST   api/v1/notifications/read/        — O'qilgan deb belgilash
+  GET    api/v1/notifications/unread-count/ — O'qilmaganlar soni
+
+WORDS ENDPOINTLARI:
+  GET    api/v1/words/                     — So'zlar ro'yxati
+  POST   api/v1/words/                     — So'z qo'shish
+  POST   api/v1/words/bulk/                — Ko'p so'z qo'shish
+  GET    api/v1/words/stats/               — So'z statistikasi
+  GET    api/v1/words/review/              — Ko'rib chiqish so'zlari
+  POST   api/v1/words/enrich-all/          — Barcha so'zlarni boyitish
+  POST   api/v1/words/import/analyze/      — Matnni tahlil qilish
+  POST   api/v1/words/import/add/          — So'zlarni import qilish
+  GET    api/v1/words/{id}/                — So'z detali
+  PUT    api/v1/words/{id}/                — So'z yangilash
+  DELETE api/v1/words/{id}/                — So'z o'chirish
+  POST   api/v1/words/{id}/enrich/         — So'zni AI bilan boyitish
+  GET    api/v1/words/{id}/enrichment-status/ — Boyitish holati
+  GET    api/v1/words/categories/          — Kategoriyalar ro'yxati
+  POST   api/v1/words/categories/          — Kategoriya yaratish
+  DELETE api/v1/words/categories/{id}/     — Kategoriya o'chirish
+
+REVIEW ENDPOINTLARI:
+  GET    api/v1/review/words/              — Ko'rib chiqish uchun so'zlar
+  POST   api/v1/review/sessions/           — Sessiya boshlash
+  GET    api/v1/review/sessions/{id}/      — Sessiya detali
+  POST   api/v1/review/sessions/{id}/answer/ — Javob yuborish
+  POST   api/v1/review/sessions/{id}/complete/ — Sessiya tugatish
+  GET    api/v1/review/summary/            — Umumiy xulosa
+  GET    api/v1/review/history/            — Ko'rib chiqish tarixi
+  GET    api/v1/review/streak/             — Streak ma'lumotlari
+  GET    api/v1/review/daily-progress/     — Kunlik progress
+  GET    api/v1/review/words/{id}/predict/ — SM-2 bashorat
+
+TEST ENDPOINTLARI:
+  POST   api/v1/tests/generate/            — Test generatsiya qilish
+  GET    api/v1/tests/history/             — Test tarixi
+  GET    api/v1/tests/{id}/                — Test detali
+  POST   api/v1/tests/{id}/answer/         — Javob yuborish
+  POST   api/v1/tests/{id}/complete/       — Test tugatish
+
+GAME ENDPOINTLARI:
+  POST   api/v1/games/speed-round/start/   — Speed round boshlash
+  POST   api/v1/games/speed-round/submit/  — Speed round yuborish
+  POST   api/v1/games/word-match/start/    — Word match boshlash
+  POST   api/v1/games/word-match/submit/   — Word match yuborish
+  POST   api/v1/games/word-context/start/  — Word context boshlash
+  POST   api/v1/games/word-context/submit/ — Word context yuborish
+  GET    api/v1/games/history/             — O'yin tarixi
+  GET    api/v1/games/stats/               — O'yin statistikasi
+
+CHAT ENDPOINTLARI:
+  POST   api/v1/chat/start/                — Chat boshlash
+  GET    api/v1/chat/history/              — Chat tarixi
+  GET    api/v1/chat/sessions/{id}/        — Chat sessiya detali
+  POST   api/v1/chat/sessions/{id}/message/ — Xabar yuborish
+  POST   api/v1/chat/sessions/{id}/end/    — Chat tugatish
+
+ANALYTICS ENDPOINTLARI:
+  GET    api/v1/analytics/overview/        — Umumiy ko'rinish
+  GET    api/v1/analytics/weekly/          — Haftalik statistika
+  GET    api/v1/analytics/monthly/         — Oylik statistika
+  GET    api/v1/analytics/difficult-words/ — Qiyin so'zlar
+  GET    api/v1/analytics/word-progress/   — So'z progressi
+  GET    api/v1/analytics/calendar/        — O'qish kalendari
+
+
+================================================================================
+4. MA'LUMOTLAR BAZASI MODELLARI
+================================================================================
+
+UMUMIY BAZAVIY MODEL (AbstractBaseModel):
+  - id              UUID    (PK, auto uuid4)
+  - created_at      DateTime (auto_now_add)
+  - updated_at      DateTime (auto_now)
+  - is_active       Boolean  (default: True)
+  Metodlar: soft_delete(), restore()
+
+--- USERS APP MODELLARI ---
+
+CustomUser (AbstractBaseUser, PermissionsMixin):
+  Jadval: users
+  - id                UUID     PK
+  - email             Email    unique, indexed
+  - username          Char(30) unique, regex: [a-zA-Z0-9_]
+  - full_name         Char(100)
+  - avatar            Image    upload_to="avatars/"
+  - native_language   Char(10) default: "uz"
+  - learning_language Char(10) default: "en"
+  - proficiency_level Char(2)  choices: A1/A2/B1/B2/C1/C2, default: "A1"
+  - daily_goal        Integer  default: 10
+  - timezone          Char(50) default: "Asia/Tashkent"
+  - is_premium        Boolean  default: False
+  - premium_until     DateTime nullable
+  - is_active         Boolean  default: True
+  - is_staff          Boolean  default: False
+  - date_joined       DateTime auto_now_add
+  - last_login        DateTime nullable
+  USERNAME_FIELD: email
+  REQUIRED_FIELDS: ["username"]
+  Manager: CustomUserManager (create_user, create_superuser)
+  Property: is_premium_active
+
+UserProgress:
+  Jadval: user_progress
+  - id                      UUID PK
+  - user                    OneToOne(CustomUser) → related: progress
+  - total_xp                Integer (0)
+  - level                   Integer (1)
+  - words_learned_total     Integer (0)
+  - words_mastered_total    Integer (0)
+  - tests_completed         Integer (0)
+  - games_played            Integer (0)
+  - reviews_completed       Integer (0)
+  - perfect_scores          Integer (0)
+  - total_study_time_seconds Integer (0)
+  - created_at / updated_at DateTime
+
+XPTransaction:
+  Jadval: xp_transactions
+  - id          UUID PK
+  - user        FK(CustomUser) → related: xp_transactions
+  - amount      Integer
+  - reason      Char(20) choices: word_added, review_correct/incorrect/
+                complete/perfect, test_complete/good/perfect,
+                game_complete/good, word_mastered, streak_7/30,
+                daily_goal, badge_reward, level_up
+  - description Char(200)
+  - created_at  DateTime
+
+Badge:
+  Jadval: badges
+  - id          UUID PK
+  - code        Char(50) unique
+  - name        Char(100)
+  - description Char(255)
+  - icon        Char(50) default: "award"
+  - category    Char(10) choices: words/streak/review/test/game/mastery/level
+  - xp_reward   Integer (0)
+  - rarity      Char(10) choices: common/rare/epic/legendary
+  - created_at  DateTime
+
+UserBadge:
+  Jadval: user_badges
+  - id        UUID PK
+  - user      FK(CustomUser)
+  - badge     FK(Badge)
+  - earned_at DateTime (auto_now_add)
+  unique_together: [user, badge]
+
+Notification:
+  Jadval: notifications
+  - id         UUID PK
+  - user       FK(CustomUser)
+  - type       Char(25) choices: review_reminder, streak_warning,
+               badge_earned, level_up, daily_goal_complete,
+               word_mastered, weekly_report
+  - title      Char(200)
+  - message    Text
+  - is_read    Boolean (False)
+  - data       JSON (dict)
+  - created_at DateTime
+
+--- WORDS APP MODELLARI ---
+
+WordCategory (AbstractBaseModel):
+  Jadval: word_categories
+  - user        FK → related: word_categories
+  - name        Char(50)
+  - color       Char(7) default: "#6C5CE7" (hex validated)
+  - icon        Char(50) default: "book"
+  - words_count Integer (0)
+  unique_together: [user, name]
+
+Word (AbstractBaseModel):
+  Jadval: words
+  - user              FK → related: words, indexed
+  - original_word     Char(100) indexed
+  - translation       Char(200)
+  - pronunciation     Char(200)
+  - part_of_speech    Char(15) choices: noun/verb/adjective/adverb/
+                      preposition/conjunction/pronoun/interjection/phrase/other
+  - definition        Text
+  - example_sentence  Text
+  - example_translation Text
+  - synonyms          JSON (list)
+  - antonyms          JSON (list)
+  - collocations      JSON (list)
+  - word_family       JSON (list)
+  - image_url         URL
+  - audio_url         URL
+  - notes             Text
+  - mnemonic          Text
+  - usage_notes       Text
+  - category          FK(WordCategory) nullable
+  - tags              JSON (list)
+  - difficulty_level  Char(6) choices: easy/medium/hard, default: "medium"
+  - is_enriched       Boolean (False)
+  - enrichment_status Char(10) choices: pending/enriching/enriched/failed
+  - enrichment_error  Text
+  - enriched_at       DateTime nullable
+  - confidence_score  Float (0, range: 0–100)
+  - next_review_at    DateTime nullable
+  - review_count      Integer (0)
+  - correct_count     Integer (0)
+  - incorrect_count   Integer (0)
+  - last_reviewed_at  DateTime nullable
+  - is_mastered       Boolean (False)
+  - easiness_factor   Float (2.5) — SM-2
+  - repetition_number Integer (0) — SM-2
+  - interval_days     Integer (0) — SM-2
+  unique_together: [user, original_word]
+  Indexes: [user,is_mastered], [user,confidence_score],
+           [user,next_review_at], [user,category]
+  Property: accuracy_rate
+
+ReviewSession (AbstractBaseModel):
+  Jadval: review_sessions
+  - user            FK → related: review_sessions
+  - started_at      DateTime (auto_now_add)
+  - completed_at    DateTime nullable
+  - total_words     Integer (0)
+  - correct_count   Integer (0)
+  - incorrect_count Integer (0)
+  - average_quality Float (0.0)
+  - duration_seconds Integer (0)
+  - session_type    Char(10) choices: review/quick/focus
+  - is_completed    Boolean (False)
+
+ReviewLog (AbstractBaseModel):
+  Jadval: review_logs
+  - session             FK(ReviewSession) nullable → related: logs
+  - user                FK → related: review_logs
+  - word                FK(Word) → related: review_logs
+  - quality             Integer (0–5)
+  - response_time_ms    Integer nullable
+  - is_correct          Boolean
+  - reviewed_at         DateTime (auto_now_add)
+  - previous_confidence Float (0.0)
+  - new_confidence      Float (0.0)
+  - previous_interval   Integer (0)
+  - new_interval        Integer (0)
+
+DailyStreak (AbstractBaseModel):
+  Jadval: daily_streaks
+  - user                OneToOne → related: streak
+  - current_streak      Integer (0)
+  - longest_streak      Integer (0)
+  - last_activity_date  Date nullable
+  - streak_frozen_until Date nullable
+  - total_review_days   Integer (0)
+
+DailyActivity (AbstractBaseModel):
+  Jadval: daily_activities
+  - user             FK → related: daily_activities
+  - date             Date
+  - words_reviewed   Integer (0)
+  - words_added      Integer (0)
+  - words_mastered   Integer (0)
+  - correct_answers  Integer (0)
+  - incorrect_answers Integer (0)
+  - total_time_seconds Integer (0)
+  - goal_completed   Boolean (False)
+  - xp_earned        Integer (0)
+  unique_together: [user, date]
+
+TestSession (AbstractBaseModel):
+  Jadval: test_sessions
+  - user             FK → related: test_sessions
+  - test_type        Char(20) choices: multiple_choice/fill_blank/
+                     context_guess/mixed
+  - difficulty       Char(10) choices: easy/medium/hard/adaptive
+  - total_questions  Integer (0)
+  - correct_answers  Integer (0)
+  - incorrect_answers Integer (0)
+  - score_percentage Float (0.0)
+  - started_at       DateTime (auto_now_add)
+  - completed_at     DateTime nullable
+  - duration_seconds Integer (0)
+  - is_completed     Boolean (False)
+  - words_tested     M2M(Word) through TestQuestion
+
+TestQuestion (AbstractBaseModel):
+  Jadval: test_questions
+  - session         FK(TestSession) → related: questions
+  - word            FK(Word) → related: test_questions
+  - question_type   Char(25) choices: multiple_choice/fill_blank/
+                    context_guess/word_to_translation/translation_to_word/
+                    listen_and_type
+  - question_text   Text
+  - correct_answer  Char(500)
+  - options         JSON (list)
+  - user_answer     Char(500)
+  - is_correct      Boolean nullable
+  - response_time_ms Integer nullable
+  - explanation     Text
+  - order           Integer (0)
+
+GameSession (AbstractBaseModel):
+  Jadval: game_sessions
+  - user             FK → related: game_sessions
+  - game_type        Char(15) choices: speed_round/word_match/word_context
+  - score            Integer (0)
+  - max_score        Integer (0)
+  - correct_answers  Integer (0)
+  - incorrect_answers Integer (0)
+  - duration_seconds Integer (0)
+  - started_at       DateTime (auto_now_add)
+  - completed_at     DateTime nullable
+  - is_completed     Boolean (False)
+  - level            Integer (1)
+  - xp_earned        Integer (0)
+
+ChatSession (AbstractBaseModel):
+  Jadval: chat_sessions
+  - user           FK → related: chat_sessions
+  - topic          Char(200)
+  - started_at     DateTime (auto_now_add)
+  - ended_at       DateTime nullable
+  - message_count  Integer (0)
+  - words_practiced M2M(Word) → related: chat_sessions
+  - target_words   JSON (list)
+  - is_active      Boolean (True)
+
+ChatMessage (AbstractBaseModel):
+  Jadval: chat_messages
+  - session    FK(ChatSession) → related: messages
+  - role       Char(10) choices: user/assistant
+  - content    Text
+  - corrections JSON (list)
+  - words_used JSON (list)
+  - order      Integer (0)
+
+
+================================================================================
+5. DOMAIN QATLAMI (Domain Layer)
+================================================================================
+
+ENTITIES (apps/words/domain/entities.py):
+  Barcha @dataclass sinflari — model maydonlarining in-memory ko'rinishi:
+  - WordCategoryEntity     (validate() metodi)
+  - WordEntity             (accuracy_rate property, validate() metodi)
+  - ReviewSessionEntity
+  - ReviewLogEntity
+  - DailyStreakEntity
+  - DailyActivityEntity
+  - TestSessionEntity
+  - TestQuestionEntity
+  - GameSessionEntity
+  - ChatSessionEntity
+  - ChatMessageEntity
+
+VALUE OBJECTS (apps/words/domain/value_objects.py):
+  - WordText (frozen)  — bo'sh emas, max 100 belgi, lowercase normalizatsiya
+  - Definition (frozen) — bo'sh emas
+
+DOMAIN SERVICES (apps/words/domain/services.py):
+  - WordDomainService
+    • calculate_next_review_interval(times_correct, times_reviewed) → int
+  - SpacedRepetitionService — SM-2 algoritmi implementatsiyasi
+    • calculate_next_review(word_entity, quality, now) → word_entity
+    • calculate_confidence(word_entity, now) → float
+    • get_predicted_intervals(word_entity) → dict
+  - WordEnrichmentDomainService
+    • enrich_word(word_entity, enrichment_data, now) → word_entity
+
+REPOSITORY INTERFEYSLARI (apps/words/domain/repositories.py):
+  - AbstractWordRepository         (14 metod)
+  - AbstractWordCategoryRepository (5 metod)
+  - AbstractReviewSessionRepository (4 metod)
+  - AbstractReviewLogRepository    (3 metod)
+  - AbstractDailyStreakRepository   (2 metod)
+  - AbstractDailyActivityRepository (3 metod)
+  - AbstractTestSessionRepository   (4 metod)
+  - AbstractTestQuestionRepository  (5 metod)
+  - AbstractGameSessionRepository   (5 metod)
+  - AbstractChatRepository          (7 metod)
+
+USERS DOMAIN:
+  Entities:
+  - UserEntity (is_premium_active property, validate_email, validate_username)
+  Value Objects:
+  - Email (frozen) — format validatsiya, normalized, domain
+  - Password (frozen) — min 8 belgi, kamida 1 raqam
+  Repository Interface:
+  - AbstractUserRepository (7 metod)
+
+
+================================================================================
+6. APPLICATION QATLAMI (Use Cases)
+================================================================================
+
+Fayl strukturasi: apps/words/application/use_cases/ (package)
+  __init__.py      — barcha use caselarni re-export
+  word_crud.py     — Word CRUD operatsiyalari
+  enrichment.py    — AI boyitish
+  review.py        — Ko'rib chiqish sessiyalari
+  streak.py        — Streak boshqaruvi
+  testing.py       — Test generatsiya va boshqaruv
+  games.py         — O'yin logikasi
+  smart_import.py  — Aqlli import
+  chat.py          — AI chat
+  analytics.py     — Analitika
+
+WORD CRUD (word_crud.py):
+  AddWordUseCase         — So'z qo'shish + auto-enrich
+  GetWordsUseCase        — Paginated ro'yxat + filtrlar
+  GetWordDetailUseCase   — Bitta so'z
+  UpdateWordUseCase      — Qisman yangilash (original_word o'zgarmaydi)
+  DeleteWordUseCase      — Doimiy o'chirish
+  BulkAddWordsUseCase    — Ko'p so'z qo'shish
+  GetWordStatsUseCase    — Foydalanuvchi statistikasi
+  SearchWordsUseCase     — So'z qidirish
+
+ENRICHMENT (enrichment.py):
+  EnrichWordUseCase      — AI boyitish (foydalanuvchi tili/darajasiga mos prompt)
+                           + TTS audio generatsiya
+  BatchEnrichUseCase     — Ko'p so'zlarni boyitish (1 soniya interval)
+
+REVIEW (review.py):
+  GetReviewWordsUseCase       — Ko'rib chiqish uchun so'zlar
+  StartReviewSessionUseCase   — Sessiya yaratish
+  SubmitReviewAnswerUseCase   — SM-2 hisoblash + so'z/sessiya/faoliyat/
+                                streak yangilash
+  CompleteReviewSessionUseCase — Sessiyani yakunlash
+  GetReviewSummaryUseCase     — Dashboard xulosa
+
+STREAK (streak.py):
+  UpdateStreakUseCase     — Kunlik streak yangilash (davomiylik, muzlatish,
+                           qayta boshlash)
+
+TESTING (testing.py):
+  GenerateTestUseCase        — AI test generatsiya (multiple_choice/fill_blank/
+                               context_guess/mixed) + fallback
+  SubmitTestAnswerUseCase    — Javob yuborish
+  CompleteTestSessionUseCase — Test yakunlash
+  GetTestHistoryUseCase      — Paginated tarix
+  GetTestDetailUseCase       — Sessiya + savollar
+
+GAMES (games.py):
+  StartSpeedRoundUseCase   — Speed round boshlash (25 so'z, 60s, 4 variant)
+  SubmitSpeedRoundUseCase  — Natijalar (80%+ = 2x XP)
+  StartWordMatchUseCase    — Word match boshlash (juftlik)
+  SubmitWordMatchUseCase   — Natijalar
+  StartWordContextUseCase  — Context o'yin (AI paragraflar)
+  SubmitWordContextUseCase — Natijalar
+  GetGameHistoryUseCase    — Paginated tarix
+  GetGameStatsUseCase      — Umumiy statistika
+
+SMART IMPORT (smart_import.py):
+  AnalyzeTextUseCase  — AI matn tahlili (max 5000 belgi, regex fallback)
+  ImportWordsUseCase  — Tanlangan so'zlarni import + auto-enrich
+
+CHAT (chat.py):
+  StartChatUseCase          — AI chat boshlash (mavzu + past ishonchli so'zlar)
+  SendChatMessageUseCase    — Xabar yuborish → AI javob + tuzatishlar +
+                              ishlatilgan so'zlar + SR yangilash
+  EndChatUseCase            — Sessiya tugatish
+  GetChatHistoryUseCase     — Paginated sessiyalar
+  GetChatSessionDetailUseCase — Sessiya + xabarlar
+
+ANALYTICS (analytics.py):
+  GetAnalyticsOverviewUseCase — Keng ko'lamli umumiy ko'rinish
+  GetWeeklyStatsUseCase      — 7 kunlik statistika
+  GetMonthlyStatsUseCase     — 30 kunlik statistika
+  GetDifficultWordsUseCase   — Eng past aniqlikdagi so'zlar
+  GetWordProgressUseCase     — Taqsimot (confidence/difficulty/category)
+  GetStudyCalendarUseCase    — Oy heatmap
+
+USERS USE CASES (apps/users/application/use_cases.py):
+  RegisterUserUseCase      — Ro'yxatdan o'tish + duplikat tekshirish
+  LoginUserUseCase         — Kirish + last_login yangilash
+  GetUserProfileUseCase    — Profil olish
+  UpdateUserProfileUseCase — Profil yangilash (ruxsat berilgan maydonlar)
+  ChangePasswordUseCase    — Parol almashtirish
+
+
+================================================================================
+7. USERS DOMAIN SERVICES
+================================================================================
+
+XPService (apps/users/domain/services/xp_service.py):
+  Daraja chegaralari:
+    Level 1: 0 XP
+    Level 2: 100 XP
+    Level 3: 250 XP
+    Level 4: 500 XP
+    Level 5: 1000 XP
+    Level 6: 1750 XP
+    Level 7: 2750 XP
+    Level 8: 4000 XP
+    Level 9: 5500 XP
+    Level 10: 7500 XP
+    Level 11+: +2500 har biri
+
+  XP mukofotlari:
+    word_added=5, review_correct=10, review_incorrect=3,
+    review_complete=20, review_perfect=30, test_complete=25,
+    test_good=15, test_perfect=40, game_complete=15, game_good=10,
+    word_mastered=25, streak_7=50, streak_30=200, daily_goal=20
+
+  Metodlar: award_xp(), get_level_info(), get_xp_history()
+
+BadgeService (apps/users/domain/services/badge_service.py):
+  20 ta badge ta'rifi:
+    first_word, word_10, word_50, word_100,
+    streak_3, streak_7, streak_30, streak_100,
+    review_first, review_50,
+    test_first, test_10,
+    game_first, speed_demon,
+    perfect_review, perfect_test,
+    level_5, level_10,
+    mastered_10, mastered_50
+  Metodlar: check_and_award_badges(), get_user_badges(),
+            get_available_badges()
+
+NotificationService (apps/users/domain/services/notification_service.py):
+  Metodlar: create_notification(), get_unread_count(),
+            get_notifications(), mark_as_read(), mark_all_as_read()
+
+
+================================================================================
+8. INFRASTRUCTURE QATLAMI
+================================================================================
+
+REPOSITORY IMPLEMENTATSIYALARI:
+
+Words Repositories (apps/words/infrastructure/repositories/):
+  word_repo.py   — DjangoWordRepository, DjangoWordCategoryRepository
+  review_repo.py — DjangoReviewSessionRepository, DjangoReviewLogRepository,
+                   DjangoStreakRepository, DjangoDailyActivityRepository
+  test_repo.py   — DjangoTestSessionRepository, DjangoTestQuestionRepository
+  game_repo.py   — DjangoGameSessionRepository
+  chat_repo.py   — DjangoChatRepository
+
+Users Repositories (apps/users/infrastructure/repositories/):
+  user_repo.py        — DjangoUserRepository
+  progress_repo.py    — DjangoProgressRepository (atomic F-expressions)
+  xp_repo.py          — DjangoXPTransactionRepository
+  badge_repo.py       — DjangoBadgeRepository, DjangoUserBadgeRepository
+  notification_repo.py — DjangoNotificationRepository
+
+
+================================================================================
+9. PRESENTATION QATLAMI
+================================================================================
+
+VIEWS (apps/words/presentation/views/) — 46 ta view class:
+  word_views.py       — WordListCreateView, WordDetailView,
+                        WordBulkCreateView, WordStatsView, WordReviewView,
+                        WordCategoryListCreateView, WordCategoryDeleteView
+  review_views.py     — ReviewWordsView, ReviewSessionCreateView,
+                        ReviewSessionDetailView, SubmitAnswerView,
+                        CompleteSessionView, ReviewSummaryView,
+                        ReviewHistoryView, StreakView, DailyProgressView,
+                        PredictedIntervalsView
+  test_views.py       — TestGenerateView, TestSubmitAnswerView,
+                        TestCompleteView, TestHistoryView,
+                        TestSessionDetailView
+  game_views.py       — SpeedRoundStartView, SpeedRoundSubmitView,
+                        WordMatchStartView, WordMatchSubmitView,
+                        WordContextStartView, WordContextSubmitView,
+                        GameHistoryView, GameStatsView
+  enrichment_views.py — EnrichWordView, EnrichAllView, EnrichmentStatusView
+  import_views.py     — AnalyzeTextView, ImportAddWordsView
+  chat_views.py       — ChatStartView, ChatSendMessageView, ChatEndView,
+                        ChatHistoryView, ChatSessionDetailView
+  analytics_views.py  — AnalyticsOverviewView, AnalyticsWeeklyView,
+                        AnalyticsMonthlyView, AnalyticsDifficultWordsView,
+                        AnalyticsWordProgressView, AnalyticsCalendarView
+
+SERIALIZERS (apps/words/presentation/serializers/) — 29 ta serializer:
+  word_serializers.py    — WordCategorySerializer, WordCreateSerializer,
+                          WordUpdateSerializer, WordListSerializer,
+                          WordDetailSerializer, WordStatsSerializer,
+                          BulkWordCreateSerializer
+  review_serializers.py  — ReviewSubmitSerializer,
+                          ReviewSessionCreateSerializer,
+                          EnrichWordSerializer, BatchEnrichSerializer
+  test_serializers.py    — TestGenerateSerializer, TestQuestionSerializer,
+                          TestSessionSerializer, TestSessionDetailSerializer,
+                          TestAnswerSubmitSerializer
+  game_serializers.py    — GameSessionSerializer, SpeedRoundStartSerializer,
+                          SpeedRoundSubmitSerializer, WordMatchStartSerializer,
+                          WordMatchSubmitSerializer,
+                          WordContextSubmitSerializer, GameStatsSerializer
+  import_serializers.py  — AnalyzeTextSerializer, WordSuggestionSerializer,
+                          ImportWordsSerializer
+  chat_serializers.py    — StartChatSerializer, ChatMessageSerializer,
+                          ChatSessionListSerializer
+
+DEPENDENCIES (apps/words/presentation/dependencies/) — Factory funksiyalar:
+  common_deps.py     — Repository va service factory'lar
+  word_deps.py       — Word CRUD use case factory'lar
+  review_deps.py     — Review use case factory'lar
+  enrichment_deps.py — Enrichment use case factory'lar
+  test_deps.py       — Test use case factory'lar
+  game_deps.py       — Game use case factory'lar
+  import_deps.py     — Import use case factory'lar
+  chat_deps.py       — Chat use case factory'lar
+  analytics_deps.py  — Analytics use case factory'lar
+
+
+================================================================================
+10. CORE — AI VA TTS
+================================================================================
+
+AI PROVIDER INTERFEYSI (core/interfaces/ai_provider.py):
+  AbstractAIProvider:
+    generate_text(prompt, max_tokens, temperature) → str
+    generate_json(prompt, max_tokens, temperature) → dict
+    generate_chat(messages, max_tokens, temperature) → str
+    get_provider_name() → str
+    is_available() → bool
+  AIProviderError — exception with provider attribute
+
+TTS PROVIDER INTERFEYSI (core/interfaces/tts_provider.py):
+  AbstractTTSProvider:
+    generate_audio(text, language) → bytes
+    get_provider_name() → str
+
+AI PROVIDERLAR:
+  AIProviderFactory (core/services/ai/ai_factory.py):
+    Singleton cache, "groq" va "openai" qo'llab-quvvatlaydi
+  GroqProvider (core/services/ai/groq_provider.py):
+    Model: llama-3.3-70b-versatile
+    Retry: exponential backoff
+    JSON: markdown stripping
+    Availability: 5 daqiqa cache
+  OpenAIProvider (core/services/ai/openai_provider.py):
+    Model: gpt-4o-mini
+    JSON: response_format={"type": "json_object"}
+    Retry/cache: xuddi shunday
+
+TTS PROVIDER:
+  GoogleTTSProvider (core/services/tts/google_tts.py):
+    gTTS kutubxonasi (bepul, API key shart emas)
+    Format: MP3
+
+AI PROMPTLAR (core/services/ai/prompts.py):
+  Qo'llab-quvvatlanadigan tillar: uz, ru, tr, ko, ar, de, fr, es, ja, zh,
+                                  hi, pt
+  Promptlar:
+    WORD_ENRICHMENT_PROMPT   — tarjima, IPA, qism, ta'rif, misollar,
+                               sinonimlar, antonimlar, collocations,
+                               word_family, mnemonic, usage_notes
+    MULTIPLE_CHOICE_PROMPT   — so'z↔tarjima, ta'rif→so'z, 4 variant
+    FILL_BLANK_PROMPT        — gap bilan jumla + maslahat
+    CONTEXT_GUESS_PROMPT     — 3-5 jumlali paragraf + 4 variant
+    WORD_CONTEXT_GAME_PROMPT — 2-3 jumlali paragraf gap bilan
+    SMART_IMPORT_PROMPT      — matnni noma'lum so'zlar uchun tahlil
+    CHAT_SYSTEM_PROMPT       — suhbat o'qituvchisi + tuzatishlar +
+                               maqsadli so'zlarni kuzatish
+
+
+================================================================================
+11. CELERY VAZIFALAR
+================================================================================
+
+BEAT JADVAL:
+  update-streaks-daily     — 86400s (har kuni)
+  cleanup-stale-sessions   — 3600s (har soatda)
+  review-reminder-morning  — 43200s (12 soatda)
+  streak-warning-evening   — 86400s (har kuni)
+  weekly-report            — 604800s (har hafta)
+
+WORDS TASKS (apps/words/infrastructure/tasks.py):
+  update_streaks_task()       — Streaklar yangilash
+  cleanup_stale_sessions_task() — Eskirgan sessiyalar tozalash
+
+USERS TASKS (apps/users/infrastructure/tasks.py):
+  review_reminder_task() — Ko'rib chiqish eslatmasi bildirishnomasi
+  streak_warning_task()  — Streak yo'qolish xavfi haqida ogohlantirish
+  weekly_report_task()   — Haftalik hisobot yuborish
+
+
+================================================================================
+12. COMMON MODULE
+================================================================================
+
+EXCEPTIONS (apps/common/exceptions.py):
+  WordFixBaseException   — 500 (bazaviy)
+  EntityNotFoundError    — 404
+  EntityAlreadyExistsError — 409
+  ValidationError        — 400
+  AuthenticationError    — 401
+  PermissionDeniedError  — 403
+  AIProviderError        — 503
+  RateLimitError         — 429
+
+EXCEPTION HANDLER (apps/common/exception_handler.py):
+  custom_exception_handler() — Barcha javoblarni standart formatga o'giradi:
+  {success, data, message, errors, meta}
+
+PAGINATION (apps/common/pagination.py):
+  StandardResultsPagination — 20/sahifa, max 100
+  Javob: {success, data, message, errors, meta: {page, total_pages,
+          total_count, page_size, next, previous}}
+
+PERMISSIONS (apps/common/permissions.py):
+  IsActiveUser — autentifikatsiya qilingan + faol
+  IsOwner — obj.user yoki obj.owner == request.user
+
+RENDERER (apps/common/renderers.py):
+  CustomJSONRenderer — Barcha javoblarni {success, data, message, errors,
+                       meta} konvertga o'raydi
+
+MIDDLEWARE (apps/common/middleware/request_id.py):
+  RequestIDMiddleware — X-Request-ID header hosil/oladi, requestga biriktiradi
+
+HELPERS (apps/common/utils/helpers.py):
+  build_success_response(data, message, meta) → dict
+  build_error_response(message, errors) → dict
+  get_client_ip(request) → str (X-Forwarded-For ni qo'llab-quvvatlaydi)
+
+
+================================================================================
+13. TEST INFRASTRUKTURASI
+================================================================================
+
+CONFTEST.PY FIKSTURALARI:
+  api_client()              — APIClient
+  user(db)                  — CustomUser (test@example.com / testuser)
+  another_user(db)          — Ikkinchi foydalanuvchi (izolyatsiya uchun)
+  authenticated_client()    — JWT autentifikatsiya qilingan client
+  another_authenticated_client() — Ikkinchi autentifikatsiya qilingan client
+  word_category(user)       — WordCategory (Test Category)
+  sample_word(user)         — Word (hello/salom)
+  sample_words(user)        — 5 ta so'z
+
+PYTEST SOZLAMALARI:
+  DJANGO_SETTINGS_MODULE = config.settings.test
+  Test papkalar: apps, core, tests
+  Parametrlar: -v --tb=short --strict-markers
+
+
+================================================================================
+14. DOCKER SOZLAMALARI
+================================================================================
+
+DOCKERFILE:
+  Base:    python:3.12-slim
+  Deps:    gcc, libpq-dev, curl
+  Package: poetry → poetry install
+  Entry:   entrypoint.sh (DB kutish → migrate → collectstatic)
+
+DOCKER-COMPOSE SERVICELAR:
+  db             — PostgreSQL 16 Alpine, port 5433:5432, healthcheck
+  redis          — Redis 7 Alpine, port 6379, healthcheck
+  web            — Django dev server, port 8000, depends: db+redis
+  celery_worker  — Celery worker
+  celery_beat    — Celery beat (DatabaseScheduler)
+  frontend       — Vite dev server, port 5173
+
+VOLUMES: postgres_data, redis_data, media_data
+NETWORK: wordfix-network (bridge)
+
+
+================================================================================
+15. FAYL STRUKTURASI — BACKEND
+================================================================================
+
+wordfix-backend/
+├── conftest.py              — Test fiksturalari
+├── manage.py                — Django CLI
+├── pyproject.toml           — Loyiha konfiguratsiyasi
+├── apps/
+│   ├── common/              — Umumiy yordamchi modullar
+│   │   ├── exception_handler.py
+│   │   ├── exceptions.py
+│   │   ├── models.py        — AbstractBaseModel
+│   │   ├── pagination.py
+│   │   ├── permissions.py
+│   │   ├── renderers.py
+│   │   ├── middleware/
+│   │   │   └── request_id.py
+│   │   ├── utils/
+│   │   │   └── helpers.py
+│   │   └── tests/           — 8 ta test fayl
+│   ├── users/               — Foydalanuvchilar app
+│   │   ├── models.py        — Proxy (infrastructure/models dan import)
+│   │   ├── application/
+│   │   │   └── use_cases.py — 5 ta use case
+│   │   ├── domain/
+│   │   │   ├── entities.py
+│   │   │   ├── repositories.py
+│   │   │   ├── value_objects.py
+│   │   │   └── services/    — Package
+│   │   │       ├── xp_service.py
+│   │   │       ├── badge_service.py
+│   │   │       └── notification_service.py
+│   │   ├── infrastructure/
+│   │   │   ├── models.py
+│   │   │   ├── tasks.py
+│   │   │   └── repositories/ — Package
+│   │   │       ├── user_repo.py
+│   │   │       ├── progress_repo.py
+│   │   │       ├── xp_repo.py
+│   │   │       ├── badge_repo.py
+│   │   │       └── notification_repo.py
+│   │   ├── presentation/
+│   │   │   ├── views.py
+│   │   │   ├── serializers.py
+│   │   │   ├── dependencies.py
+│   │   │   ├── urls.py
+│   │   │   ├── notification_urls.py
+│   │   │   ├── progress_dependencies.py
+│   │   │   └── progress_views.py
+│   │   └── tests/
+│   └── words/               — So'zlar app
+│       ├── models.py        — Proxy (infrastructure/models dan import)
+│       ├── application/
+│       │   └── use_cases/   — Package (9 ta fayl)
+│       │       ├── word_crud.py
+│       │       ├── enrichment.py
+│       │       ├── review.py
+│       │       ├── streak.py
+│       │       ├── testing.py
+│       │       ├── games.py
+│       │       ├── smart_import.py
+│       │       ├── chat.py
+│       │       └── analytics.py
+│       ├── domain/
+│       │   ├── entities.py
+│       │   ├── repositories.py
+│       │   ├── value_objects.py
+│       │   └── services.py
+│       ├── infrastructure/
+│       │   ├── tasks.py
+│       │   ├── models/      — Package (5 ta fayl)
+│       │   │   ├── word_models.py
+│       │   │   ├── review_models.py
+│       │   │   ├── test_models.py
+│       │   │   ├── game_models.py
+│       │   │   └── chat_models.py
+│       │   └── repositories/ — Package (5 ta fayl)
+│       │       ├── word_repo.py
+│       │       ├── review_repo.py
+│       │       ├── test_repo.py
+│       │       ├── game_repo.py
+│       │       └── chat_repo.py
+│       ├── presentation/
+│       │   ├── urls.py
+│       │   ├── review_urls.py
+│       │   ├── testing_urls.py
+│       │   ├── game_urls.py
+│       │   ├── chat_urls.py
+│       │   ├── analytics_urls.py
+│       │   ├── views/       — Package (8 ta fayl)
+│       │   ├── serializers/ — Package (6 ta fayl)
+│       │   └── dependencies/ — Package (9 ta fayl)
+│       └── tests/
+├── config/
+│   ├── urls.py
+│   ├── celery.py
+│   ├── asgi.py / wsgi.py
+│   └── settings/
+│       ├── base.py
+│       ├── development.py
+│       ├── production.py
+│       └── test.py
+├── core/
+│   ├── interfaces/
+│   │   ├── ai_provider.py
+│   │   └── tts_provider.py
+│   ├── services/
+│   │   ├── ai/
+│   │   │   ├── ai_factory.py
+│   │   │   ├── groq_provider.py
+│   │   │   ├── openai_provider.py
+│   │   │   └── prompts.py
+│   │   └── tts/
+│   │       └── google_tts.py
+│   └── tests/
+├── docker/
+│   ├── Dockerfile
+│   └── entrypoint.sh
+├── logs/
+├── media/
+├── staticfiles/
+└── tests/
+    ├── test_docker_health.py
+    └── test_settings.py
+
+================================================================================
+                         HUJJAT TUGADI
+================================================================================

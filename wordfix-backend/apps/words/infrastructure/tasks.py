@@ -146,3 +146,89 @@ def cleanup_stale_sessions_task():
         session.save()
 
     logger.info(f"Cleaned up {stale.count()} stale sessions")
+
+
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=30,
+)
+def generate_distractors_task(self, word_id: str, user_id: str):
+    """Generate smart distractors for a word. Called after enrichment."""
+    try:
+        from apps.words.presentation.dependencies import get_distractor_service
+        from uuid import UUID
+
+        service = get_distractor_service()
+        from apps.words.presentation.dependencies import get_word_repository, get_user_repository
+        word_repo = get_word_repository()
+        word = word_repo.get_by_id(word_id=UUID(word_id), user_id=UUID(user_id))
+
+        # Get user language info
+        native_lang = "Uzbek"
+        user_level = "B1"
+        try:
+            user_repo = get_user_repository()
+            from core.services.ai.prompts import NATIVE_LANGUAGE_MAP
+            user_info = user_repo.get_user_language_info(UUID(user_id))
+            native_lang = NATIVE_LANGUAGE_MAP.get(
+                user_info.get("native_language", "uz"), "Uzbek"
+            )
+            user_level = user_info.get("proficiency_level", "B1")
+        except Exception:
+            pass
+
+        service.generate_distractors(
+            word_id=UUID(word_id),
+            word=word.original_word,
+            translation=word.translation,
+            part_of_speech=word.part_of_speech,
+            synonyms=word.synonyms or [],
+            difficulty=word.difficulty_level,
+            user_id=UUID(user_id),
+            user_level=user_level,
+            native_language=native_lang,
+        )
+        logger.info(f"Generated distractors for word {word_id}")
+    except Exception as e:
+        logger.error(f"Distractor generation failed for word {word_id}: {e}")
+        try:
+            self.retry(exc=e)
+        except self.MaxRetriesExceededError:
+            logger.error(f"Max retries exceeded for distractor generation: {word_id}")
+
+
+@shared_task
+def generate_daily_challenges_task():
+    """Generate daily challenges for all active users. Run daily at 00:01."""
+    from apps.users.infrastructure.models import CustomUser, UserProgress
+    from apps.words.infrastructure.models import Word
+    from apps.words.domain.services import DailyChallengeService
+    from apps.words.infrastructure.repositories import DjangoDailyChallengeRepository
+
+    repo = DjangoDailyChallengeRepository()
+    users = CustomUser.objects.filter(is_active=True)
+    created_count = 0
+
+    for user in users:
+        try:
+            # Get user level
+            try:
+                progress = UserProgress.objects.get(user=user)
+                level = progress.level
+            except UserProgress.DoesNotExist:
+                level = 1
+
+            word_count = Word.objects.filter(user_id=user.id).count()
+            challenges = DailyChallengeService.generate_daily_challenges(level, word_count)
+
+            _, created = repo.get_or_create_today(
+                user_id=user.id,
+                challenges=challenges,
+            )
+            if created:
+                created_count += 1
+        except Exception as e:
+            logger.error(f"Failed to generate challenges for user {user.id}: {e}")
+
+    logger.info(f"Generated daily challenges for {created_count} users")

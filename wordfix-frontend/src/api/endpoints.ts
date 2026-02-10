@@ -58,6 +58,36 @@ const API_ENDPOINTS = {
     MARK_READ: '/notifications/read/',
     UNREAD_COUNT: '/notifications/unread-count/',
   },
+  IMPORT: {
+    ANALYZE: '/words/import/analyze/',
+    ADD: '/words/import/add/',
+  },
+  CHAT: {
+    START: '/chat/start/',
+    HISTORY: '/chat/history/',
+    SESSION_DETAIL: (id: string) => `/chat/sessions/${id}/`,
+    SEND_MESSAGE: (id: string) => `/chat/sessions/${id}/message/`,
+    END: (id: string) => `/chat/sessions/${id}/end/`,
+  },
+  ANALYTICS: {
+    OVERVIEW: '/analytics/overview/',
+    WEEKLY: '/analytics/weekly/',
+    MONTHLY: '/analytics/monthly/',
+    DIFFICULT_WORDS: '/analytics/difficult-words/',
+    WORD_PROGRESS: '/analytics/word-progress/',
+    CALENDAR: '/analytics/calendar/',
+  },
+  CONFUSING_PAIRS: {
+    LIST: '/words/confusing-pairs/',
+    DETAIL: (id: string) => `/words/confusing-pairs/${id}/`,
+    DRILL: (id: string) => `/words/confusing-pairs/${id}/drill/`,
+    RESOLVE: (id: string) => `/words/confusing-pairs/${id}/resolve/`,
+    COUNT: '/words/confusing-pairs/count/',
+  },
+  CHALLENGES: {
+    TODAY: '/challenges/today/',
+    CLAIM: '/challenges/claim/',
+  },
 } as const;
 
 export default API_ENDPOINTS;

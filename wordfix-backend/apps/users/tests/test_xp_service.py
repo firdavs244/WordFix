@@ -166,8 +166,14 @@ class TestXPRewards:
     """Test that XP reward constants are all positive integers."""
 
     def test_all_rewards_positive(self):
+        # combo_bonus and daily_challenge are dynamic (computed at runtime), so their
+        # base values in XP_REWARDS are 0
+        dynamic_rewards = {"combo_bonus", "daily_challenge"}
         for reason, amount in XP_REWARDS.items():
-            assert amount > 0, f"{reason} has non-positive reward: {amount}"
+            if reason in dynamic_rewards:
+                assert amount >= 0, f"{reason} has negative reward: {amount}"
+            else:
+                assert amount > 0, f"{reason} has non-positive reward: {amount}"
 
     def test_review_correct_more_than_incorrect(self):
         assert XP_REWARDS["review_correct"] > XP_REWARDS["review_incorrect"]

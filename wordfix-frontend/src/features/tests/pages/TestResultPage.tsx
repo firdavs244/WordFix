@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, BarChart3, Clock, RotateCcw, ArrowLeft, Trophy } from 'lucide-react';
+import { CheckCircle2, XCircle, BarChart3, Clock, RotateCcw, ArrowLeft, Trophy, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTransition } from '@/components/animations/PageTransition';
@@ -63,6 +63,22 @@ export function TestResultPage() {
                   <Clock className="h-4 w-4" />
                   {Math.floor(session.duration_seconds / 60)}m {session.duration_seconds % 60}s
                 </p>
+              )}
+
+              {/* Combo Stats */}
+              {session.max_combo >= 2 && (
+                <div className="flex items-center justify-center gap-4 pt-2">
+                  <div className="flex items-center gap-1.5 rounded-lg bg-orange-500/10 px-3 py-1.5">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-bold text-orange-500">Max Combo: {session.max_combo}</span>
+                  </div>
+                  {session.combo_xp_bonus > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5">
+                      <Zap className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-bold text-primary">+{session.combo_xp_bonus} XP Bonus</span>
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

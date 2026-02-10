@@ -110,6 +110,9 @@ class ReviewSessionEntity:
     duration_seconds: int = 0
     session_type: str = "review"
     is_completed: bool = False
+    current_combo: int = 0
+    max_combo: int = 0
+    combo_xp_bonus: int = 0
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -188,6 +191,9 @@ class TestSessionEntity:
     completed_at: datetime | None = None
     duration_seconds: int = 0
     is_completed: bool = False
+    current_combo: int = 0
+    max_combo: int = 0
+    combo_xp_bonus: int = 0
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -231,6 +237,88 @@ class GameSessionEntity:
     is_completed: bool = False
     level: int = 1
     xp_earned: int = 0
+    current_combo: int = 0
+    max_combo: int = 0
+    combo_xp_bonus: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class ChatSessionEntity:
+    """Chat session entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    user_id: UUID = field(default_factory=uuid4)
+    topic: str = ""
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    message_count: int = 0
+    target_words: list = field(default_factory=list)
+    words_practiced: list = field(default_factory=list)
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class ChatMessageEntity:
+    """Chat message entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    session_id: UUID = field(default_factory=uuid4)
+    role: str = "user"
+    content: str = ""
+    corrections: list = field(default_factory=list)
+    words_used: list = field(default_factory=list)
+    order: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class ConfusingPairEntity:
+    """Confusing pair entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    user_id: UUID = field(default_factory=uuid4)
+    word_1_id: UUID = field(default_factory=uuid4)
+    word_2_id: UUID = field(default_factory=uuid4)
+    confusion_count: int = 1
+    last_confused_at: datetime | None = None
+    is_resolved: bool = False
+    drill_data: dict = field(default_factory=dict)
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class DailyChallengeEntity:
+    """Daily challenge entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    user_id: UUID = field(default_factory=uuid4)
+    date: datetime | None = None
+    challenges: list = field(default_factory=list)
+    all_completed: bool = False
+    bonus_claimed: bool = False
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class WordDistractorEntity:
+    """Word distractor entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    word_id: UUID = field(default_factory=uuid4)
+    distractors: list = field(default_factory=list)
+    language: str = "uz"
+    generated_by: str = "ai"
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None

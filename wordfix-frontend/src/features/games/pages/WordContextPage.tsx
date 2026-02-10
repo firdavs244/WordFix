@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { useStartWordContext, useSubmitWordContext } from '../hooks/useGames';
+import { ComboIndicator } from '@/features/review/components';
 import type { WordContextQuestion, WordContextAnswer } from '@/types';
 
 export function WordContextPage() {
@@ -22,6 +23,7 @@ export function WordContextPage() {
   const [userAnswer, setUserAnswer] = useState('');
   const [answers, setAnswers] = useState<WordContextAnswer[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [combo, setCombo] = useState(0);
 
   const currentQ = questions[currentIndex];
   const progress = questions.length > 0 ? ((currentIndex + (feedback ? 1 : 0)) / questions.length) * 100 : 0;
@@ -38,12 +40,19 @@ export function WordContextPage() {
 
   const handleSubmit = () => {
     if (!currentQ || !userAnswer.trim()) return;
+    const isCorrectGuess = userAnswer.trim().toLowerCase() === currentQ.correct_answer.toLowerCase();
     const answer: WordContextAnswer = {
       word_id: currentQ.word_id,
       selected_answer: userAnswer.trim(),
     };
     const newAnswers = [...answers, answer];
     setAnswers(newAnswers);
+
+    if (isCorrectGuess) {
+      setCombo((c) => c + 1);
+    } else {
+      setCombo(0);
+    }
 
     // Show instant feedback
     setFeedback(currentQ.word_id);
@@ -63,6 +72,8 @@ export function WordContextPage() {
                 xp_earned: res.data.xp_earned,
                 correct_answers: res.data.correct_answers,
                 total_questions: res.data.total_questions,
+                max_combo: res.data.max_combo,
+                combo_xp_bonus: res.data.combo_xp_bonus,
               },
             });
           },
@@ -108,6 +119,11 @@ export function WordContextPage() {
             <span>Question {currentIndex + 1} of {questions.length}</span>
           </div>
           <Progress value={progress} className="h-2" />
+        </div>
+
+        {/* Combo Indicator */}
+        <div className="flex justify-center">
+          <ComboIndicator combo={combo} multiplier={combo >= 20 ? 5 : combo >= 10 ? 3 : combo >= 5 ? 2 : combo >= 2 ? 1.5 : 1} isActive={combo >= 2} />
         </div>
 
         {currentQ && (
