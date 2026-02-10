@@ -69,11 +69,21 @@ export function ChatSessionPage() {
     try {
       const result = await chatApi.sendMessage(sessionId, { message: userMsg });
       const data = result.data;
-      // Replace temp with real messages
+      // Keep user message (update id) and build AI message from response
+      const aiMsg: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        session_id: sessionId,
+        role: 'assistant',
+        content: data.ai_message ?? '',
+        corrections: data.corrections || [],
+        words_used: data.words_used || [],
+        order: messages.length + 1,
+        created_at: new Date().toISOString(),
+      };
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== tempUserMsg.id),
-        data.user_message,
-        data.assistant_message,
+        { ...tempUserMsg, id: `user-${Date.now()}` },
+        aiMsg,
       ]);
     } catch {
       // Remove temp message on error

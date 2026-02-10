@@ -35,9 +35,15 @@ export interface StartChatRequest {
 }
 
 export interface StartChatResponse {
-  session: ChatSession;
-  first_message: ChatMessage;
+  session_id: string;
+  topic: string;
   target_words: string[];
+  first_message: {
+    role: string;
+    content: string;
+    corrections: ChatCorrection[];
+    words_used: string[];
+  };
 }
 
 export interface SendMessageRequest {
@@ -45,11 +51,11 @@ export interface SendMessageRequest {
 }
 
 export interface SendMessageResponse {
-  user_message: ChatMessage;
-  assistant_message: ChatMessage;
+  ai_message: string;
   corrections: ChatCorrection[];
   words_used: string[];
   encouragement: string;
+  xp_earned: number;
 }
 
 export interface ChatSessionListResponse {

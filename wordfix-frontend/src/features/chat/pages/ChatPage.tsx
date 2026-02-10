@@ -27,7 +27,7 @@ export function ChatPage() {
     const result = await startChat.mutateAsync({
       topic: selectedTopic || topic || undefined,
     });
-    navigate(`/chat/session/${result.data.session.id}`);
+    navigate(`/chat/session/${result.data.session_id}`);
   };
 
   const recentSessions: ChatSession[] = historyData?.data || [];
