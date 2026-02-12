@@ -1,5 +1,5 @@
 """
-Game views — speed round, word match, word context games.
+Game views — speed round, word match, word context, story builder, listening challenge.
 """
 
 from rest_framework import status
@@ -17,6 +17,12 @@ from ..dependencies import (
     get_submit_word_context_use_case,
     get_game_history_use_case,
     get_game_stats_use_case,
+    get_story_builder_start_use_case,
+    get_story_builder_submit_use_case,
+    get_story_builder_complete_use_case,
+    get_listening_start_use_case,
+    get_listening_answer_use_case,
+    get_listening_complete_use_case,
 )
 from ..serializers import (
     GameSessionSerializer,
@@ -24,6 +30,11 @@ from ..serializers import (
     SpeedRoundSubmitSerializer,
     WordContextSubmitSerializer,
     WordMatchSubmitSerializer,
+    StoryBuilderStartSerializer,
+    StoryRoundSubmitSerializer,
+    StoryBuilderCompleteSerializer,
+    ListeningAnswerSerializer,
+    ListeningCompleteSerializer,
 )
 from .word_views import (
     _award_xp,
@@ -233,3 +244,150 @@ class GameStatsView(APIView):
         stats = use_case.execute(user_id=request.user.id)
 
         return Response(build_success_response(data=stats))
+
+
+# =============================================================================
+# Story Builder Views
+# =============================================================================
+
+
+class StoryBuilderStartView(APIView):
+    """POST /api/v1/games/story-builder/start/ — Start Story Builder."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = StoryBuilderStartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_story_builder_start_use_case()
+        result = use_case.execute(
+            user_id=request.user.id,
+            genre=serializer.validated_data.get("genre", ""),
+        )
+
+        _increment_progress(request.user.id, games_played=1)
+
+        return Response(
+            build_success_response(data=result, message="Story Builder started!"),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class StoryBuilderSubmitView(APIView):
+    """POST /api/v1/games/story-builder/submit/ — Submit story round."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = StoryRoundSubmitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_story_builder_submit_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+            user_text=serializer.validated_data["user_text"],
+        )
+
+        return Response(
+            build_success_response(data=result, message="Round submitted!"),
+        )
+
+
+class StoryBuilderCompleteView(APIView):
+    """POST /api/v1/games/story-builder/complete/ — Complete Story Builder."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = StoryBuilderCompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_story_builder_complete_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+        )
+
+        new_badges = _check_badges(request.user.id)
+        if new_badges:
+            result["new_badges"] = [
+                {"code": b.code, "name": b.name, "icon": b.icon}
+                for b in new_badges
+            ]
+
+        return Response(
+            build_success_response(data=result, message="Story Builder completed!"),
+        )
+
+
+# =============================================================================
+# Listening Challenge Views
+# =============================================================================
+
+
+class ListeningStartView(APIView):
+    """POST /api/v1/games/listening/start/ — Start Listening Challenge."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        use_case = get_listening_start_use_case()
+        result = use_case.execute(user_id=request.user.id)
+
+        _increment_progress(request.user.id, games_played=1)
+
+        return Response(
+            build_success_response(data=result, message="Listening Challenge started!"),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ListeningAnswerView(APIView):
+    """POST /api/v1/games/listening/answer/ — Submit listening answer."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = ListeningAnswerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_listening_answer_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+            round_number=serializer.validated_data["round_number"],
+            answer=serializer.validated_data["answer"],
+        )
+
+        return Response(
+            build_success_response(data=result, message="Answer submitted!"),
+        )
+
+
+class ListeningCompleteView(APIView):
+    """POST /api/v1/games/listening/complete/ — Complete Listening Challenge."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = ListeningCompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_listening_complete_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+        )
+
+        new_badges = _check_badges(request.user.id)
+        if new_badges:
+            result["new_badges"] = [
+                {"code": b.code, "name": b.name, "icon": b.icon}
+                for b in new_badges
+            ]
+
+        return Response(
+            build_success_response(data=result, message="Listening Challenge completed!"),
+        )

@@ -214,3 +214,77 @@ class TestCreateBadgesCommand:
         call_command("create_badges")
         call_command("create_badges")
         assert Badge.objects.count() == len(BADGE_DEFINITIONS)
+
+
+# =============================================================================
+# NEW GAME BADGE TESTS
+# =============================================================================
+
+
+@pytest.mark.django_db
+class TestNewGameBadges:
+    """Tests for Story Builder, Listening Challenge, and Game Variety badges."""
+
+    def test_storyteller_badge(self, user, badge_service):
+        """Storyteller badge awarded for 5+ story builder games."""
+        p, _ = UserProgress.objects.get_or_create(user=user)
+        p.save()
+
+        new_badges = badge_service.check_and_award_badges(
+            user.id, context={"story_builder_count": 5}
+        )
+        codes = [b.code for b in new_badges]
+        assert "storyteller" in codes
+
+    def test_story_master_badge(self, user, badge_service):
+        """Story master badge awarded for 90+ score."""
+        p, _ = UserProgress.objects.get_or_create(user=user)
+        p.save()
+
+        new_badges = badge_service.check_and_award_badges(
+            user.id, context={"story_builder_score": 95}
+        )
+        codes = [b.code for b in new_badges]
+        assert "story_master" in codes
+
+    def test_sharp_ears_badge(self, user, badge_service):
+        """Sharp ears badge for 10+ listening challenges."""
+        p, _ = UserProgress.objects.get_or_create(user=user)
+        p.save()
+
+        new_badges = badge_service.check_and_award_badges(
+            user.id, context={"listening_challenge_count": 10}
+        )
+        codes = [b.code for b in new_badges]
+        assert "sharp_ears" in codes
+
+    def test_perfect_hearing_badge(self, user, badge_service):
+        """Perfect hearing badge for 100% listening accuracy."""
+        p, _ = UserProgress.objects.get_or_create(user=user)
+        p.save()
+
+        new_badges = badge_service.check_and_award_badges(
+            user.id, context={"listening_accuracy": 100}
+        )
+        codes = [b.code for b in new_badges]
+        assert "perfect_hearing" in codes
+
+    def test_five_games_badge(self, user, badge_service):
+        """Five games badge for playing all 5 game types."""
+        p, _ = UserProgress.objects.get_or_create(user=user)
+        p.save()
+
+        new_badges = badge_service.check_and_award_badges(
+            user.id, context={"unique_game_types": 5}
+        )
+        codes = [b.code for b in new_badges]
+        assert "five_games" in codes
+
+    def test_new_badges_in_definitions(self):
+        """All new badges are present in BADGE_DEFINITIONS."""
+        codes = {b["code"] for b in BADGE_DEFINITIONS}
+        assert "storyteller" in codes
+        assert "story_master" in codes
+        assert "sharp_ears" in codes
+        assert "perfect_hearing" in codes
+        assert "five_games" in codes

@@ -26,7 +26,10 @@ def get_review_words_use_case() -> GetReviewWordsUseCase:
 
 
 def get_start_session_use_case() -> StartReviewSessionUseCase:
-    return StartReviewSessionUseCase(session_repo=get_session_repository())
+    return StartReviewSessionUseCase(
+        session_repo=get_session_repository(),
+        word_repo=get_word_repository(),
+    )
 
 
 def get_submit_answer_use_case() -> SubmitReviewAnswerUseCase:

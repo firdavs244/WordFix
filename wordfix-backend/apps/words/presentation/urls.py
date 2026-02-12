@@ -9,6 +9,7 @@ from .views import (
     CSVImportView,
     CSVValidateView,
     EnrichAllView,
+    EnrichmentRetryView,
     EnrichmentStatusView,
     EnrichWordView,
     ImportAddWordsView,
@@ -36,6 +37,7 @@ urlpatterns = [
     path("<uuid:word_id>/", WordDetailView.as_view(), name="word-detail"),
     path("<uuid:word_id>/enrich/", EnrichWordView.as_view(), name="word-enrich"),
     path("<uuid:word_id>/enrichment-status/", EnrichmentStatusView.as_view(), name="word-enrichment-status"),
+    path("<uuid:word_id>/enrichment-retry/", EnrichmentRetryView.as_view(), name="word-enrichment-retry"),
     path("categories/", WordCategoryListCreateView.as_view(), name="category-list-create"),
     path("categories/<uuid:category_id>/", WordCategoryDeleteView.as_view(), name="category-delete"),
 ]

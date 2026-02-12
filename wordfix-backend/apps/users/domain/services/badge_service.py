@@ -61,6 +61,19 @@ BADGE_DEFINITIONS = [
      "icon": "calendar-check", "category": "challenge", "xp_reward": 75, "rarity": "rare"},
     {"code": "daily_champion_30", "name": "Monthly Challenger", "description": "Complete all daily challenges 30 days in a row",
      "icon": "calendar-check", "category": "challenge", "xp_reward": 300, "rarity": "legendary"},
+    # Story Builder badges
+    {"code": "storyteller", "name": "Storyteller", "description": "Play Story Builder 5 times",
+     "icon": "book-open-text", "category": "game", "xp_reward": 50, "rarity": "rare"},
+    {"code": "story_master", "name": "Story Master", "description": "Score 90+ in Story Builder",
+     "icon": "feather", "category": "game", "xp_reward": 100, "rarity": "epic"},
+    # Listening Challenge badges
+    {"code": "sharp_ears", "name": "Sharp Ears", "description": "Play Listening Challenge 10 times",
+     "icon": "ear", "category": "game", "xp_reward": 50, "rarity": "rare"},
+    {"code": "perfect_hearing", "name": "Perfect Hearing", "description": "Get 100% in Listening Challenge",
+     "icon": "headphones", "category": "game", "xp_reward": 100, "rarity": "epic"},
+    # Game variety badge
+    {"code": "five_games", "name": "Game Variety", "description": "Play all 5 game types",
+     "icon": "dices", "category": "game", "xp_reward": 50, "rarity": "rare"},
 ]
 
 
@@ -112,6 +125,14 @@ class BadgeService:
             # Daily challenge badges
             "daily_champion_7": context.get("consecutive_challenge_days", 0) >= 7,
             "daily_champion_30": context.get("consecutive_challenge_days", 0) >= 30,
+            # Story Builder badges
+            "storyteller": context.get("story_builder_count", 0) >= 5,
+            "story_master": context.get("story_builder_score", 0) >= 90,
+            # Listening Challenge badges
+            "sharp_ears": context.get("listening_challenge_count", 0) >= 10,
+            "perfect_hearing": context.get("listening_accuracy", 0) >= 100,
+            # Game variety badge
+            "five_games": context.get("unique_game_types", 0) >= 5,
         }
 
         for code, condition in checks.items():

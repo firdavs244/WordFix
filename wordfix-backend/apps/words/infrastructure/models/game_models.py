@@ -1,5 +1,5 @@
 """
-GameSession Django ORM model.
+GameSession, StoryRound, ListeningRound Django ORM models.
 """
 
 from django.conf import settings
@@ -15,6 +15,8 @@ class GameSession(AbstractBaseModel):
         ("speed_round", "Speed Round"),
         ("word_match", "Word Match"),
         ("word_context", "Word Context"),
+        ("story_builder", "Story Builder"),
+        ("listening_challenge", "Listening Challenge"),
     ]
 
     user = models.ForeignKey(
@@ -22,7 +24,7 @@ class GameSession(AbstractBaseModel):
         on_delete=models.CASCADE,
         related_name="game_sessions",
     )
-    game_type = models.CharField(max_length=15, choices=GAME_TYPE_CHOICES)
+    game_type = models.CharField(max_length=20, choices=GAME_TYPE_CHOICES)
     score = models.PositiveIntegerField(default=0)
     max_score = models.PositiveIntegerField(default=0)
     correct_answers = models.PositiveIntegerField(default=0)
@@ -45,3 +47,63 @@ class GameSession(AbstractBaseModel):
 
     def __str__(self) -> str:
         return f"Game {self.game_type} by user {self.user_id}"
+
+
+class StoryRound(AbstractBaseModel):
+    """A single round in a Story Builder game."""
+
+    session = models.ForeignKey(
+        GameSession,
+        on_delete=models.CASCADE,
+        related_name="story_rounds",
+    )
+    round_number = models.PositiveIntegerField()
+    ai_text = models.TextField()
+    user_text = models.TextField(blank=True, default="")
+    target_words = models.JSONField(default=list)
+    words_used = models.JSONField(default=list)
+    grammar_corrections = models.JSONField(default=list)
+    is_correct_usage = models.BooleanField(default=False)
+    score = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "story_rounds"
+        ordering = ["round_number"]
+        unique_together = ["session", "round_number"]
+        verbose_name = "Story Round"
+        verbose_name_plural = "Story Rounds"
+
+    def __str__(self) -> str:
+        return f"StoryRound {self.round_number} for session {self.session_id}"
+
+
+class ListeningRound(AbstractBaseModel):
+    """A single round in a Listening Challenge game."""
+
+    session = models.ForeignKey(
+        GameSession,
+        on_delete=models.CASCADE,
+        related_name="listening_rounds",
+    )
+    word = models.ForeignKey(
+        "words.Word",
+        on_delete=models.CASCADE,
+    )
+    round_number = models.PositiveIntegerField()
+    correct_answer = models.CharField(max_length=100)
+    user_answers = models.JSONField(default=list)
+    attempts_used = models.PositiveIntegerField(default=0)
+    max_attempts = models.PositiveIntegerField(default=3)
+    is_correct = models.BooleanField(default=False)
+    hints_shown = models.JSONField(default=list)
+    score = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "listening_rounds"
+        ordering = ["round_number"]
+        unique_together = ["session", "round_number"]
+        verbose_name = "Listening Round"
+        verbose_name_plural = "Listening Rounds"
+
+    def __str__(self) -> str:
+        return f"ListeningRound {self.round_number} for session {self.session_id}"

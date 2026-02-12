@@ -322,3 +322,42 @@ class WordDistractorEntity:
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+@dataclass
+class StoryRoundEntity:
+    """Story round entity for Story Builder game."""
+
+    id: UUID = field(default_factory=uuid4)
+    session_id: UUID = field(default_factory=uuid4)
+    round_number: int = 1
+    ai_text: str = ""
+    user_text: str = ""
+    target_words: list = field(default_factory=list)
+    words_used: list = field(default_factory=list)
+    grammar_corrections: list = field(default_factory=list)
+    is_correct_usage: bool = False
+    score: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class ListeningRoundEntity:
+    """Listening round entity for Listening Challenge game."""
+
+    id: UUID = field(default_factory=uuid4)
+    session_id: UUID = field(default_factory=uuid4)
+    word_id: UUID = field(default_factory=uuid4)
+    round_number: int = 1
+    correct_answer: str = ""
+    user_answers: list = field(default_factory=list)
+    attempts_used: int = 0
+    max_attempts: int = 3
+    is_correct: bool = False
+    hints_shown: list = field(default_factory=list)
+    score: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

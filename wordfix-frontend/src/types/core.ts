@@ -15,7 +15,7 @@ export type EnrichmentStatus = 'pending' | 'processing' | 'enriched' | 'failed';
 export type TestType = 'multiple_choice' | 'fill_blank' | 'context_guess' | 'mixed';
 export type TestDifficulty = 'easy' | 'medium' | 'hard' | 'adaptive';
 
-export type GameType = 'speed_round' | 'word_match' | 'word_context';
+export type GameType = 'speed_round' | 'word_match' | 'word_context' | 'story_builder' | 'listening_challenge';
 
 export type BadgeRarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type BadgeCategory = 'words' | 'streak' | 'review' | 'test' | 'game' | 'mastery' | 'level';

@@ -125,27 +125,49 @@ def update_streaks_task():
 @shared_task
 def cleanup_stale_sessions_task():
     """Complete sessions that have been open for more than 2 hours.
-    
+
     Scheduled via Celery Beat (hourly).
     """
     from django.utils import timezone
     from datetime import timedelta
-    from apps.words.infrastructure.models import ReviewSession
+    from apps.words.infrastructure.models import ReviewSession, GameSession
 
     cutoff = timezone.now() - timedelta(hours=2)
-    stale = ReviewSession.objects.filter(
+
+    # Clean up stale review sessions
+    stale_reviews = ReviewSession.objects.filter(
         is_completed=False,
         started_at__lt=cutoff,
     )
 
-    for session in stale:
+    review_count = 0
+    for session in stale_reviews:
         duration = int((timezone.now() - session.started_at).total_seconds())
         session.is_completed = True
         session.completed_at = timezone.now()
         session.duration_seconds = duration
         session.save()
+        review_count += 1
 
-    logger.info(f"Cleaned up {stale.count()} stale sessions")
+    # Clean up stale game sessions (1 hour for games)
+    game_cutoff = timezone.now() - timedelta(hours=1)
+    stale_games = GameSession.objects.filter(
+        is_completed=False,
+        started_at__lt=game_cutoff,
+    )
+
+    game_count = 0
+    for session in stale_games:
+        session.is_completed = True
+        session.completed_at = timezone.now()
+        session.score = 0
+        session.save()
+        game_count += 1
+
+    logger.info(
+        f"Cleaned up {review_count} stale review sessions, "
+        f"{game_count} stale game sessions"
+    )
 
 
 @shared_task(

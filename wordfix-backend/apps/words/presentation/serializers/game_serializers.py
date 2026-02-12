@@ -83,3 +83,93 @@ class GameStatsSerializer(serializers.Serializer):
     total_xp = serializers.IntegerField()
     favorite_game = serializers.CharField(allow_null=True)
     by_type = serializers.DictField()
+
+
+# =============================================================================
+# Story Builder serializers
+# =============================================================================
+
+
+class StoryBuilderStartSerializer(serializers.Serializer):
+    """Request serializer for starting story builder."""
+    genre = serializers.CharField(required=False, default="", allow_blank=True)
+
+
+class StoryBuilderStartResponseSerializer(serializers.Serializer):
+    """Response serializer for story builder start."""
+    session_id = serializers.UUIDField()
+    genre = serializers.CharField()
+    ai_text = serializers.CharField()
+    target_words = serializers.ListField(child=serializers.CharField())
+    total_rounds = serializers.IntegerField()
+    current_round = serializers.IntegerField()
+    all_target_words = serializers.ListField(child=serializers.CharField())
+
+
+class StoryRoundSubmitSerializer(serializers.Serializer):
+    """Request serializer for submitting a story round."""
+    session_id = serializers.UUIDField()
+    user_text = serializers.CharField(min_length=10, max_length=500)
+
+
+class StoryRoundResultSerializer(serializers.Serializer):
+    """Response serializer for story round result."""
+    round_result = serializers.DictField()
+    next_round = serializers.DictField(allow_null=True)
+    session_stats = serializers.DictField()
+    combo = serializers.IntegerField()
+    multiplier = serializers.FloatField()
+    xp_earned = serializers.IntegerField()
+
+
+class StoryBuilderCompleteSerializer(serializers.Serializer):
+    """Request serializer for completing story builder."""
+    session_id = serializers.UUIDField()
+
+
+class StoryBuilderCompleteResponseSerializer(serializers.Serializer):
+    """Response serializer for story builder completion."""
+    total_score = serializers.IntegerField()
+    max_score = serializers.IntegerField()
+    rounds = serializers.ListField()
+    full_story = serializers.CharField()
+    xp_earned = serializers.IntegerField()
+
+
+# =============================================================================
+# Listening Challenge serializers
+# =============================================================================
+
+
+class ListeningStartResponseSerializer(serializers.Serializer):
+    """Response serializer for listening challenge start."""
+    session_id = serializers.UUIDField()
+    total_rounds = serializers.IntegerField()
+    current_round = serializers.IntegerField()
+    first_word = serializers.DictField()
+
+
+class ListeningAnswerSerializer(serializers.Serializer):
+    """Request serializer for submitting a listening answer."""
+    session_id = serializers.UUIDField()
+    round_number = serializers.IntegerField(min_value=1)
+    answer = serializers.CharField(max_length=100)
+
+
+class ListeningAnswerResultSerializer(serializers.Serializer):
+    """Response serializer for listening answer result."""
+    is_correct = serializers.BooleanField()
+    score = serializers.IntegerField()
+    attempts_used = serializers.IntegerField()
+    attempts_remaining = serializers.IntegerField()
+    hint = serializers.CharField(allow_blank=True)
+    correct_answer = serializers.CharField(allow_blank=True)
+    next_round = serializers.DictField(allow_null=True)
+    combo = serializers.IntegerField()
+    multiplier = serializers.FloatField()
+    xp_earned = serializers.IntegerField()
+
+
+class ListeningCompleteSerializer(serializers.Serializer):
+    """Request serializer for completing listening challenge."""
+    session_id = serializers.UUIDField()

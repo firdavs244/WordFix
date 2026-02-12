@@ -16,6 +16,12 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # Auto-discover tasks in all installed apps
 app.autodiscover_tasks()
 
+# Also discover tasks in infrastructure sub-packages (Clean Architecture layout)
+app.autodiscover_tasks([
+    "apps.words.infrastructure",
+    "apps.users.infrastructure",
+])
+
 
 # Celery Beat schedule
 app.conf.beat_schedule = {

@@ -4,6 +4,7 @@ Word & WordCategory repository implementations using Django ORM.
 
 from uuid import UUID
 
+from django.core.cache import cache
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 
@@ -24,6 +25,15 @@ from apps.words.infrastructure.models import (
 
 class DjangoWordRepository(AbstractWordRepository):
     """Concrete implementation of AbstractWordRepository."""
+
+    @staticmethod
+    def _invalidate_user_cache(user_id: UUID):
+        """Invalidate all cached analytics data for this user."""
+        cache.delete(f"word_count_{user_id}")
+        cache.delete(f"word_stats_{user_id}")
+        cache.delete(f"analytics_overview_{user_id}")
+        cache.delete(f"weekly_stats_{user_id}")
+        cache.delete(f"word_progress_{user_id}")
 
     def _to_entity(self, word: Word) -> WordEntity:
         """Convert Word model to WordEntity."""
@@ -138,6 +148,7 @@ class DjangoWordRepository(AbstractWordRepository):
         kwargs["original_word"] = original_word
         word = Word.objects.create(user_id=user_id, **kwargs)
         word = Word.objects.select_related("category").get(id=word.id)
+        self._invalidate_user_cache(user_id)
         return self._to_entity(word)
 
     def update(self, word_id: UUID, user_id: UUID, **kwargs) -> WordEntity:
@@ -150,6 +161,7 @@ class DjangoWordRepository(AbstractWordRepository):
             setattr(word, field, value)
         word.save()
         word = Word.objects.select_related("category").get(id=word.id)
+        self._invalidate_user_cache(user_id)
         return self._to_entity(word)
 
     def delete(self, word_id: UUID, user_id: UUID) -> None:
@@ -158,6 +170,7 @@ class DjangoWordRepository(AbstractWordRepository):
         except Word.DoesNotExist:
             raise EntityNotFoundError("Word not found.")
         word.delete()
+        self._invalidate_user_cache(user_id)
 
     def exists(self, original_word: str, user_id: UUID) -> bool:
         return Word.objects.filter(
@@ -165,7 +178,13 @@ class DjangoWordRepository(AbstractWordRepository):
         ).exists()
 
     def get_count_by_user(self, user_id: UUID) -> int:
-        return Word.objects.filter(user_id=user_id).count()
+        cache_key = f"word_count_{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        count = Word.objects.filter(user_id=user_id).count()
+        cache.set(cache_key, count, timeout=120)  # 2 min
+        return count
 
     def search(
         self, user_id: UUID, query: str, page: int = 1, page_size: int = 20,
@@ -312,6 +331,11 @@ class DjangoWordRepository(AbstractWordRepository):
         return {"created": created, "skipped": skipped, "errors": errors}
 
     def get_stats(self, user_id: UUID) -> dict:
+        cache_key = f"word_stats_{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         qs = Word.objects.filter(user_id=user_id)
         total = qs.count()
         if total == 0:
@@ -350,7 +374,7 @@ class DjangoWordRepository(AbstractWordRepository):
 
         avg_confidence = qs.aggregate(avg=Avg("confidence_score"))["avg"] or 0
 
-        return {
+        result = {
             "total": total,
             "mastered": mastered,
             "learning": learning,
@@ -359,6 +383,9 @@ class DjangoWordRepository(AbstractWordRepository):
             "by_category": by_category_formatted,
             "average_confidence": round(avg_confidence, 1),
         }
+
+        cache.set(cache_key, result, timeout=300)  # 5 min
+        return result
 
 
 class DjangoWordCategoryRepository(AbstractWordCategoryRepository):

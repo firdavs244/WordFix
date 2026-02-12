@@ -78,6 +78,16 @@ const GameResultPage = lazy(() =>
     default: m.GameResultPage,
   })),
 );
+const StoryBuilderPage = lazy(() =>
+  import('@/features/games/pages/StoryBuilderPage').then((m) => ({
+    default: m.StoryBuilderPage,
+  })),
+);
+const ListeningPage = lazy(() =>
+  import('@/features/games/pages/ListeningPage').then((m) => ({
+    default: m.ListeningPage,
+  })),
+);
 const BadgesPage = lazy(() =>
   import('@/features/progress/pages/BadgesPage').then((m) => ({
     default: m.BadgesPage,
@@ -216,6 +226,8 @@ export function AppRoutes() {
           <Route path="/games/speed-round" element={<SpeedRoundPage />} />
           <Route path="/games/word-match" element={<WordMatchPage />} />
           <Route path="/games/word-context" element={<WordContextPage />} />
+          <Route path="/games/story-builder" element={<StoryBuilderPage />} />
+          <Route path="/games/listening" element={<ListeningPage />} />
           <Route path="/games/result/:sessionId" element={<GameResultPage />} />
           <Route path="/badges" element={<BadgesPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />

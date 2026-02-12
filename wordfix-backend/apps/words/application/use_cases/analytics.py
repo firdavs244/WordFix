@@ -7,6 +7,8 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
+from django.core.cache import cache
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +23,12 @@ class GetAnalyticsOverviewUseCase:
 
     def execute(self, user_id) -> dict:
         user_id = UUID(str(user_id))
+
+        # Check cache (5 min TTL)
+        cache_key = f"analytics_overview_{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         # Word stats
         stats = self.word_repo.get_stats(user_id)
@@ -71,7 +79,7 @@ class GetAnalyticsOverviewUseCase:
         avg_daily_words = round(total_words / member_since_days, 1)
         avg_daily_time = round(total_study_time / member_since_days)
 
-        return {
+        result = {
             "total_words": total_words,
             "mastered_words": mastered_words,
             "mastered_percentage": mastered_pct,
@@ -90,6 +98,9 @@ class GetAnalyticsOverviewUseCase:
             "member_since_days": member_since_days,
         }
 
+        cache.set(cache_key, result, timeout=300)  # 5 min
+        return result
+
 
 class GetWeeklyStatsUseCase:
     """Get weekly stats (last 7 days)."""
@@ -99,6 +110,13 @@ class GetWeeklyStatsUseCase:
 
     def execute(self, user_id) -> list[dict]:
         user_id = UUID(str(user_id))
+
+        # Check cache (10 min TTL)
+        cache_key = f"weekly_stats_{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         today = date.today()
         start_date = today - timedelta(days=6)
 
@@ -120,6 +138,7 @@ class GetWeeklyStatsUseCase:
                 "goal_completed": activity.goal_completed if activity else False,
             })
 
+        cache.set(cache_key, result, timeout=600)  # 10 min
         return result
 
 
@@ -196,6 +215,13 @@ class GetWordProgressUseCase:
 
     def execute(self, user_id) -> dict:
         user_id = UUID(str(user_id))
+
+        # Check cache (5 min TTL)
+        cache_key = f"word_progress_{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         words, _ = self.word_repo.get_all_by_user(
             user_id=user_id, page=1, page_size=10000,
         )
@@ -251,13 +277,16 @@ class GetWordProgressUseCase:
             for w in reviewed[:5]
         ]
 
-        return {
+        result = {
             "by_confidence": by_confidence,
             "by_difficulty": by_difficulty,
             "by_category": by_category,
             "recently_mastered": recently_mastered,
             "needs_attention": needs_attention,
         }
+
+        cache.set(cache_key, result, timeout=300)  # 5 min
+        return result
 
 
 class GetStudyCalendarUseCase:

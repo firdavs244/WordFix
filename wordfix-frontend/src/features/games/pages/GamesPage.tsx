@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Zap, Shuffle, BookOpen, History, TrendingUp } from 'lucide-react';
+import { Zap, Shuffle, BookOpen, History, TrendingUp, Headphones, PenTool } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTransition } from '@/components/animations/PageTransition';
@@ -15,6 +15,7 @@ const GAMES = [
     color: 'text-yellow-500',
     bg: 'bg-yellow-500/10',
     path: '/games/speed-round',
+    bestLabel: (s: any) => s ? `Best: ${s.best_score}` : null,
   },
   {
     key: 'word_match',
@@ -24,6 +25,7 @@ const GAMES = [
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     path: '/games/word-match',
+    bestLabel: (s: any) => s ? `Best: ${s.best_score}` : null,
   },
   {
     key: 'word_context',
@@ -33,6 +35,27 @@ const GAMES = [
     color: 'text-purple-500',
     bg: 'bg-purple-500/10',
     path: '/games/word-context',
+    bestLabel: (s: any) => s ? `Best: ${s.best_score}` : null,
+  },
+  {
+    key: 'story_builder',
+    title: 'Story Builder',
+    description: 'Write a story using your words.',
+    icon: PenTool,
+    color: 'text-violet-500',
+    bg: 'bg-violet-500/10',
+    path: '/games/story-builder',
+    bestLabel: (s: any) => s ? `Best: ${s.best_score}/100` : null,
+  },
+  {
+    key: 'listening_challenge',
+    title: 'Listening Challenge',
+    description: 'Listen and type the word you hear.',
+    icon: Headphones,
+    color: 'text-teal-500',
+    bg: 'bg-teal-500/10',
+    path: '/games/listening',
+    bestLabel: (s: any) => s ? `Best: ${s.best_score}%` : null,
   },
 ] as const;
 
@@ -53,29 +76,37 @@ export function GamesPage() {
         </div>
 
         {/* Game Cards */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          {GAMES.map((game, i) => (
-            <motion.div
-              key={game.key}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Card
-                className="cursor-pointer border-border/50 transition-all hover:shadow-md hover:-translate-y-1"
-                onClick={() => navigate(game.path)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {GAMES.map((game, i) => {
+            const gameStat = stats?.by_type?.[game.key];
+            return (
+              <motion.div
+                key={game.key}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
               >
-                <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-                  <div className={`rounded-xl p-3 ${game.bg}`}>
-                    <game.icon className={`h-8 w-8 ${game.color}`} />
-                  </div>
-                  <h3 className="font-semibold">{game.title}</h3>
-                  <p className="text-sm text-muted-foreground">{game.description}</p>
-                  <Button size="sm" className="mt-2 w-full">Play</Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                <Card
+                  className="cursor-pointer border-border/50 transition-all hover:shadow-md hover:-translate-y-1 hover:scale-[1.03]"
+                  onClick={() => navigate(game.path)}
+                >
+                  <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+                    <div className={`rounded-xl p-3 ${game.bg}`}>
+                      <game.icon className={`h-8 w-8 ${game.color}`} />
+                    </div>
+                    <h3 className="font-semibold">{game.title}</h3>
+                    <p className="text-sm text-muted-foreground">{game.description}</p>
+                    {gameStat && gameStat.games_played > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {game.bestLabel(gameStat)}
+                      </p>
+                    )}
+                    <Button size="sm" className="mt-2 w-full">Play</Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Stats */}
@@ -87,7 +118,7 @@ export function GamesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 {GAMES.map((game) => {
                   const s = stats.by_type?.[game.key];
                   if (!s || s.games_played === 0) return (

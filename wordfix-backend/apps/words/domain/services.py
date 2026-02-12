@@ -265,6 +265,10 @@ class DailyChallengeService:
          "title": "Complete a test", "icon": "clipboard"},
         {"type": "chat_practice", "target": 1, "xp_reward": 15,
          "title": "Practice in AI chat", "icon": "message-circle"},
+        {"type": "write_story", "target": 1, "xp_reward": 20,
+         "title": "Write a story", "icon": "pen-tool"},
+        {"type": "listening", "target": 1, "xp_reward": 15,
+         "title": "Complete listening challenge", "icon": "headphones"},
     ]
 
     CHALLENGE_TYPES_MEDIUM = [
@@ -282,6 +286,10 @@ class DailyChallengeService:
          "title": "Complete a test", "icon": "clipboard"},
         {"type": "master_word", "target": 1, "xp_reward": 35,
          "title": "Master a word", "icon": "crown"},
+        {"type": "write_story", "target": 1, "xp_reward": 30,
+         "title": "Write a story", "icon": "pen-tool"},
+        {"type": "listening", "target": 1, "xp_reward": 25,
+         "title": "Complete listening challenge", "icon": "headphones"},
     ]
 
     CHALLENGE_TYPES_HARD = [
@@ -299,6 +307,10 @@ class DailyChallengeService:
          "title": "Master a word", "icon": "crown"},
         {"type": "add_words", "target": 5, "xp_reward": 35,
          "title": "Add 5 new words", "icon": "plus"},
+        {"type": "write_story", "target": 1, "xp_reward": 40,
+         "title": "Write a story", "icon": "pen-tool"},
+        {"type": "listening", "target": 2, "xp_reward": 35,
+         "title": "Complete 2 listening challenges", "icon": "headphones"},
     ]
 
     @staticmethod

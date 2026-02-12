@@ -135,6 +135,9 @@ class XPService:
         if amount <= 0:
             return {"new_total": 0, "level_up": False, "new_level": 1, "xp_gained": 0}
 
+        # Cap XP per action at 500 to prevent overflow
+        amount = min(amount, 500)
+
         progress = self.progress_repo.get_or_create(user_id)
         old_level = progress.level
 

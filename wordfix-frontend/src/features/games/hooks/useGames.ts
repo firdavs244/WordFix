@@ -79,3 +79,57 @@ export function useSubmitWordContext() {
     },
   });
 }
+
+// ─── Story Builder ─────────────────────────────────────────────────────────────
+
+export function useStartStoryBuilder() {
+  return useMutation({
+    mutationFn: (genre?: string) => gameApi.startStoryBuilder(genre),
+    onError: () => toast.error('Failed to start Story Builder.'),
+  });
+}
+
+export function useSubmitStoryRound() {
+  return useMutation({
+    mutationFn: ({ sessionId, userText }: { sessionId: string; userText: string }) =>
+      gameApi.submitStoryRound(sessionId, userText),
+  });
+}
+
+export function useCompleteStoryBuilder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId: string) => gameApi.completeStoryBuilder(sessionId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: gameKeys.all });
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
+    },
+  });
+}
+
+// ─── Listening Challenge ───────────────────────────────────────────────────────
+
+export function useStartListening() {
+  return useMutation({
+    mutationFn: () => gameApi.startListening(),
+    onError: () => toast.error('Failed to start Listening Challenge.'),
+  });
+}
+
+export function useSubmitListeningAnswer() {
+  return useMutation({
+    mutationFn: ({ sessionId, roundNumber, answer }: { sessionId: string; roundNumber: number; answer: string }) =>
+      gameApi.submitListeningAnswer(sessionId, roundNumber, answer),
+  });
+}
+
+export function useCompleteListening() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId: string) => gameApi.completeListening(sessionId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: gameKeys.all });
+      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
+    },
+  });
+}

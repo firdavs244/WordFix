@@ -1,5 +1,6 @@
 """
-Tests for new models: WordDistractor, ConfusingPair, DailyChallenge, and combo fields.
+Tests for new models: WordDistractor, ConfusingPair, DailyChallenge, combo fields,
+StoryRound, and ListeningRound.
 """
 
 import pytest
@@ -13,6 +14,8 @@ from apps.words.infrastructure.models import (
     ReviewSession,
     TestSession,
     GameSession,
+    StoryRound,
+    ListeningRound,
 )
 
 
@@ -145,3 +148,100 @@ class TestComboFieldsOnSession:
         assert review_session.current_combo == 5
         assert review_session.max_combo == 10
         assert review_session.combo_xp_bonus == 25
+
+
+@pytest.mark.django_db
+class TestStoryRoundModel:
+    """Test StoryRound model."""
+
+    def test_create_story_round(self, user):
+        session = GameSession.objects.create(
+            user=user, game_type="story_builder", max_score=100,
+        )
+        story_round = StoryRound.objects.create(
+            session=session,
+            round_number=1,
+            ai_text="Once upon a time...",
+            target_words=["apple", "run"],
+        )
+        assert story_round.id is not None
+        assert story_round.round_number == 1
+        assert story_round.target_words == ["apple", "run"]
+        assert story_round.score == 0
+
+    def test_story_round_defaults(self, user):
+        session = GameSession.objects.create(
+            user=user, game_type="story_builder", max_score=100,
+        )
+        story_round = StoryRound.objects.create(
+            session=session, round_number=1,
+        )
+        assert story_round.ai_text == ""
+        assert story_round.user_text == ""
+        assert story_round.target_words == []
+        assert story_round.words_used == []
+        assert story_round.grammar_corrections == []
+        assert story_round.is_correct_usage is False
+        assert story_round.score == 0
+
+    def test_multiple_rounds_per_session(self, user):
+        session = GameSession.objects.create(
+            user=user, game_type="story_builder", max_score=100,
+        )
+        for i in range(5):
+            StoryRound.objects.create(
+                session=session, round_number=i + 1,
+                ai_text=f"Round {i + 1} text",
+            )
+        assert StoryRound.objects.filter(session=session).count() == 5
+
+
+@pytest.mark.django_db
+class TestListeningRoundModel:
+    """Test ListeningRound model."""
+
+    def test_create_listening_round(self, user, sample_word):
+        session = GameSession.objects.create(
+            user=user, game_type="listening_challenge", max_score=100,
+        )
+        listening_round = ListeningRound.objects.create(
+            session=session,
+            word=sample_word,
+            round_number=1,
+            correct_answer="hello",
+        )
+        assert listening_round.id is not None
+        assert listening_round.correct_answer == "hello"
+        assert listening_round.max_attempts == 3
+
+    def test_listening_round_defaults(self, user, sample_word):
+        session = GameSession.objects.create(
+            user=user, game_type="listening_challenge", max_score=100,
+        )
+        listening_round = ListeningRound.objects.create(
+            session=session, word=sample_word,
+            round_number=1, correct_answer="hello",
+        )
+        assert listening_round.user_answers == []
+        assert listening_round.attempts_used == 0
+        assert listening_round.is_correct is False
+        assert listening_round.hints_shown == []
+        assert listening_round.score == 0
+
+    def test_update_listening_round_attempts(self, user, sample_word):
+        session = GameSession.objects.create(
+            user=user, game_type="listening_challenge", max_score=100,
+        )
+        listening_round = ListeningRound.objects.create(
+            session=session, word=sample_word,
+            round_number=1, correct_answer="hello",
+        )
+        listening_round.user_answers = ["helo", "hello"]
+        listening_round.attempts_used = 2
+        listening_round.is_correct = True
+        listening_round.score = 7
+        listening_round.save()
+        listening_round.refresh_from_db()
+        assert listening_round.attempts_used == 2
+        assert listening_round.is_correct is True
+        assert listening_round.score == 7

@@ -26,10 +26,20 @@ class GetReviewWordsUseCase:
 class StartReviewSessionUseCase:
     """Start a new review session."""
 
-    def __init__(self, session_repo):
+    def __init__(self, session_repo, word_repo=None):
         self.session_repo = session_repo
+        self.word_repo = word_repo
 
     def execute(self, user_id: UUID, session_type: str = "review", word_count: int = 0):
+        # Check that user has enough words for review
+        if self.word_repo:
+            count = self.word_repo.get_count_by_user(user_id)
+            if count < 5:
+                from apps.common.exceptions import ValidationError
+                raise ValidationError(
+                    f"You need at least 5 words to start a review session. "
+                    f"You currently have {count} word(s). Please add more words first."
+                )
         return self.session_repo.create(
             user_id=user_id,
             session_type=session_type,

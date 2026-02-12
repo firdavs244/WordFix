@@ -78,3 +78,95 @@ export interface GameStats {
   favorite_game: string;
   by_type: Record<string, { games_played: number; best_score: number; total_xp: number }>;
 }
+
+// ─── Story Builder Types ───────────────────────────────────────────────────────
+
+export interface StoryStartResponse {
+  session_id: string;
+  genre: string;
+  ai_text: string;
+  target_words: string[];
+  total_rounds: number;
+  current_round: number;
+  all_target_words: string[];
+}
+
+export interface StoryRoundResult {
+  score: number;
+  words_used: string[];
+  grammar_corrections: Array<{
+    original: string;
+    corrected: string;
+    explanation: string;
+  }>;
+  feedback: string;
+  is_correct_usage: boolean;
+}
+
+export interface StorySubmitResponse {
+  round_result: StoryRoundResult;
+  next_round: { ai_text: string; target_words: string[]; round_number: number } | null;
+  session_stats: { total_score: number; rounds_completed: number };
+  combo: number;
+  multiplier: number;
+  xp_earned: number;
+}
+
+export interface StoryCompleteResponse {
+  total_score: number;
+  max_score: number;
+  rounds: Array<{
+    round_number: number;
+    score: number;
+    words_used: string[];
+    corrections: any[];
+  }>;
+  full_story: string;
+  xp_earned: number;
+}
+
+// ─── Listening Challenge Types ─────────────────────────────────────────────────
+
+export interface ListeningStartResponse {
+  session_id: string;
+  total_rounds: number;
+  current_round: number;
+  first_word: {
+    round_number: number;
+    audio_url: string;
+    hint: string;
+    difficulty: string;
+    max_attempts: number;
+  };
+}
+
+export interface ListeningAnswerResponse {
+  is_correct: boolean;
+  score: number;
+  attempts_used: number;
+  attempts_remaining: number;
+  hint: string;
+  correct_answer: string;
+  next_round: {
+    round_number: number;
+    audio_url: string;
+    hint: string;
+    max_attempts: number;
+  } | null;
+  combo: number;
+  multiplier: number;
+  xp_earned: number;
+}
+
+export interface ListeningCompleteResponse {
+  total_score: number;
+  max_score: number;
+  rounds: Array<{
+    word: string;
+    is_correct: boolean;
+    attempts_used: number;
+    score: number;
+  }>;
+  accuracy_pct: number;
+  xp_earned: number;
+}

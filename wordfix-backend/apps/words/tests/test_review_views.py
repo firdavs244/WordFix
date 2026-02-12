@@ -112,7 +112,7 @@ class TestReviewWordsView:
 
 @pytest.mark.django_db
 class TestReviewSessionViews:
-    def test_create_session(self, review_client):
+    def test_create_session(self, review_client, review_words):
         response = review_client.post(
             "/api/v1/review/sessions/",
             {"session_type": "review"},
@@ -123,7 +123,7 @@ class TestReviewSessionViews:
         assert data["session_type"] == "review"
         assert data["is_completed"] is False
 
-    def test_create_quick_session(self, review_client):
+    def test_create_quick_session(self, review_client, review_words):
         response = review_client.post(
             "/api/v1/review/sessions/",
             {"session_type": "quick"},
@@ -131,7 +131,7 @@ class TestReviewSessionViews:
         )
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_create_session_default_type(self, review_client):
+    def test_create_session_default_type(self, review_client, review_words):
         response = review_client.post(
             "/api/v1/review/sessions/", {}, format="json",
         )

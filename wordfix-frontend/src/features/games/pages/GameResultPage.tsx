@@ -1,15 +1,20 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, CheckCircle2, XCircle, Star, RotateCcw, ArrowLeft, Flame, Zap } from 'lucide-react';
+import { Trophy, CheckCircle2, XCircle, Star, RotateCcw, ArrowLeft, Flame, Zap, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageTransition } from '@/components/animations/PageTransition';
+import { toast } from 'sonner';
 
 const GAME_LABELS: Record<string, string> = {
   speed_round: 'Speed Round',
   word_match: 'Word Match',
   word_context: 'Word Context',
+  story_builder: 'Story Complete!',
+  listening_challenge: 'Challenge Complete!',
 };
+
+
 
 export function GameResultPage() {
   const location = useLocation();
@@ -24,6 +29,12 @@ export function GameResultPage() {
     total_questions: number;
     max_combo?: number;
     combo_xp_bonus?: number;
+    // Story Builder extras
+    rounds?: Array<{ round_number: number; score: number; words_used: string[]; corrections: any[] }>;
+    full_story?: string;
+    // Listening Challenge extras
+    listening_rounds?: Array<{ word: string; is_correct: boolean; attempts_used: number; score: number }>;
+    accuracy_pct?: number;
   } | null;
 
   if (!state) {
@@ -98,6 +109,70 @@ export function GameResultPage() {
                       <span className="text-sm font-bold text-primary">+{state.combo_xp_bonus} XP Bonus</span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Story Builder: Round Scores + Full Story */}
+              {state.game_type === 'story_builder' && state.rounds && (
+                <div className="space-y-3 text-left">
+                  <p className="text-sm font-semibold">📊 Round Scores</p>
+                  {state.rounds.map((r) => (
+                    <div key={r.round_number} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                      <span>Round {r.round_number}</span>
+                      <span className="font-bold">{r.score}/20</span>
+                    </div>
+                  ))}
+                  {state.full_story && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">📖 Your Story</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs"
+                          onClick={() => {
+                            navigator.clipboard.writeText(state.full_story ?? '');
+                            toast.success('Story copied!');
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" /> Copy
+                        </Button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto rounded-lg bg-muted/50 p-3 text-sm leading-relaxed">
+                        {state.full_story}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Listening Challenge: Word Results */}
+              {state.game_type === 'listening_challenge' && state.listening_rounds && (
+                <div className="space-y-2 text-left">
+                  {state.accuracy_pct !== undefined && (
+                    <p className="text-center text-sm text-muted-foreground">
+                      Accuracy: {state.accuracy_pct}%
+                    </p>
+                  )}
+                  <p className="text-sm font-semibold">📊 Results</p>
+                  {state.listening_rounds.map((r, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                        r.is_correct ? 'bg-green-500/5' : 'bg-red-500/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{r.is_correct ? '✅' : '❌'}</span>
+                        <span className="font-medium">{r.word}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {r.is_correct
+                          ? `${r.attempts_used === 1 ? '1st' : r.attempts_used === 2 ? '2nd' : '3rd'} try (${r.score})`
+                          : `failed (${r.score})`}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

@@ -79,3 +79,37 @@ class EnrichmentStatusView(APIView):
                 "enriched_at": word.enriched_at.isoformat() if word.enriched_at else None,
             }),
         )
+
+
+class EnrichmentRetryView(APIView):
+    """POST /api/v1/words/{word_id}/enrichment-retry/ — Retry failed enrichment."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, word_id) -> Response:
+        word_repo = get_word_repository()
+        word = word_repo.get_by_id(word_id=word_id, user_id=request.user.id)
+
+        if word.enrichment_status != "failed":
+            return Response(
+                build_success_response(
+                    message="Word enrichment is not in failed state.",
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Reset to pending so the enrichment task picks it up
+        word_repo.update(
+            word_id=word_id, user_id=request.user.id,
+            enrichment_status="pending", enrichment_error="",
+        )
+
+        # Trigger enrichment
+        enrich_task = get_enrich_word_task()
+        if enrich_task:
+            enrich_task(str(word_id), str(request.user.id))
+
+        return Response(
+            build_success_response(message="Enrichment retry started."),
+            status=status.HTTP_202_ACCEPTED,
+        )
