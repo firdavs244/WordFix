@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X } from 'lucide-react';
@@ -19,6 +19,7 @@ export function ReviewSessionPage() {
   const [multiplier, setMultiplier] = useState(1);
   const [showComboBreak, setShowComboBreak] = useState(false);
   const [xpPopup, setXpPopup] = useState<{ xp: number; multiplier: number } | null>(null);
+  const flipTimeRef = useRef<number>(0);
 
   const {
     words,
@@ -67,6 +68,7 @@ export function ReviewSessionPage() {
     if (!showRating) {
       flipCard();
       setShowRating(true);
+      flipTimeRef.current = performance.now();
     }
   }, [showRating, flipCard]);
 
@@ -76,11 +78,13 @@ export function ReviewSessionPage() {
       setSubmitting(true);
 
       try {
-        const startTime = performance.now();
+        const responseTime = flipTimeRef.current > 0
+          ? Math.round(performance.now() - flipTimeRef.current)
+          : 0;
         const result = await submitAnswer.mutateAsync({
           word_id: currentWord.id,
           quality,
-          response_time_ms: Math.round(performance.now() - startTime),
+          response_time_ms: responseTime,
         });
         recordAnswer(currentWord.id, quality);
 

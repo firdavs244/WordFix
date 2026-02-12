@@ -14,13 +14,20 @@ class GameSessionSerializer(serializers.Serializer):
     max_score = serializers.IntegerField()
     correct_answers = serializers.IntegerField()
     incorrect_answers = serializers.IntegerField()
+    total_questions = serializers.SerializerMethodField()
     duration_seconds = serializers.IntegerField()
     is_completed = serializers.BooleanField()
     level = serializers.IntegerField()
     xp_earned = serializers.IntegerField()
+    current_combo = serializers.IntegerField()
+    max_combo = serializers.IntegerField()
+    combo_xp_bonus = serializers.IntegerField()
     started_at = serializers.DateTimeField()
     completed_at = serializers.DateTimeField(allow_null=True)
     created_at = serializers.DateTimeField()
+
+    def get_total_questions(self, obj) -> int:
+        return (getattr(obj, 'correct_answers', 0) or 0) + (getattr(obj, 'incorrect_answers', 0) or 0)
 
 
 class SpeedRoundStartSerializer(serializers.Serializer):

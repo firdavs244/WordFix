@@ -114,13 +114,27 @@ const ConfusingPairsPage = lazy(() =>
     default: m.ConfusingPairsPage,
   })),
 );
+const OnboardingPage = lazy(() =>
+  import('@/features/onboarding/pages/OnboardingPage').then((m) => ({
+    default: m.default,
+  })),
+);
 
 // ─── Route Guards ──────────────────────────────────────────────────────────────
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user && !user.has_completed_onboarding) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // Allow both first-time and retake users
   return <>{children}</>;
 }
 
@@ -169,6 +183,16 @@ export function AppRoutes() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
+
+        {/* Onboarding Route (auth required, not completed yet) */}
+        <Route
+          path="/onboarding"
+          element={
+            <OnboardingRoute>
+              <OnboardingPage />
+            </OnboardingRoute>
+          }
+        />
 
         {/* Protected Routes (auth required) */}
         <Route

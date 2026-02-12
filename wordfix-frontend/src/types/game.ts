@@ -8,11 +8,14 @@ export interface GameSession {
   score: number;
   max_score: number;
   correct_answers: number;
+  incorrect_answers: number;
   total_questions: number;
   duration_seconds: number;
   level: number;
   xp_earned: number;
   is_completed: boolean;
+  started_at: string;
+  completed_at: string | null;
   created_at: string;
   // Combo system
   current_combo: number;
@@ -42,6 +45,7 @@ export interface WordMatchStartResponse {
   session_id: string;
   words: { word_id: string; word: string }[];
   translations: string[];
+  pair_count: number;
 }
 
 export interface WordMatchPair {

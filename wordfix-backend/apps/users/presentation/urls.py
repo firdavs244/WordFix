@@ -12,6 +12,8 @@ from .views import (
     TokenRefreshView,
     ProfileView,
     ChangePasswordView,
+    GoogleLoginView,
+    GoogleAuthStatusView,
 )
 from .progress_views import (
     UserProgressView,
@@ -30,6 +32,9 @@ urlpatterns = [
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/profile/", ProfileView.as_view(), name="profile"),
     path("auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
+    # Google OAuth
+    path("auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    path("auth/providers/", GoogleAuthStatusView.as_view(), name="auth-providers"),
     # XP & Progress
     path("users/progress/", UserProgressView.as_view(), name="user-progress"),
     path("users/xp-history/", XPHistoryView.as_view(), name="xp-history"),

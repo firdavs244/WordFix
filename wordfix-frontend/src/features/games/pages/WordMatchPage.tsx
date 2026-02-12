@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shuffle } from 'lucide-react';
@@ -23,6 +23,7 @@ export function WordMatchPage() {
   const [matchedWordIdxs, setMatchedWordIdxs] = useState<Set<number>>(new Set());
   const [matchedTransIdxs, setMatchedTransIdxs] = useState<Set<number>>(new Set());
   const [combo, setCombo] = useState(0);
+  const gameStartTimeRef = useRef<number>(0);
 
   const handleStart = () => {
     startGame.mutate(undefined, {
@@ -31,6 +32,7 @@ export function WordMatchPage() {
         setWords(res.data.words);
         setTranslations(res.data.translations);
         setStarted(true);
+        gameStartTimeRef.current = Date.now();
       },
     });
   };
@@ -50,7 +52,7 @@ export function WordMatchPage() {
     // Check if all matched
     if (matchedPairs.length + 1 === words.length) {
       submitGame.mutate(
-        { sessionId: sessionId!, pairs: [...matchedPairs, pair], timeSeconds: 0 },
+        { sessionId: sessionId!, pairs: [...matchedPairs, pair], timeSeconds: Math.round((Date.now() - gameStartTimeRef.current) / 1000) },
         {
           onSuccess: (res) => {
             navigate(`/games/result/${sessionId}`, {

@@ -29,6 +29,20 @@ export const authApi = {
     return res.data;
   },
 
+  googleLogin: async (data: { access_token?: string; id_token?: string }) => {
+    const res = await apiClient.post<
+      ApiResponse<{ user: User; tokens: AuthTokens; is_new_user: boolean }>
+    >(API_ENDPOINTS.AUTH.GOOGLE_LOGIN, data);
+    return res.data;
+  },
+
+  getProviders: async () => {
+    const res = await apiClient.get<ApiResponse<{ google_enabled: boolean }>>(
+      API_ENDPOINTS.AUTH.PROVIDERS,
+    );
+    return res.data;
+  },
+
   logout: async (refreshToken: string) => {
     const res = await apiClient.post<ApiResponse>(API_ENDPOINTS.AUTH.LOGOUT, {
       refresh: refreshToken,

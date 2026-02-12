@@ -19,6 +19,7 @@ export interface User {
   is_active: boolean;
   date_joined: string;
   last_login: string | null;
+  has_completed_onboarding: boolean;
 }
 
 export interface AuthTokens {

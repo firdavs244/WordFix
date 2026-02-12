@@ -41,12 +41,19 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "django.contrib.sites",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "django_celery_beat",
     "django_filters",
     "drf_spectacular",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
 ]
 
 LOCAL_APPS = [
@@ -78,6 +85,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.common.middleware.request_id.RequestIDMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -341,6 +349,53 @@ LOGGING = {
 # =============================================================================
 
 APP_VERSION = "1.0.0"
+
+# =============================================================================
+# SITE ID (required by django-allauth)
+# =============================================================================
+
+SITE_ID = 1
+
+# =============================================================================
+# ALLAUTH
+# =============================================================================
+
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_ADAPTER = "apps.users.infrastructure.adapters.CustomSocialAccountAdapter"
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "APP": {
+            "client_id": config("GOOGLE_CLIENT_ID", default=""),
+            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+        },
+        "FETCH_USERINFO": True,
+    }
+}
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# =============================================================================
+# REST AUTH (dj-rest-auth)
+# =============================================================================
+
+REST_AUTH = {
+    "USE_JWT": True,
+    "JWT_AUTH_HTTPONLY": False,
+    "JWT_AUTH_RETURN_EXPIRATION": True,
+    "USER_DETAILS_SERIALIZER": "apps.users.presentation.serializers.UserProfileSerializer",
+    "TOKEN_MODEL": None,
+}
 
 # =============================================================================
 # DRF SPECTACULAR (Swagger/OpenAPI)

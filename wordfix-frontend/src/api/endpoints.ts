@@ -8,6 +8,14 @@ const API_ENDPOINTS = {
     REFRESH: '/auth/token/refresh/',
     PROFILE: '/auth/profile/',
     CHANGE_PASSWORD: '/auth/change-password/',
+    GOOGLE_LOGIN: '/auth/google/',
+    PROVIDERS: '/auth/providers/',
+  },
+  ONBOARDING: {
+    QUESTIONS: '/auth/onboarding/questions/',
+    SUBMIT: '/auth/onboarding/submit/',
+    SKIP: '/auth/onboarding/skip/',
+    STATUS: '/auth/onboarding/status/',
   },
   WORDS: {
     LIST: '/words/',
@@ -18,13 +26,13 @@ const API_ENDPOINTS = {
     CATEGORIES: '/words/categories/',
     CATEGORY_DETAIL: (id: string) => `/words/categories/${id}/`,
     ENRICH: (id: string) => `/words/${id}/enrich/`,
-    ENRICHMENT_STATUS: '/words/enrichment-status/',
+    ENRICHMENT_STATUS: (id: string) => `/words/${id}/enrichment-status/`,
   },
   REVIEW: {
     WORDS: '/review/words/',
     SESSIONS: '/review/sessions/',
     SESSION_DETAIL: (id: string) => `/review/sessions/${id}/`,
-    SESSION_SUBMIT: (id: string) => `/review/sessions/${id}/submit/`,
+    SESSION_SUBMIT: (id: string) => `/review/sessions/${id}/answer/`,
     SESSION_COMPLETE: (id: string) => `/review/sessions/${id}/complete/`,
     SUMMARY: '/review/summary/',
     STREAK: '/review/streak/',
@@ -61,6 +69,8 @@ const API_ENDPOINTS = {
   IMPORT: {
     ANALYZE: '/words/import/analyze/',
     ADD: '/words/import/add/',
+    CSV_VALIDATE: '/words/import/csv/validate/',
+    CSV_IMPORT: '/words/import/csv/',
   },
   CHAT: {
     START: '/chat/start/',

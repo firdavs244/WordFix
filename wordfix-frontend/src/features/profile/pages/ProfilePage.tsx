@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { User as UserIcon, Mail, Globe, Target, Shield, Save, Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User as UserIcon, Mail, Globe, Target, Shield, Save, Lock, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -240,6 +241,37 @@ export function ProfilePage() {
                 Change Password
               </Button>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Learning Level Card */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <GraduationCap className="h-5 w-5" />
+              Learning Level
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary ring-2 ring-primary/30">
+                {user.proficiency_level}
+              </div>
+              <div>
+                <p className="font-medium">Current Level: {user.proficiency_level}</p>
+                <p className="text-sm text-muted-foreground">
+                  {user.has_completed_onboarding
+                    ? 'Determined by your level test'
+                    : 'Default level — take the test to update'}
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" asChild>
+              <Link to="/onboarding">
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Retake Level Test
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

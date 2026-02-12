@@ -40,3 +40,26 @@ export interface ImportWordsResponse {
   skipped: number;
   errors: { word: string; error: string }[];
 }
+
+// ─── CSV Import Types ──────────────────────────────────────────────────────────
+
+export interface CSVValidateResult {
+  headers: string[];
+  preview: Array<Record<string, string>>;
+  total_rows: number;
+  valid_rows: number;
+  errors: string[];
+  has_translation: boolean;
+  has_difficulty: boolean;
+  has_category: boolean;
+}
+
+export interface CSVImportResult {
+  total_in_file: number;
+  imported: number;
+  skipped_duplicate: number;
+  skipped_invalid: number;
+  errors: string[];
+  categories_created: string[];
+  xp_earned?: number;
+}

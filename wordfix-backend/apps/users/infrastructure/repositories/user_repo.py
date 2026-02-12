@@ -30,6 +30,7 @@ class DjangoUserRepository(AbstractUserRepository):
             premium_until=user.premium_until,
             is_active=user.is_active,
             is_staff=user.is_staff,
+            has_completed_onboarding=user.has_completed_onboarding,
             date_joined=user.date_joined,
             last_login=user.last_login,
         )

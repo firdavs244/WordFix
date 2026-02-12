@@ -36,3 +36,28 @@ export function useImportWords() {
     },
   });
 }
+
+export function useValidateCSV() {
+  return useMutation({
+    mutationFn: (file: File) => importApi.validateCSV(file),
+    onError: () => {
+      toast.error('Failed to validate CSV file.');
+    },
+  });
+}
+
+export function useImportCSV() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => importApi.importCSV(file),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: wordKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.stats() });
+      const result = data.data;
+      toast.success(`Imported ${result.imported} words from CSV!`);
+    },
+    onError: () => {
+      toast.error('Failed to import CSV.');
+    },
+  });
+}

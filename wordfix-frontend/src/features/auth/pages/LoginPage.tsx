@@ -5,7 +5,9 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { GoogleLoginButton } from '@/features/auth/components/GoogleLoginButton';
 import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
 import type { ApiResponse } from '@/types';
@@ -13,10 +15,12 @@ import type { ApiResponse } from '@/types';
 export function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
+  const googleLogin = useAuthStore((s) => s.googleLogin);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +31,12 @@ export function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login({ email, password });
-      navigate('/', { replace: true });
+      const { has_completed_onboarding } = await login({ email, password });
+      if (!has_completed_onboarding) {
+        navigate('/onboarding', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       const axiosErr = err as AxiosError<ApiResponse>;
       const msg = axiosErr.response?.data?.message || 'Login failed.';
@@ -99,6 +107,37 @@ export function LoginPage() {
               )}
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </Button>
+
+            {/* Google OAuth divider */}
+            <div className="relative flex w-full items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground">or continue with</span>
+              <Separator className="flex-1" />
+            </div>
+
+            <GoogleLoginButton
+              text="Continue with Google"
+              disabled={isSubmitting || isGoogleLoading}
+              onSuccess={async (credential) => {
+                setIsGoogleLoading(true);
+                try {
+                  const { has_completed_onboarding } = await googleLogin(credential);
+                  if (!has_completed_onboarding) {
+                    navigate('/onboarding', { replace: true });
+                  } else {
+                    navigate('/', { replace: true });
+                  }
+                } catch (err) {
+                  const axiosErr = err as AxiosError<ApiResponse>;
+                  const msg = axiosErr.response?.data?.message || 'Google login failed.';
+                  toast.error(msg);
+                } finally {
+                  setIsGoogleLoading(false);
+                }
+              }}
+              onError={() => toast.error('Google sign-in was cancelled or failed.')}
+            />
+
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
               <Link to="/register" className="font-medium text-primary hover:underline">

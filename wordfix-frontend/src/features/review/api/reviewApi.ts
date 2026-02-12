@@ -41,7 +41,7 @@ export const reviewApi = {
 
   submitAnswer: async (sessionId: string, answer: ReviewAnswer) => {
     const res = await apiClient.post<ApiResponse<ReviewAnswerResult>>(
-      `/review/sessions/${sessionId}/submit/`,
+      `/review/sessions/${sessionId}/answer/`,
       answer,
     );
     return res.data;

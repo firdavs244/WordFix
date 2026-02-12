@@ -30,6 +30,7 @@ class UserEntity:
     premium_until: datetime | None = None
     is_active: bool = True
     is_staff: bool = False
+    has_completed_onboarding: bool = False
     date_joined: datetime | None = None
     last_login: datetime | None = None
 

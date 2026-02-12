@@ -87,3 +87,11 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {}  # noqa: F405
 WORD_ENRICHMENT_ENABLED = False  # Don't auto-enrich in test AddWord
 GROQ_API_KEY = ""
 OPENAI_API_KEY = ""
+
+# =============================================================================
+# ALLAUTH (for tests)
+# =============================================================================
+
+SITE_ID = 1
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_AUTO_SIGNUP = True

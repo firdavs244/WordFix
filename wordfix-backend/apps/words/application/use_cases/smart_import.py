@@ -1,7 +1,9 @@
 """
-Smart import use cases: text analysis and word import.
+Smart import use cases: text analysis, word import, and CSV import.
 """
 
+import csv
+import io
 import logging
 from uuid import UUID
 
@@ -163,3 +165,219 @@ class ImportWordsUseCase:
                 skipped += 1
 
         return {"added": added, "skipped": skipped}
+
+
+class ValidateCSVUseCase:
+    """Validate and preview a CSV file before import."""
+
+    MAX_ROWS = 500
+    REQUIRED_HEADER = "word"
+    KNOWN_HEADERS = {"word", "translation", "difficulty", "category", "notes"}
+
+    def execute(self, file_content: str) -> dict:
+        """
+        Parse CSV, detect headers, return preview + errors.
+        """
+        errors = []
+        reader = csv.DictReader(io.StringIO(file_content))
+
+        if not reader.fieldnames:
+            return {
+                "headers": [],
+                "preview": [],
+                "total_rows": 0,
+                "valid_rows": 0,
+                "errors": ["No headers found in CSV file."],
+                "has_translation": False,
+                "has_difficulty": False,
+                "has_category": False,
+            }
+
+        # Normalize header names
+        headers = [h.strip().lower() for h in reader.fieldnames]
+
+        if self.REQUIRED_HEADER not in headers:
+            return {
+                "headers": headers,
+                "preview": [],
+                "total_rows": 0,
+                "valid_rows": 0,
+                "errors": ["CSV must have a 'word' column."],
+                "has_translation": False,
+                "has_difficulty": False,
+                "has_category": False,
+            }
+
+        has_translation = "translation" in headers
+        has_difficulty = "difficulty" in headers
+        has_category = "category" in headers
+
+        rows = []
+        preview = []
+        valid_count = 0
+
+        for i, row in enumerate(reader, start=2):  # start=2 since row 1 is header
+            if i - 1 > self.MAX_ROWS:
+                errors.append(f"File has more than {self.MAX_ROWS} rows. Only first {self.MAX_ROWS} will be imported.")
+                break
+
+            # Normalize keys
+            normalized = {}
+            for k, v in row.items():
+                normalized[k.strip().lower()] = (v or "").strip()
+
+            word = normalized.get("word", "").strip()
+            if not word:
+                errors.append(f"Row {i}: empty word.")
+                continue
+            if len(word) > 100:
+                errors.append(f"Row {i}: word too long (max 100 chars).")
+                continue
+
+            valid_count += 1
+            rows.append(normalized)
+
+            if len(preview) < 10:
+                preview.append(normalized)
+
+        return {
+            "headers": headers,
+            "preview": preview,
+            "total_rows": len(rows) + len([e for e in errors if "Row" in e]),
+            "valid_rows": valid_count,
+            "errors": errors,
+            "has_translation": has_translation,
+            "has_difficulty": has_difficulty,
+            "has_category": has_category,
+        }
+
+
+class CSVImportUseCase:
+    """Import words from CSV file into user's word bank."""
+
+    MAX_ROWS = 500
+    VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+
+    def __init__(self, word_repo, enrich_task=None, enrichment_enabled: bool = True):
+        self.word_repo = word_repo
+        self.enrich_task = enrich_task
+        self.enrichment_enabled = enrichment_enabled
+
+    def execute(self, user_id, file_content: str) -> dict:
+        """
+        Parse CSV and import words.
+        """
+        user_id = UUID(str(user_id))
+        errors = []
+        imported = 0
+        skipped_duplicate = 0
+        skipped_invalid = 0
+        categories_created = []
+
+        reader = csv.DictReader(io.StringIO(file_content))
+        if not reader.fieldnames:
+            return {
+                "total_in_file": 0,
+                "imported": 0,
+                "skipped_duplicate": 0,
+                "skipped_invalid": 0,
+                "errors": ["No headers found in CSV file."],
+                "categories_created": [],
+            }
+
+        headers = [h.strip().lower() for h in reader.fieldnames]
+        has_translation = "translation" in headers
+        has_difficulty = "difficulty" in headers
+        has_category = "category" in headers
+
+        rows = list(reader)
+        total_in_file = len(rows)
+
+        if total_in_file > self.MAX_ROWS:
+            return {
+                "total_in_file": total_in_file,
+                "imported": 0,
+                "skipped_duplicate": 0,
+                "skipped_invalid": 0,
+                "errors": [f"Too many rows ({total_in_file}). Maximum is {self.MAX_ROWS}."],
+                "categories_created": [],
+            }
+
+        for i, row in enumerate(rows, start=2):
+            # Normalize keys
+            normalized = {}
+            for k, v in row.items():
+                normalized[k.strip().lower()] = (v or "").strip()
+
+            word = normalized.get("word", "").strip().lower()
+            if not word:
+                errors.append(f"Row {i}: empty word.")
+                skipped_invalid += 1
+                continue
+            if len(word) > 100:
+                errors.append(f"Row {i}: word too long.")
+                skipped_invalid += 1
+                continue
+
+            # Check duplicate
+            if self.word_repo.exists(word, user_id):
+                skipped_duplicate += 1
+                continue
+
+            # Prepare word data
+            translation = normalized.get("translation", "") if has_translation else ""
+            difficulty = normalized.get("difficulty", "medium").lower() if has_difficulty else "medium"
+            if difficulty not in self.VALID_DIFFICULTIES:
+                difficulty = "medium"
+            notes = normalized.get("notes", "")
+
+            # Category handling
+            category_id = None
+            if has_category and normalized.get("category"):
+                cat_name = normalized["category"].strip()
+                if cat_name:
+                    try:
+                        from apps.words.infrastructure.models import WordCategory
+                        cat, created = WordCategory.objects.get_or_create(
+                            user_id=user_id,
+                            name=cat_name,
+                            defaults={"color": "#6C5CE7", "icon": "folder"},
+                        )
+                        category_id = cat.id
+                        if created and cat_name not in categories_created:
+                            categories_created.append(cat_name)
+                    except Exception:
+                        pass
+
+            try:
+                create_kwargs = {
+                    "original_word": word,
+                    "translation": translation,
+                    "difficulty_level": difficulty,
+                    "notes": notes,
+                }
+                if category_id:
+                    create_kwargs["category_id"] = category_id
+
+                new_word = self.word_repo.create(user_id=user_id, **create_kwargs)
+                imported += 1
+
+                # Queue enrichment
+                if self.enrichment_enabled and self.enrich_task:
+                    try:
+                        self.enrich_task(str(new_word.id), str(user_id))
+                    except Exception as e:
+                        logger.warning(f"Failed to queue enrichment for {word}: {e}")
+
+            except Exception as e:
+                logger.warning(f"Failed to import word '{word}': {e}")
+                skipped_duplicate += 1
+
+        return {
+            "total_in_file": total_in_file,
+            "imported": imported,
+            "skipped_duplicate": skipped_duplicate,
+            "skipped_invalid": skipped_invalid,
+            "errors": errors,
+            "categories_created": categories_created,
+        }

@@ -120,7 +120,7 @@ export function TestResultPage() {
           <Button variant="outline" className="flex-1 gap-2" onClick={() => navigate('/tests')}>
             <RotateCcw className="h-4 w-4" /> New Test
           </Button>
-          <Button variant="outline" className="flex-1 gap-2" onClick={() => navigate('/dashboard')}>
+          <Button variant="outline" className="flex-1 gap-2" onClick={() => navigate('/')}>
             <ArrowLeft className="h-4 w-4" /> Dashboard
           </Button>
         </div>

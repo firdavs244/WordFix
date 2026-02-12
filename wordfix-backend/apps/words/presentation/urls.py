@@ -6,6 +6,8 @@ from django.urls import path
 
 from .views import (
     AnalyzeTextView,
+    CSVImportView,
+    CSVValidateView,
     EnrichAllView,
     EnrichmentStatusView,
     EnrichWordView,
@@ -29,6 +31,8 @@ urlpatterns = [
     path("enrich-all/", EnrichAllView.as_view(), name="enrich-all"),
     path("import/analyze/", AnalyzeTextView.as_view(), name="import-analyze"),
     path("import/add/", ImportAddWordsView.as_view(), name="import-add"),
+    path("import/csv/validate/", CSVValidateView.as_view(), name="csv-validate"),
+    path("import/csv/", CSVImportView.as_view(), name="csv-import"),
     path("<uuid:word_id>/", WordDetailView.as_view(), name="word-detail"),
     path("<uuid:word_id>/enrich/", EnrichWordView.as_view(), name="word-enrich"),
     path("<uuid:word_id>/enrichment-status/", EnrichmentStatusView.as_view(), name="word-enrichment-status"),

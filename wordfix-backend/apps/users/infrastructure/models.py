@@ -81,6 +81,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     premium_until = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    has_completed_onboarding = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(null=True, blank=True)
 
@@ -287,3 +288,52 @@ class Notification(models.Model):
 
     def __str__(self) -> str:
         return f"{self.type}: {self.title} (user={self.user.email})"
+
+
+class OnboardingQuestion(models.Model):
+    """Pre-built level assessment questions."""
+
+    LEVEL_CHOICES = [
+        ("A1", "A1"), ("A2", "A2"), ("B1", "B1"),
+        ("B2", "B2"), ("C1", "C1"), ("C2", "C2"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    level = models.CharField(max_length=2, choices=LEVEL_CHOICES)
+    question_text = models.TextField()
+    correct_answer = models.CharField(max_length=200)
+    options = models.JSONField(default=list)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "onboarding_questions"
+        ordering = ["level", "order"]
+        verbose_name = "Onboarding Question"
+        verbose_name_plural = "Onboarding Questions"
+
+    def __str__(self) -> str:
+        return f"[{self.level}] {self.question_text[:50]}"
+
+
+class OnboardingResult(models.Model):
+    """User's onboarding test result."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="onboarding_result",
+    )
+    answers = models.JSONField(default=list)
+    determined_level = models.CharField(max_length=2, default="A1")
+    completed_at = models.DateTimeField(auto_now_add=True)
+    total_correct = models.PositiveIntegerField(default=0)
+    total_questions = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "onboarding_results"
+        verbose_name = "Onboarding Result"
+        verbose_name_plural = "Onboarding Results"
+
+    def __str__(self) -> str:
+        return f"Onboarding: {self.user.email} → {self.determined_level}"

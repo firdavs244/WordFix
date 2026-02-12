@@ -125,7 +125,8 @@ class SubmitAnswerView(APIView):
             "is_correct": result["is_correct"],
         }
         if xp_result:
-            response_data["xp_earned"] = xp_result
+            response_data["xp_earned"] = xp_result.get("xp_gained", 0)
+            response_data["xp_details"] = xp_result
 
         return Response(build_success_response(data=response_data))
 
@@ -167,7 +168,8 @@ class CompleteSessionView(APIView):
 
         response_data = _session_to_dict(session)
         if xp_result:
-            response_data["xp_earned"] = xp_result
+            response_data["xp_earned"] = xp_result.get("xp_gained", 0)
+            response_data["xp_details"] = xp_result
         if new_badges:
             response_data["new_badges"] = [{"code": b.code, "name": b.name, "icon": b.icon} for b in new_badges]
 

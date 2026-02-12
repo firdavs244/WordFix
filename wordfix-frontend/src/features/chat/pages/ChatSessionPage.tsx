@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { useChatSession, useSendMessage, useEndChat } from '../hooks/useChat';
+import { useChatSession, useEndChat } from '../hooks/useChat';
 import { chatApi } from '../api/chatApi';
 import type { ChatMessage, ChatCorrection } from '@/types';
 
@@ -26,10 +26,10 @@ export function ChatSessionPage() {
   const [targetWords, setTargetWords] = useState<string[]>([]);
   const [isSessionActive, setIsSessionActive] = useState(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: sessionData, isLoading } = useChatSession(sessionId || '');
-  const sendMessage = useSendMessage(sessionId || '');
   const endChat = useEndChat();
 
   // Load session data
@@ -48,10 +48,11 @@ export function ChatSessionPage() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!message.trim() || !sessionId || sendMessage.isPending) return;
+    if (!message.trim() || !sessionId || isSending) return;
 
     const userMsg = message;
     setMessage('');
+    setIsSending(true);
 
     // Optimistic: add user message
     const tempUserMsg: ChatMessage = {
@@ -88,6 +89,8 @@ export function ChatSessionPage() {
     } catch {
       // Remove temp message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -205,7 +208,7 @@ export function ChatSessionPage() {
             ))}
           </AnimatePresence>
 
-          {sendMessage.isPending && (
+          {isSending && (
             <div className="flex justify-start">
               <div className="rounded-2xl bg-muted px-4 py-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -229,12 +232,12 @@ export function ChatSessionPage() {
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your message..."
-              disabled={sendMessage.isPending}
+              disabled={isSending}
               className="flex-1"
             />
             <Button
               onClick={handleSend}
-              disabled={!message.trim() || sendMessage.isPending}
+              disabled={!message.trim() || isSending}
               size="icon"
             >
               <Send className="h-4 w-4" />

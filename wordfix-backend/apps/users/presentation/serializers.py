@@ -88,3 +88,49 @@ class ChangePasswordSerializer(serializers.Serializer):
                 {"new_password_confirm": "Passwords do not match."}
             )
         return data
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    """Google OAuth login serializer."""
+
+    access_token = serializers.CharField(required=False, allow_blank=True, default="")
+    id_token = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate(self, data: dict) -> dict:
+        if not data.get("access_token") and not data.get("id_token"):
+            raise serializers.ValidationError(
+                "access_token or id_token is required."
+            )
+        return data
+
+
+class OnboardingQuestionSerializer(serializers.Serializer):
+    """Onboarding question serializer (no correct_answer)."""
+
+    id = serializers.UUIDField()
+    level = serializers.CharField()
+    question_text = serializers.CharField()
+    options = serializers.ListField()
+    order = serializers.IntegerField()
+
+
+class OnboardingAnswerSerializer(serializers.Serializer):
+    """Single answer in onboarding submission."""
+
+    question_id = serializers.UUIDField()
+    answer = serializers.CharField()
+
+
+class OnboardingSubmitSerializer(serializers.Serializer):
+    """Onboarding test submission serializer."""
+
+    answers = OnboardingAnswerSerializer(many=True)
+
+
+class OnboardingResultSerializer(serializers.Serializer):
+    """Onboarding result serializer."""
+
+    determined_level = serializers.CharField()
+    total_correct = serializers.IntegerField()
+    total_questions = serializers.IntegerField()
+    message = serializers.CharField()

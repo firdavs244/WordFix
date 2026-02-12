@@ -5,7 +5,9 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { GoogleLoginButton } from '@/features/auth/components/GoogleLoginButton';
 import { toast } from 'sonner';
 import type { AxiosError } from 'axios';
 import type { ApiResponse } from '@/types';
@@ -15,8 +17,10 @@ const STEPS = ['Account', 'Personal', 'Confirm'] as const;
 export function RegisterPage() {
   const navigate = useNavigate();
   const register = useAuthStore((s) => s.register);
+  const googleLogin = useAuthStore((s) => s.googleLogin);
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Form data
@@ -67,7 +71,8 @@ export function RegisterPage() {
         password_confirm: passwordConfirm,
         full_name: fullName || undefined,
       });
-      navigate('/', { replace: true });
+      // New users always go to onboarding
+      navigate('/onboarding', { replace: true });
     } catch (err) {
       const axiosErr = err as AxiosError<ApiResponse>;
       const msg = axiosErr.response?.data?.message || 'Registration failed.';
@@ -119,6 +124,36 @@ export function RegisterPage() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-4"
                 >
+                  {/* Google sign-up button at top of step 1 */}
+                  <GoogleLoginButton
+                    text="Sign up with Google"
+                    disabled={isSubmitting || isGoogleLoading}
+                    onSuccess={async (credential) => {
+                      setIsGoogleLoading(true);
+                      try {
+                        const { has_completed_onboarding } = await googleLogin(credential);
+                        if (!has_completed_onboarding) {
+                          navigate('/onboarding', { replace: true });
+                        } else {
+                          navigate('/', { replace: true });
+                        }
+                      } catch (err) {
+                        const axiosErr = err as AxiosError<ApiResponse>;
+                        const msg = axiosErr.response?.data?.message || 'Google sign-up failed.';
+                        toast.error(msg);
+                      } finally {
+                        setIsGoogleLoading(false);
+                      }
+                    }}
+                    onError={() => toast.error('Google sign-in was cancelled or failed.')}
+                  />
+
+                  <div className="relative flex items-center gap-3">
+                    <Separator className="flex-1" />
+                    <span className="text-xs text-muted-foreground">or use email</span>
+                    <Separator className="flex-1" />
+                  </div>
+
                   <div className="space-y-2">
                     <label htmlFor="email" className="text-sm font-medium">
                       Email

@@ -11,8 +11,9 @@ interface AuthState {
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<{ has_completed_onboarding: boolean }>;
   register: (data: RegisterData) => Promise<void>;
+  googleLogin: (credential: string) => Promise<{ has_completed_onboarding: boolean; is_new_user: boolean }>;
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -35,6 +36,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('refresh_token', tokens.refresh);
     set({ user, isAuthenticated: true, isLoading: false });
     toast.success('Welcome back!');
+    return { has_completed_onboarding: user.has_completed_onboarding };
   },
 
   register: async (data) => {
@@ -44,6 +46,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('refresh_token', tokens.refresh);
     set({ user, isAuthenticated: true, isLoading: false });
     toast.success('Account created successfully!');
+  },
+
+  googleLogin: async (credential: string) => {
+    const response = await authApi.googleLogin({ id_token: credential });
+    const { user, tokens, is_new_user } = response.data;
+    localStorage.setItem('access_token', tokens.access);
+    localStorage.setItem('refresh_token', tokens.refresh);
+    set({ user, isAuthenticated: true, isLoading: false });
+    toast.success(is_new_user ? 'Welcome to WordFix!' : 'Welcome back!');
+    return { has_completed_onboarding: user.has_completed_onboarding, is_new_user };
   },
 
   logout: async () => {

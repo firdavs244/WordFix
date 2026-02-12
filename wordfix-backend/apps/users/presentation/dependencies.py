@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.users.application.use_cases import (
     ChangePasswordUseCase,
     GetUserProfileUseCase,
+    GoogleLoginUseCase,
     LoginUserUseCase,
     RegisterUserUseCase,
     UpdateUserProfileUseCase,
@@ -49,3 +50,7 @@ def get_update_profile_use_case() -> UpdateUserProfileUseCase:
 
 def get_change_password_use_case() -> ChangePasswordUseCase:
     return ChangePasswordUseCase(get_user_repository())
+
+
+def get_google_login_use_case() -> GoogleLoginUseCase:
+    return GoogleLoginUseCase(get_user_repository(), token_generator=generate_tokens)

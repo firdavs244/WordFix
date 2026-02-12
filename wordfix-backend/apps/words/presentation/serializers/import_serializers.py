@@ -41,3 +41,40 @@ class ImportWordsSerializer(serializers.Serializer):
             if not word_data.get("original_word", "").strip():
                 raise serializers.ValidationError("Each word must have an 'original_word' field.")
         return value
+
+
+class CSVUploadSerializer(serializers.Serializer):
+    """CSV file upload serializer."""
+
+    file = serializers.FileField()
+
+    def validate_file(self, value):
+        if value.size > 1024 * 1024:  # 1MB
+            raise serializers.ValidationError("File too large (max 1MB).")
+        if not value.name.endswith(".csv"):
+            raise serializers.ValidationError("Only CSV files are accepted.")
+        return value
+
+
+class CSVValidateResultSerializer(serializers.Serializer):
+    """CSV validation result serializer."""
+
+    headers = serializers.ListField()
+    preview = serializers.ListField()
+    total_rows = serializers.IntegerField()
+    valid_rows = serializers.IntegerField()
+    errors = serializers.ListField()
+    has_translation = serializers.BooleanField()
+    has_difficulty = serializers.BooleanField()
+    has_category = serializers.BooleanField()
+
+
+class CSVImportResultSerializer(serializers.Serializer):
+    """CSV import result serializer."""
+
+    total_in_file = serializers.IntegerField()
+    imported = serializers.IntegerField()
+    skipped_duplicate = serializers.IntegerField()
+    skipped_invalid = serializers.IntegerField()
+    errors = serializers.ListField()
+    categories_created = serializers.ListField()

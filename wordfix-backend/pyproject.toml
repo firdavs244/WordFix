@@ -26,6 +26,8 @@ groq = ">=0.12.0"
 openai = ">=1.50.0"
 gTTS = ">=2.5.0"
 Pillow = ">=10.0.0"
+django-allauth = {version = ">=65.0", extras = ["socialaccount"]}
+dj-rest-auth = {version = ">=7.0", extras = ["with_social"]}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
@@ -74,6 +76,34 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+
+[tool.coverage.run]
+source = ["apps", "core"]
+omit = [
+    "*/migrations/*",
+    "*/management/commands/*",
+    "config/*",
+    "manage.py",
+    "*/infrastructure/tasks.py",
+    "*/infrastructure/adapters.py",
+    "*/tests/factories.py",
+    "core/services/ai/openai_provider.py",
+    "core/services/ai/groq_provider.py",
+    "core/services/tts/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.",
+    "raise NotImplementedError",
+    "except ImportError",
+    "logger\\.warning",
+    "logger\\.info",
+    "logger\\.error",
+    "logger\\.debug",
+]
 
 [tool.django-stubs]
 django_settings_module = "config.settings.development"
