@@ -50,6 +50,7 @@ class TestGroqProvider:
         from core.services.ai.groq_provider import GroqProvider
 
         provider = GroqProvider()
+        provider.circuit = None  # Disable circuit breaker for test
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Hello world"
@@ -67,6 +68,7 @@ class TestGroqProvider:
         from core.services.ai.groq_provider import GroqProvider
 
         provider = GroqProvider()
+        provider.circuit = None  # Disable circuit breaker for test
         expected = {"translation": "salom", "definition": "A greeting"}
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
@@ -85,6 +87,7 @@ class TestGroqProvider:
         from core.services.ai.groq_provider import GroqProvider
 
         provider = GroqProvider()
+        provider.circuit = None  # Disable circuit breaker for test
         expected = {"key": "val"}
         mock_resp1 = MagicMock()
         mock_resp1.choices = [MagicMock()]

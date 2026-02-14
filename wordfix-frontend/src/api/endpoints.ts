@@ -104,6 +104,18 @@ const API_ENDPOINTS = {
     TODAY: '/challenges/today/',
     CLAIM: '/challenges/claim/',
   },
+  SYSTEM: {
+    HEALTH: '/system/health/detailed/',
+    CONFIG: '/system/config/status/',
+  },
+  LEARNING: {
+    PROFILE: '/learning-profile/',
+    ANALYZE: '/learning-profile/analyze/',
+    MISTAKES: '/learning-profile/mistake-patterns/',
+    RECOMMENDATIONS: '/learning-profile/recommendations/',
+    DOMAIN_COVERAGE: '/learning-profile/domain-coverage/',
+    DIFFICULTY: '/learning-profile/difficulty/',
+  },
 } as const;
 
 export default API_ENDPOINTS;

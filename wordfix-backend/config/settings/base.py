@@ -85,6 +85,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.common.middleware.request_id.RequestIDMiddleware",
+    "apps.common.idempotency.IdempotencyMiddleware",
+    "apps.common.logging.RequestLoggingMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
 
@@ -202,6 +204,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
+        "apps.common.rate_limiter.CRUDRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
@@ -307,8 +310,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "()": "django.utils.log.ServerFormatter",
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+            "()": "apps.common.logging.JSONFormatter",
         },
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
@@ -337,7 +339,7 @@ LOGGING = {
             "propagate": False,
         },
         "apps": {
-            "handlers": ["console"],
+            "handlers": ["console", "file"],
             "level": "DEBUG",
             "propagate": False,
         },

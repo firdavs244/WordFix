@@ -129,6 +129,11 @@ const OnboardingPage = lazy(() =>
     default: m.default,
   })),
 );
+const LearningProfilePage = lazy(() =>
+  import('@/features/learning/pages/LearningProfilePage').then((m) => ({
+    default: m.LearningProfilePage,
+  })),
+);
 
 // ─── Route Guards ──────────────────────────────────────────────────────────────
 
@@ -237,6 +242,7 @@ export function AppRoutes() {
           <Route path="/chat/history" element={<ChatHistoryPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/confusing-pairs" element={<ConfusingPairsPage />} />
+          <Route path="/learning-profile" element={<LearningProfilePage />} />
         </Route>
 
         {/* 404 */}

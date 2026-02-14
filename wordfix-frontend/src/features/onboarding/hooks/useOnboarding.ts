@@ -50,8 +50,14 @@ export function useSkipOnboarding() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
-    onError: () => {
-      toast.error('Failed to skip onboarding.');
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Failed to skip onboarding.';
+      // If already completed, treat as success
+      if (message.toLowerCase().includes('already completed')) {
+        queryClient.invalidateQueries({ queryKey: ['auth'] });
+        return;
+      }
+      toast.error(message);
     },
   });
 }

@@ -1,0 +1,809 @@
+================================================================================
+          WORDFIX — LOYIHANI ISHLATISH BO'YICHA TO'LIQ QO'LLANMA
+================================================================================
+Loyiha:   WordFix — AI-powered ingliz tili lug'at o'rganish platformasi
+Versiya:  1.0.0
+Sana:     2026-yil, 13-fevral
+================================================================================
+
+
+================================================================================
+1. LOYIHA HAQIDA UMUMIY MA'LUMOT
+================================================================================
+
+WordFix — bu sun'iy intellekt (AI) yordamida ingliz tili lug'atini
+o'rganish uchun mo'ljallangan zamonaviy web platforma. Platforma
+foydalanuvchilarga so'zlarni qo'shish, AI yordamida boyitish,
+flashcard ko'rib chiqish (SM-2 algoritmi), testlar, o'yinlar,
+AI chat va boshqa interaktiv usullar orqali so'z boyligini oshirish
+imkonini beradi.
+
+ASOSIY XUSUSIYATLAR:
+  ✦ So'z boshqaruvi — CRUD, kategoriyalar, AI boyitish
+  ✦ Spaced Repetition — SM-2 algoritmi bilan aqlli takrorlash
+  ✦ AI boyitish — tarjima, ta'rif, misollar, sinonimlar, mnemonic
+  ✦ TTS — Google Text-to-Speech (so'zlarni eshitish)
+  ✦ Smart Import — matndan so'zlarni AI bilan tahlil qilish
+  ✦ Testlar — 4 turdagi AI generatsiya qilingan testlar
+  ✦ O'yinlar — 5 ta interaktiv o'yin (Speed Round, Word Match, va h.k.)
+  ✦ AI Chat — sun'iy intellekt bilan ingliz tilida suhbat
+  ✦ Confusing Pairs — chalkash so'zlarni aniqlash va mashq qilish
+  ✦ Daily Challenges — kunlik topshiriqlar va bonuslar
+  ✦ Onboarding — daraja aniqlash testi (A1–C2)
+  ✦ Analitika — batafsil statistika, kalendar, progress
+  ✦ Gamifikatsiya — XP, darajalar, 20 ta badge, streak
+  ✦ Bildirishnomalar — eslatmalar, streak ogohlantirish, haftalik hisobot
+  ✦ Dark/Light tema — 3 ta rejim (light, dark, system)
+
+ARXITEKTURA:
+  Backend:  Django 5.1 + DRF (Clean Architecture)
+  Frontend: React 19 + TypeScript + Vite
+  Database: PostgreSQL 16
+  Cache:    Redis 7
+  Queue:    Celery + Redis
+  AI:       Groq (Llama 3.3) / OpenAI (GPT-4o-mini)
+  TTS:      Google TTS (bepul)
+  Deploy:   Docker + Docker Compose
+
+
+================================================================================
+2. TIZIM TALABLARI
+================================================================================
+
+MINIMAL TALABLAR:
+  - Docker Desktop 4.0+ (Windows/Mac) yoki Docker Engine 20+ (Linux)
+  - Docker Compose v2.0+
+  - Xotira: kamida 4 GB RAM (tavsiya: 8 GB)
+  - Disk: kamida 5 GB bo'sh joy
+  - Internet: AI xizmatlari uchun (Groq/OpenAI API)
+
+IXTIYORIY (lokal ishlab chiqish uchun):
+  - Python 3.11+ (backend)
+  - Node.js 20+ (frontend)
+  - Poetry (Python package manager)
+  - Git
+
+PORTLAR:
+  - 8000  — Backend (Django)
+  - 5173  — Frontend (Vite)
+  - 5433  — PostgreSQL (tashqi ulanish uchun)
+  - 6379  — Redis
+
+
+================================================================================
+3. TEZKOR BOSHLASH (Docker bilan — tavsiya etiladi)
+================================================================================
+
+1-QADAM: Loyihani klonlash yoki papkaga o'tish
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ cd C:\Users\Firdavs\Desktop\WordFix                               │
+  └─────────────────────────────────────────────────────────────────────┘
+
+2-QADAM: Environment (.env) faylni sozlash
+  wordfix-backend/ papkada .env fayl yarating:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ # .env fayl — wordfix-backend/ papkada                            │
+  │                                                                     │
+  │ # Django                                                            │
+  │ SECRET_KEY=your-super-secret-key-change-this-in-production         │
+  │ DEBUG=True                                                          │
+  │ DJANGO_SETTINGS_MODULE=config.settings.development                 │
+  │                                                                     │
+  │ # Database                                                          │
+  │ POSTGRES_DB=wordfix                                                │
+  │ POSTGRES_USER=wordfix_user                                         │
+  │ POSTGRES_PASSWORD=wordfix_pass                                     │
+  │ POSTGRES_HOST=db                                                   │
+  │ POSTGRES_PORT=5432                                                 │
+  │                                                                     │
+  │ # Redis                                                             │
+  │ REDIS_URL=redis://redis:6379/0                                     │
+  │ CELERY_BROKER_URL=redis://redis:6379/1                             │
+  │ CELERY_RESULT_BACKEND=redis://redis:6379/2                         │
+  │                                                                     │
+  │ # AI Providers (kamida bittasi kerak)                              │
+  │ GROQ_API_KEY=your-groq-api-key                                    │
+  │ OPENAI_API_KEY=your-openai-api-key                                │
+  │ AI_DEFAULT_PROVIDER=groq                                           │
+  │                                                                     │
+  │ # Google OAuth (ixtiyoriy)                                         │
+  │ GOOGLE_CLIENT_ID=your-google-client-id                             │
+  │ GOOGLE_CLIENT_SECRET=your-google-client-secret                     │
+  └─────────────────────────────────────────────────────────────────────┘
+
+3-QADAM: Docker Compose bilan loyihani ishga tushirish
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose up --build                                          │
+  └─────────────────────────────────────────────────────────────────────┘
+  Bu komanda 6 ta service ni ishga tushiradi:
+    - db (PostgreSQL)   → port 5433
+    - redis (Redis)     → port 6379
+    - web (Django)      → port 8000
+    - celery_worker     → background
+    - celery_beat       → background
+    - frontend (Vite)   → port 5173
+
+  ESLATMA: Birinchi marta ishga tushirilganda 3-5 daqiqa kutish kerak
+  (Docker imagelar yuklanadi, poetry install bajariiladi).
+
+4-QADAM: Superuser yaratish
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py createsuperuser           │
+  └─────────────────────────────────────────────────────────────────────┘
+  Email, username va parol kiritiladi.
+
+5-QADAM: Brauzerda ochish
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ Frontend:      http://localhost:5173                                │
+  │ Backend API:   http://localhost:8000/api/v1/health/                │
+  │ Swagger UI:    http://localhost:8000/api/docs/                     │
+  │ Admin panel:   http://localhost:8000/admin/                        │
+  └─────────────────────────────────────────────────────────────────────┘
+
+TABRIKLAYMIZ! 🎉 WordFix ishga tushdi.
+
+
+================================================================================
+4. LOKAL ISHLAB CHIQISH (Docker'siz)
+================================================================================
+
+BACKEND O'RNATISH:
+
+  1. Python 3.11+ va Poetry o'rnating
+  2. PostgreSQL 16 va Redis 7 o'rnating va ishga tushiring
+  3. Backend papkaga o'ting:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ cd wordfix-backend                                              │
+     │ poetry install                                                  │
+     └─────────────────────────────────────────────────────────────────┘
+  4. .env faylni sozlang (3-qadam da ko'rsatilgan)
+     POSTGRES_HOST ni "db" o'rniga "localhost" ga o'zgartiring
+     POSTGRES_PORT ni 5432 ga o'zgartiring
+  5. Ma'lumotlar bazasini yarating:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ createdb -U wordfix_user wordfix                                │
+     └─────────────────────────────────────────────────────────────────┘
+  6. Migratsiyalarni bajaring:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ poetry run python manage.py migrate                             │
+     │ poetry run python manage.py collectstatic --noinput             │
+     └─────────────────────────────────────────────────────────────────┘
+  7. Superuser yarating:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ poetry run python manage.py createsuperuser                     │
+     └─────────────────────────────────────────────────────────────────┘
+  8. Serverni ishga tushiring:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ poetry run python manage.py runserver 0.0.0.0:8000              │
+     └─────────────────────────────────────────────────────────────────┘
+  9. Celery worker va beat (alohida terminallarda):
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ poetry run celery -A config worker -l info                      │
+     │ poetry run celery -A config beat -l info --scheduler \          │
+     │   django_celery_beat.schedulers:DatabaseScheduler               │
+     └─────────────────────────────────────────────────────────────────┘
+
+FRONTEND O'RNATISH:
+
+  1. Node.js 20+ o'rnating
+  2. Frontend papkaga o'ting:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ cd wordfix-frontend                                             │
+     │ npm install                                                     │
+     └─────────────────────────────────────────────────────────────────┘
+  3. Dev serverni ishga tushiring:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ npm run dev                                                     │
+     └─────────────────────────────────────────────────────────────────┘
+  4. Brauzerda oching: http://localhost:5173
+
+
+================================================================================
+5. AI API KALITLARINI OLISH
+================================================================================
+
+GROQ API (bepul, tezkor — TAVSIYA ETILADI):
+  1. https://console.groq.com/ saytiga o'ting
+  2. Ro'yxatdan o'ting (Google/GitHub bilan kirish mumkin)
+  3. API Keys bo'limiga o'ting
+  4. "Create API Key" tugmasini bosing
+  5. Kalitni .env fayliga qo'shing: GROQ_API_KEY=gsk_...
+  6. Bepul: 30 so'rov/daqiqa, 14,400 so'rov/kun
+
+OPENAI API (pullik, alternativ):
+  1. https://platform.openai.com/ saytiga o'ting
+  2. Ro'yxatdan o'ting va to'lov ma'lumotlarini kiriting
+  3. API Keys bo'limiga o'ting
+  4. "Create new secret key" tugmasini bosing
+  5. Kalitni .env fayliga qo'shing: OPENAI_API_KEY=sk-...
+  6. Narx: ~$0.15/1M input token (GPT-4o-mini)
+
+  ESLATMA: Kamida bitta AI provider API kaliti kerak.
+  Groq bepul va tezkor bo'lgani uchun boshlash uchun tavsiya etiladi.
+
+
+================================================================================
+6. FOYDALANUVCHI QO'LLANMASI — ASOSIY FUNKSIYALAR
+================================================================================
+
+--- 6.1 RO'YXATDAN O'TISH VA KIRISH ---
+
+  1. http://localhost:5173/welcome sahifasiga o'ting
+  2. "Ro'yxatdan o'tish" tugmasini bosing
+  3. 3 bosqichli formani to'ldiring:
+     - Email, username, parol (kamida 8 belgi, 1 raqam)
+     - Ism, familiya, ona tili, o'rganish tili, daraja
+     - Ma'lumotlarni tasdiqlang
+  4. Onboarding (daraja aniqlash) testidan o'ting yoki o'tkazib yuboring
+  5. Dashboard sahifasiga yo'naltirilasiz
+
+--- 6.2 SO'Z QO'SHISH ---
+
+  Usul 1 — Qo'lda qo'shish:
+    1. "Words" sahifasiga o'ting (/words)
+    2. "+ So'z qo'shish" tugmasini bosing
+    3. So'z, tarjima kiriting (qolgan maydonlar ixtiyoriy)
+    4. "Saqlash" tugmasini bosing
+    5. AI avtomatik ravishda so'zni boyitadi (tarjima, ta'rif, misollar,
+       sinonimlar, antonimlar, mnemonic, audio va h.k.)
+
+  Usul 2 — Bulk qo'shish:
+    1. "Words" sahifasida "Ko'p qo'shish" tugmasini bosing
+    2. Har bir qatorda bitta so'z kiriting
+    3. "Qo'shish" tugmasini bosing
+
+  Usul 3 — Smart Import:
+    1. "Import" sahifasiga o'ting (/import)
+    2. Ingliz tilidagi matnni textarea ga yozing yoki joylang
+    3. "Tahlil qilish" tugmasini bosing (AI matnni tahlil qiladi)
+    4. AI topgan so'zlarni ko'rib chiqing (ishonch darajasi ko'rsatiladi)
+    5. Kerakli so'zlarni tanlang va "Import qilish" tugmasini bosing
+
+--- 6.3 SO'ZLARNI KO'RIB CHIQISH (REVIEW) ---
+
+  1. "Review" sahifasiga o'ting (/review)
+  2. Sessiya turini tanlang (Review/Learn/Mixed)
+  3. Flashcard ko'rsatiladi:
+     - Old tomon: so'z + talaffuz
+     - Audio tugma bilan eshiting
+     - Kartani aylantiring → tarjima, ta'rif, misollar ko'rsatiladi
+  4. Sifat bahosi bering (0-5):
+     0=Again, 1=Hard, 2=Difficult, 3=Good, 4=Easy, 5=Perfect
+  5. SM-2 algoritmi asosida keyingi ko'rib chiqish vaqti hisoblanadi
+  6. Sessiyani tugating → natijalarni ko'ring (XP, aniqlik, badge)
+  7. Confetti animatsiya! 🎉
+
+--- 6.4 TESTLAR ---
+
+  1. "Tests" sahifasiga o'ting (/tests)
+  2. Test turini tanlang:
+     - Multiple Choice — 4 variantdan to'g'risini tanlash
+     - Fill in the Blank — bo'sh joyni to'ldirish
+     - Context Guess — kontekstdan so'zni topish
+     - Mixed — aralash
+  3. Qiyinlik va savol sonini tanlang (5-30)
+  4. "Test boshlash" tugmasini bosing
+  5. Har bir savolga javob bering (feedback darhol ko'rsatiladi)
+  6. Natijalarni ko'ring (harf bahosi A-F, XP, savol ko'rib chiqish)
+
+--- 6.5 O'YINLAR ---
+
+  1. "Games" sahifasiga o'ting (/games)
+  2. O'yin turini tanlang:
+
+     Speed Round 🏃:
+       - 60 soniya ichida imkon qadar ko'p so'z tarjima qiling
+       - 4 variantdan to'g'risini tanlang
+       - 80%+ aniqlik = 2x XP bonus
+
+     Word Match 🔗:
+       - So'z va tarjimani juftlang
+       - Chap ustundagi so'zni, o'ng ustundagi tarjimani tanlang
+       - Barcha juftliklar topilganda o'yin tugaydi
+
+     Word Context 📖:
+       - Paragraf o'qing, bo'sh joyga to'g'ri so'zni tanlang
+       - 4 variantdan to'g'risini toping
+
+     Story Builder 📝:
+       - AI hikoya boshlanishini yozadi
+       - Siz davom ettirasiz (ingliz tilida)
+       - AI grammatikangizni baholaydi va tuzatishlar beradi
+
+     Listening Challenge 🎧:
+       - So'zni eshiting (audio)
+       - Eshitganingizni yozing
+       - Hint tugma = birinchi harf ko'rsatiladi
+
+--- 6.6 AI CHAT ---
+
+  1. "Chat" sahifasiga o'ting (/chat)
+  2. Mavzu tanlang (Sayohat, Texnologiya, va h.k.) yoki o'zingiz yozing
+  3. AI bilan ingliz tilida suhbatlashing
+  4. AI sizning xatolaringizni tuzatadi:
+     - Asl → Tuzatilgan (qizil → yashil) + tushuntirish
+  5. Maqsadli so'zlaringiz suhbatda ishlatilishi kuzatiladi
+  6. Suhbatni tugatganda XP olasiz
+
+--- 6.7 CONFUSING PAIRS (CHALKASH SO'ZLAR) ---
+
+  1. "Confusing Pairs" sahifasiga o'ting (/confusing-pairs)
+  2. Testlar va review davomida chalkashtirilgan so'zlar avtomatik
+     aniqlanadi
+  3. Har bir juftlik uchun:
+     - "Mashq" → AI maxsus mashq generatsiya qiladi
+     - "Hal qilish" → yetarli mashq qilgandan so'ng belgilang
+
+--- 6.8 DAILY CHALLENGES (KUNLIK TOPSHIRIQLAR) ---
+
+  1. Dashboard sahifasida kunlik topshiriqlar ko'rsatiladi
+  2. Har kuni yangi topshiriqlar (masalan: 5 ta so'z ko'rib chiqish,
+     1 ta test o'tkazish, va h.k.)
+  3. Barcha topshiriqlar bajarilganda bonus XP oling
+
+--- 6.9 ANALITIKA ---
+
+  1. "Analytics" sahifasiga o'ting (/analytics)
+  2. Ko'rsatkichlarni ko'ring:
+     - Umumiy statistika (so'zlar, testlar, o'yinlar, aniqlik)
+     - Haftalik/oylik progress grafigi
+     - O'qish kalendari (GitHub uslubidagi heatmap)
+     - Eng qiyin so'zlar ro'yxati
+     - So'z progress taqsimoti
+
+--- 6.10 PROFIL ---
+
+  1. "Profile" sahifasiga o'ting (/profile)
+  2. Tahrirlash rejimiga o'ting:
+     - Ism, bio, tillar, daraja, kunlik maqsad, timezone
+  3. Parol almashtirish (eski parol + yangi parol)
+  4. Avatar yuklash
+
+
+================================================================================
+7. DOCKER COMPOSE KOMANDALARI
+================================================================================
+
+ASOSIY KOMANDALAR:
+
+  Loyihani ishga tushirish (oldingi rejimda):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose up                                                  │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Loyihani ishga tushirish (orqa fonda):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose up -d                                               │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Loyihani qayta build qilish va ishga tushirish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose up --build                                          │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Loyihani to'xtatish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose down                                                │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Loyihani to'xtatish + ma'lumotlarni o'chirish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose down -v                                             │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Loglarni ko'rish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose logs -f                                             │
+  │ docker compose logs -f web                   # faqat backend       │
+  │ docker compose logs -f frontend              # faqat frontend      │
+  │ docker compose logs -f celery_worker         # faqat celery        │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Service larning holatini ko'rish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose ps                                                  │
+  └─────────────────────────────────────────────────────────────────────┘
+
+DJANGO MANAGEMENT KOMANDALARI:
+
+  Superuser yaratish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py createsuperuser           │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Migratsiya yaratish (model o'zgartirgandan keyin):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py makemigrations            │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Migratsiyalarni qo'llash:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py migrate                   │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Django shell:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py shell                     │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Statik fayllarni yig'ish:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py collectstatic --noinput   │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Badge larni yaratish (ma'lumotlar bazasiga qo'shish):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web python manage.py create_badges             │
+  └─────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+8. TESTLARNI ISHGA TUSHIRISH
+================================================================================
+
+BACKEND TESTLAR:
+
+  Docker ichida:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web pytest                                     │
+  │ docker compose exec web pytest -v                  # verbose       │
+  │ docker compose exec web pytest --cov               # coverage      │
+  │ docker compose exec web pytest apps/words/         # faqat words   │
+  │ docker compose exec web pytest apps/users/         # faqat users   │
+  │ docker compose exec web pytest core/               # faqat core    │
+  │ docker compose exec web pytest -k "test_word"      # nomi bo'yicha │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Lokal (Docker'siz):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ cd wordfix-backend                                                 │
+  │ poetry run pytest                                                  │
+  │ poetry run pytest --cov --cov-report=html                          │
+  └─────────────────────────────────────────────────────────────────────┘
+
+FRONTEND LINT:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec frontend npm run lint                          │
+  └─────────────────────────────────────────────────────────────────────┘
+
+KOD SIFATI TEKSHIRISH (backend):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ docker compose exec web black --check .            # formatlash    │
+  │ docker compose exec web isort --check-only .       # import tartib │
+  │ docker compose exec web flake8 .                   # linting       │
+  │ docker compose exec web mypy apps/                 # type checking │
+  └─────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+9. API BILAN ISHLASH (Request/Response Namunalari)
+================================================================================
+
+STANDART JAVOB FORMATI (barcha API uchun):
+  {
+    "success": true,
+    "data": { ... },
+    "message": "Muvaffaqiyat",
+    "errors": null,
+    "meta": {
+      "page": 1,
+      "total_pages": 5,
+      "total_count": 100,
+      "page_size": 20
+    }
+  }
+
+--- Ro'yxatdan o'tish ---
+  POST http://localhost:8000/api/v1/auth/register/
+  Body:
+    {
+      "email": "test@example.com",
+      "username": "testuser",
+      "password": "Test1234!",
+      "password_confirm": "Test1234!",
+      "full_name": "Test User"
+    }
+  Response:
+    {
+      "success": true,
+      "data": {
+        "user": { "id": "...", "email": "test@example.com", ... },
+        "tokens": { "access": "eyJ...", "refresh": "eyJ..." }
+      }
+    }
+
+--- Kirish ---
+  POST http://localhost:8000/api/v1/auth/login/
+  Body:
+    {
+      "email": "test@example.com",
+      "password": "Test1234!"
+    }
+  Response:
+    {
+      "success": true,
+      "data": {
+        "user": { ... },
+        "tokens": { "access": "eyJ...", "refresh": "eyJ..." }
+      }
+    }
+
+--- So'z qo'shish ---
+  POST http://localhost:8000/api/v1/words/
+  Headers: Authorization: Bearer <access_token>
+  Body:
+    {
+      "original_word": "serendipity",
+      "translation": "kutilmagan yoqimli kashfiyot"
+    }
+  Response:
+    {
+      "success": true,
+      "data": {
+        "id": "uuid...",
+        "original_word": "serendipity",
+        "translation": "kutilmagan yoqimli kashfiyot",
+        "enrichment_status": "pending",
+        ...
+      }
+    }
+
+--- So'zlar ro'yxati ---
+  GET http://localhost:8000/api/v1/words/?page=1&search=hello&difficulty_level=easy
+  Headers: Authorization: Bearer <access_token>
+  Response:
+    {
+      "success": true,
+      "data": [ { "id": "...", "original_word": "hello", ... } ],
+      "meta": { "page": 1, "total_count": 42, ... }
+    }
+
+--- Health check ---
+  GET http://localhost:8000/api/v1/health/
+  Response:
+    {
+      "success": true,
+      "data": { "status": "healthy", "database": "ok", "cache": "ok" }
+    }
+
+SWAGGER UI:
+  http://localhost:8000/api/docs/ — barcha API endpointlarni interaktiv
+  ko'ring va sinab ko'ring (Try it out tugmasi).
+
+
+================================================================================
+10. MUHIT O'ZGARUVCHILARI (Environment Variables)
+================================================================================
+
+BACKEND (.env):
+  ┌──────────────────────────┬────────────────────────────────────────────┐
+  │ O'zgaruvchi              │ Tavsif                                     │
+  ├──────────────────────────┼────────────────────────────────────────────┤
+  │ SECRET_KEY               │ Django maxfiy kalit (majburiy)             │
+  │ DEBUG                    │ Debug rejimi (True/False)                  │
+  │ DJANGO_SETTINGS_MODULE   │ Settings moduli                            │
+  │ ALLOWED_HOSTS            │ Ruxsat berilgan hostlar                    │
+  │ POSTGRES_DB              │ DB nomi (wordfix)                          │
+  │ POSTGRES_USER            │ DB foydalanuvchi (wordfix_user)            │
+  │ POSTGRES_PASSWORD        │ DB parol (wordfix_pass)                    │
+  │ POSTGRES_HOST            │ DB host (db / localhost)                   │
+  │ POSTGRES_PORT            │ DB port (5432)                             │
+  │ REDIS_URL                │ Redis URL (redis://redis:6379/0)           │
+  │ CELERY_BROKER_URL        │ Celery broker (redis://redis:6379/1)       │
+  │ CELERY_RESULT_BACKEND    │ Celery result (redis://redis:6379/2)       │
+  │ GROQ_API_KEY             │ Groq AI API kaliti                         │
+  │ OPENAI_API_KEY           │ OpenAI API kaliti                          │
+  │ AI_DEFAULT_PROVIDER      │ Default AI provider (groq/openai)          │
+  │ GOOGLE_CLIENT_ID         │ Google OAuth client ID                     │
+  │ GOOGLE_CLIENT_SECRET     │ Google OAuth client secret                 │
+  └──────────────────────────┴────────────────────────────────────────────┘
+
+FRONTEND:
+  ┌──────────────────────────┬────────────────────────────────────────────┐
+  │ VITE_API_URL             │ Backend API URL                            │
+  │                          │ Default: http://localhost:8000/api/v1      │
+  └──────────────────────────┴────────────────────────────────────────────┘
+
+
+================================================================================
+11. XATOLIKLARNI BARTARAF QILISH (Troubleshooting)
+================================================================================
+
+MUAMMO: Docker compose up ishlamayapti
+  ✓ Docker Desktop ishga tushganligini tekshiring
+  ✓ docker compose ps bilan holatni ko'ring
+  ✓ docker compose logs bilan xatolarni ko'ring
+  ✓ Portlar band emasligini tekshiring (8000, 5173, 5433, 6379)
+
+MUAMMO: Frontend backend ga ulanmayapti
+  ✓ Backend ishlayotganini tekshiring: http://localhost:8000/api/v1/health/
+  ✓ VITE_API_URL to'g'ri ekanligini tekshiring
+  ✓ CORS sozlamalarini tekshiring (development.py da CORS_ALLOW_ALL_ORIGINS=True)
+  ✓ docker compose logs -f web bilan backend loglarini ko'ring
+
+MUAMMO: AI boyitish ishlamayapti
+  ✓ GROQ_API_KEY yoki OPENAI_API_KEY .env da borligini tekshiring
+  ✓ API kalit to'g'riligini tekshiring (groqcloud.com dan)
+  ✓ Internet ulanishini tekshiring
+  ✓ docker compose logs -f celery_worker bilan celery loglarini ko'ring
+
+MUAMMO: Ma'lumotlar bazasi xatosi
+  ✓ docker compose exec db pg_isready -U wordfix_user -d wordfix
+  ✓ docker compose logs -f db bilan DB loglarini ko'ring
+  ✓ docker compose exec web python manage.py migrate bajarib ko'ring
+
+MUAMMO: Redis xatosi
+  ✓ docker compose exec redis redis-cli ping (PONG javob berishi kerak)
+  ✓ Celery CELERY_TASK_ALWAYS_EAGER=True qilib ishlaydi (Redis yo'q bo'lsa)
+
+MUAMMO: Migratsiya xatosi
+  ✓ Ma'lumotlarni tozalang: docker compose down -v
+  ✓ Qayta tushiring: docker compose up --build
+
+MUAMMO: 401 Unauthorized xatosi
+  ✓ Login qiling va yangi access token oling
+  ✓ Token muddati tugagan bo'lishi mumkin (60 daqiqa)
+  ✓ Refresh token bilan yangilang: POST /api/v1/auth/token/refresh/
+
+MUAMMO: Frontend "Connection error" ko'rsatmoqda
+  ✓ Backend ishlayotganini tekshiring
+  ✓ Brauzer developer tools → Network tabini oching
+  ✓ CORS xatosi borligini tekshiring
+  ✓ Backend wa frontend bir xil tarmoqda ekanligini tekshiring
+
+
+================================================================================
+12. PRODUCTION DEPLOY
+================================================================================
+
+PRODUCTION UCHUN TAYYORLASH:
+
+  1. Settings o'zgartirish:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ DJANGO_SETTINGS_MODULE=config.settings.production              │
+     │ DEBUG=False                                                     │
+     │ SECRET_KEY=<kuchli-random-kalit-256-bit>                       │
+     │ ALLOWED_HOSTS=yourdomain.com                                   │
+     └─────────────────────────────────────────────────────────────────┘
+
+  2. Frontend build:
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ cd wordfix-frontend                                             │
+     │ npm run build                                                   │
+     └─────────────────────────────────────────────────────────────────┘
+     dist/ papkasida statik fayllar hosil bo'ladi.
+
+  3. Gunicorn bilan ishlating (runserver o'rniga):
+     ┌─────────────────────────────────────────────────────────────────┐
+     │ gunicorn config.wsgi:application --bind 0.0.0.0:8000 \        │
+     │   --workers 4 --timeout 120                                    │
+     └─────────────────────────────────────────────────────────────────┘
+
+  4. Nginx sozlash (reverse proxy):
+     - Frontend statik fayllar: dist/ dan serve qiling
+     - Backend API: /api/ → http://localhost:8000
+     - HTTPS uchun: Let's Encrypt sertifikat
+
+  5. Xavfsizlik:
+     - HTTPS majburiy (production.py da SECURE_SSL_REDIRECT=True)
+     - HSTS yoqilgan (1 yil)
+     - CORS faqat kerakli domainlar uchun
+     - SECRET_KEY maxfiy saqlang
+     - DB parolni kuchli qo'ying
+
+
+================================================================================
+13. LOYIHA ARXITEKTURASI DIAGRAMMASI
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                        FOYDALANUVCHI                                │
+  │                      (Web Brauzer)                                  │
+  └────────────────────────┬────────────────────────────────────────────┘
+                           │
+  ┌────────────────────────▼────────────────────────────────────────────┐
+  │                    FRONTEND (port 5173)                             │
+  │        React 19 + TypeScript + Vite + Tailwind CSS                 │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
+  │  │  Routes   │  │  Stores  │  │  Hooks   │  │   API    │          │
+  │  │(30+ page) │  │ (Zustand)│  │(RQ hooks)│  │ (Axios)  │          │
+  │  └──────────┘  └──────────┘  └──────────┘  └─────┬────┘          │
+  └───────────────────────────────────────────────────┼────────────────┘
+                           HTTP (REST API)            │
+  ┌────────────────────────────────────────────────────▼───────────────┐
+  │                    BACKEND (port 8000)                              │
+  │          Django 5.1 + Django REST Framework                        │
+  │  ┌──────────────────────────────────────────────────────────┐      │
+  │  │  Presentation Layer (Views, Serializers, URLs)           │      │
+  │  │  50+ views, 30+ serializers                              │      │
+  │  └──────────────────────────┬───────────────────────────────┘      │
+  │  ┌──────────────────────────▼───────────────────────────────┐      │
+  │  │  Application Layer (Use Cases)                           │      │
+  │  │  50+ use cases (CRUD, AI, Review, Test, Game, Chat...)  │      │
+  │  └──────────────────────────┬───────────────────────────────┘      │
+  │  ┌──────────────────────────▼───────────────────────────────┐      │
+  │  │  Domain Layer (Entities, Services, Repositories)         │      │
+  │  │  SM-2 algoritmi, XP tizimi, Badge tizimi                │      │
+  │  └──────────────────────────┬───────────────────────────────┘      │
+  │  ┌──────────────────────────▼───────────────────────────────┐      │
+  │  │  Infrastructure Layer (Models, Repos, Tasks)             │      │
+  │  │  Django ORM, Celery vazifalar                            │      │
+  │  └──────────────────────────┬───────────────────────────────┘      │
+  └────────────────────────────┬┼───────────────────────────────────────┘
+                               ││
+          ┌────────────────────┘└───────────────┐
+          │                                      │
+  ┌───────▼────────┐  ┌─────────────┐  ┌───────▼────────┐
+  │  PostgreSQL 16  │  │   Redis 7   │  │  Celery Workers │
+  │  (port 5433)    │  │ (port 6379) │  │  + Beat         │
+  │  Ma'lumotlar    │  │  Cache +    │  │  Background     │
+  │  bazasi         │  │  Broker     │  │  tasks          │
+  └────────────────┘  └─────────────┘  └────────┬────────┘
+                                                 │
+                                        ┌────────▼────────┐
+                                        │  Tashqi API lar │
+                                        │  - Groq AI      │
+                                        │  - OpenAI       │
+                                        │  - Google TTS   │
+                                        └─────────────────┘
+
+
+================================================================================
+14. LOYIHA STATISTIKASI
+================================================================================
+
+  Backend:
+    - 2 ta Django app (users, words) + common module + core
+    - 15+ ta ma'lumotlar bazasi modeli
+    - 50+ ta API endpoint
+    - 50+ ta use case
+    - 50+ ta view class
+    - 30+ ta serializer
+    - 7 ta AI prompt shablon
+    - 20 ta badge
+    - 5 ta Celery vazifa
+    - Clean Architecture (4 qatlam)
+
+  Frontend:
+    - 15 ta feature moduli
+    - 30+ ta sahifa
+    - 100+ ta komponent
+    - 60+ ta React Query hook
+    - 3 ta Zustand store
+    - 15 ta tip fayl (50+ interfeys)
+    - Dark/Light tema
+    - Responsive dizayn (mobil + desktop)
+    - Framer Motion animatsiyalar
+
+  Infratuzilma:
+    - 6 ta Docker service
+    - Docker Compose orqali 1 komandada ishga tushirish
+    - PostgreSQL + Redis + Celery
+    - CI/CD tayyorligi
+
+
+================================================================================
+15. FOYDALI HAVOLALAR
+================================================================================
+
+  Frontend:      http://localhost:5173
+  Backend API:   http://localhost:8000/api/v1/
+  Swagger UI:    http://localhost:8000/api/docs/
+  Admin panel:   http://localhost:8000/admin/
+  OpenAPI schema: http://localhost:8000/api/schema/
+
+  Texnologiyalar hujjatlari:
+    Django:        https://docs.djangoproject.com/
+    DRF:           https://www.django-rest-framework.org/
+    React:         https://react.dev/
+    Vite:          https://vitejs.dev/
+    Tailwind CSS:  https://tailwindcss.com/
+    React Query:   https://tanstack.com/query/
+    Zustand:       https://zustand-demo.pmnd.rs/
+    Framer Motion: https://www.framer.com/motion/
+    Groq:          https://console.groq.com/docs
+    Celery:        https://docs.celeryq.dev/
+
+================================================================================
+              QO'LLANMA TUGADI — 15 BO'LIM
+================================================================================

@@ -24,6 +24,11 @@ class GroqProvider(AbstractAIProvider):
         self._client = None
         self._availability_cache = None
         self._availability_cache_time = 0
+        try:
+            from apps.common.circuit_breaker import get_circuit
+            self.circuit = get_circuit("groq")
+        except Exception:
+            self.circuit = None
 
     def _get_client(self):
         if self._client is None:
@@ -47,6 +52,9 @@ class GroqProvider(AbstractAIProvider):
         if not self.is_available():
             raise AIProviderError("No API key configured", provider="groq")
 
+        if self.circuit and not self.circuit.is_available():
+            raise AIProviderError("Circuit breaker is open", provider="groq")
+
         for attempt in range(self._max_retries):
             try:
                 client = self._get_client()
@@ -56,7 +64,10 @@ class GroqProvider(AbstractAIProvider):
                     max_tokens=max_tokens,
                     temperature=temperature,
                 )
-                return response.choices[0].message.content or ""
+                result = response.choices[0].message.content or ""
+                if self.circuit:
+                    self.circuit.record_success()
+                return result
             except Exception as e:
                 error_name = type(e).__name__
                 if "RateLimitError" in error_name:
@@ -65,15 +76,23 @@ class GroqProvider(AbstractAIProvider):
                         logger.warning(f"Groq rate limit, retrying in {wait}s...")
                         time.sleep(wait)
                         continue
+                    if self.circuit:
+                        self.circuit.record_failure()
                     raise AIProviderError(f"Rate limit exceeded: {e}", provider="groq")
                 if "APIError" in error_name or "APIConnectionError" in error_name:
                     if attempt < self._max_retries - 1:
                         wait = (2**attempt)
                         time.sleep(wait)
                         continue
+                    if self.circuit:
+                        self.circuit.record_failure()
                     raise AIProviderError(f"API error: {e}", provider="groq")
                 if "APITimeoutError" in error_name:
+                    if self.circuit:
+                        self.circuit.record_failure()
                     raise AIProviderError(f"Request timed out: {e}", provider="groq")
+                if self.circuit:
+                    self.circuit.record_failure()
                 raise AIProviderError(f"Unexpected error: {e}", provider="groq")
 
         raise AIProviderError("Max retries exceeded", provider="groq")

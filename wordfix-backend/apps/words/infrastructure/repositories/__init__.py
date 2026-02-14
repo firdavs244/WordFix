@@ -1,4 +1,5 @@
 from .word_repo import *
+from .word_stats_repo import *
 from .review_repo import *
 from .test_repo import *
 from .game_repo import *

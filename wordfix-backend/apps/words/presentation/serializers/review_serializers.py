@@ -17,7 +17,7 @@ class ReviewSessionCreateSerializer(serializers.Serializer):
     """Serializer for creating a review session."""
 
     session_type = serializers.ChoiceField(
-        choices=["review", "quick", "focus"],
+        choices=["review", "quick", "focus", "learn", "mixed"],
         required=False,
         default="review",
     )

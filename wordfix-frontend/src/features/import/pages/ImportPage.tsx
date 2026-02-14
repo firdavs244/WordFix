@@ -1,39 +1,42 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Sparkles, Upload, Check, Loader2, ArrowLeft } from 'lucide-react';
+import { FileText, Sparkles, Upload, Check, Loader2 } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useAnalyzeText, useImportWords, useValidateCSV, useImportCSV } from '../hooks/useImport';
 import { CSVDropZone } from '../components/CSVDropZone';
 import { CSVPreview } from '../components/CSVPreview';
 import { CSVResult } from '../components/CSVResult';
+import { TextImportReview } from '../components/TextImportReview';
+import { TextImportResult } from '../components/TextImportResult';
+import type { ImportStep } from '../components/importHelpers';
 import type { WordSuggestion } from '@/types';
 import type { CSVValidateResult, CSVImportResult } from '@/types/smart-import';
-
-type ImportStep = 'input' | 'review' | 'result';
 
 export function ImportPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<ImportStep>('input');
   const [text, setText] = useState('');
   const [suggestions, setSuggestions] = useState<WordSuggestion[]>([]);
-  const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(
+    null,
+  );
 
   const analyzeText = useAnalyzeText();
   const importWords = useImportWords();
 
-  // CSV import state
+  // CSV state
   const [csvStep, setCsvStep] = useState<'upload' | 'preview' | 'result'>('upload');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvValidation, setCsvValidation] = useState<CSVValidateResult | null>(null);
   const [csvResult, setCsvResult] = useState<CSVImportResult | null>(null);
   const validateCSV = useValidateCSV();
   const importCSV = useImportCSV();
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
 
   const handleAnalyze = async () => {
     if (!text.trim()) return;
@@ -49,18 +52,13 @@ export function ImportPage() {
     );
   };
 
-  const selectAll = () => {
-    setSuggestions((prev) => prev.map((s) => ({ ...s, selected: true })));
-  };
-
-  const deselectAll = () => {
+  const selectAll = () => setSuggestions((prev) => prev.map((s) => ({ ...s, selected: true })));
+  const deselectAll = () =>
     setSuggestions((prev) => prev.map((s) => ({ ...s, selected: false })));
-  };
 
   const handleImport = async () => {
     const selected = suggestions.filter((s) => s.selected);
     if (selected.length === 0) return;
-
     const result = await importWords.mutateAsync({
       words: selected.map((s) => ({
         original_word: s.word,
@@ -104,14 +102,7 @@ export function ImportPage() {
 
   const selectedCount = suggestions.filter((s) => s.selected).length;
 
-  const difficultyColor = (d: string) => {
-    switch (d) {
-      case 'easy': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'hard': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default: return '';
-    }
-  };
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
@@ -141,7 +132,7 @@ export function ImportPage() {
           </Tabs.Trigger>
         </Tabs.List>
 
-        {/* =========== TEXT IMPORT TAB =========== */}
+        {/* ─── Text Import Tab ────────────────────────────────────────────── */}
         <Tabs.Content value="text" className="space-y-6">
           {/* Steps indicator */}
           <div className="flex items-center gap-2">
@@ -161,7 +152,9 @@ export function ImportPage() {
                   >
                     {done ? <Check className="h-4 w-4" /> : i + 1}
                   </div>
-                  <span className={`text-sm ${active ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                  <span
+                    className={`text-sm ${active ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
+                  >
                     {label}
                   </span>
                   {i < 2 && <div className="mx-2 h-px w-8 bg-border" />}
@@ -186,7 +179,8 @@ export function ImportPage() {
                       Paste Your Text
                     </CardTitle>
                     <CardDescription>
-                      Paste an article, essay, book excerpt, or any English text (max 5000 characters)
+                      Paste an article, essay, book excerpt, or any English text (max 5000
+                      characters)
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -226,151 +220,31 @@ export function ImportPage() {
 
             {/* Step 2: Review */}
             {step === 'review' && (
-              <motion.div
-                key="review"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-4"
-              >
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-primary" />
-                          Found {suggestions.length} Words
-                        </CardTitle>
-                        <CardDescription>
-                          Select the words you want to add to your vocabulary
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={selectAll}>
-                          Select All
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={deselectAll}>
-                          Deselect All
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {suggestions.map((suggestion, index) => (
-                        <motion.div
-                          key={suggestion.word}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${
-                            suggestion.selected
-                              ? 'border-primary/30 bg-primary/5'
-                              : 'border-border bg-card opacity-60'
-                          }`}
-                        >
-                          <Checkbox
-                            checked={suggestion.selected}
-                            onCheckedChange={() => toggleWord(index)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-foreground">{suggestion.word}</span>
-                              <span className="text-muted-foreground">—</span>
-                              <span className="text-muted-foreground">{suggestion.translation}</span>
-                              <Badge variant="outline" className={difficultyColor(suggestion.difficulty)}>
-                                {suggestion.difficulty}
-                              </Badge>
-                              {suggestion.part_of_speech && (
-                                <Badge variant="secondary">{suggestion.part_of_speech}</Badge>
-                              )}
-                            </div>
-                            {suggestion.context_sentence && (
-                              <p className="text-sm italic text-muted-foreground">
-                                &ldquo;{suggestion.context_sentence}&rdquo;
-                              </p>
-                            )}
-                            {suggestion.reason && (
-                              <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex items-center justify-between">
-                  <Button variant="outline" onClick={() => setStep('input')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </Button>
-                  <Button
-                    onClick={handleImport}
-                    disabled={selectedCount === 0 || importWords.isPending}
-                    size="lg"
-                  >
-                    {importWords.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Importing...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Import {selectedCount} Words
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
+              <TextImportReview
+                suggestions={suggestions}
+                onToggleWord={toggleWord}
+                onSelectAll={selectAll}
+                onDeselectAll={deselectAll}
+                onImport={handleImport}
+                onBack={() => setStep('input')}
+                selectedCount={selectedCount}
+                isImporting={importWords.isPending}
+              />
             )}
 
             {/* Step 3: Result */}
             {step === 'result' && importResult && (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-              >
-                <Card className="text-center">
-                  <CardContent className="space-y-6 py-12">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                      className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30"
-                    >
-                      <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
-                    </motion.div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-foreground">Import Complete!</h2>
-                      <p className="mt-2 text-muted-foreground">
-                        Successfully added <strong>{importResult.created}</strong> new words to your vocabulary
-                      </p>
-                      {importResult.skipped > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          {importResult.skipped} words were skipped (already in your vocabulary)
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex justify-center gap-3">
-                      <Button variant="outline" onClick={reset}>
-                        Import More
-                      </Button>
-                      <Button onClick={() => navigate('/words')}>
-                        View My Words
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <TextImportResult
+                created={importResult.created}
+                skipped={importResult.skipped}
+                onReset={reset}
+                onViewWords={() => navigate('/words')}
+              />
             )}
           </AnimatePresence>
         </Tabs.Content>
 
-        {/* =========== CSV IMPORT TAB =========== */}
+        {/* ─── CSV Import Tab ─────────────────────────────────────────────── */}
         <Tabs.Content value="csv" className="space-y-6">
           <AnimatePresence mode="wait">
             {csvStep === 'upload' && (
@@ -387,14 +261,12 @@ export function ImportPage() {
                       Upload CSV File
                     </CardTitle>
                     <CardDescription>
-                      Upload a CSV file with columns: word (required), translation, difficulty_level, category
+                      Upload a CSV file with columns: word (required), translation,
+                      difficulty_level, category
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <CSVDropZone
-                      onFileSelect={handleCSVValidate}
-                      isLoading={validateCSV.isPending}
-                    />
+                    <CSVDropZone onFileSelect={handleCSVValidate} isLoading={validateCSV.isPending} />
                   </CardContent>
                 </Card>
               </motion.div>
@@ -413,9 +285,7 @@ export function ImportPage() {
                       <Sparkles className="h-5 w-5 text-primary" />
                       Preview & Import
                     </CardTitle>
-                    <CardDescription>
-                      Review the parsed data before importing
-                    </CardDescription>
+                    <CardDescription>Review the parsed data before importing</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <CSVPreview

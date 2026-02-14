@@ -1,12 +1,23 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Target, ArrowRight, Zap, TrendingUp, CheckCircle2, Brain, ClipboardCheck, Gamepad2 } from 'lucide-react';
+import {
+  BookOpen,
+  Target,
+  ArrowRight,
+  Zap,
+  TrendingUp,
+  CheckCircle2,
+  Brain,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransition } from '@/components/animations/PageTransition';
-import { cardHoverVariants, listContainerVariants, listItemVariants } from '@/components/animations/PageTransition';
+import {
+  cardHoverVariants,
+  listContainerVariants,
+  listItemVariants,
+} from '@/components/animations/PageTransition';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useWordStats, useWords } from '@/features/words/hooks/useWords';
 import { StreakWidget, DailyProgressWidget } from '@/features/review/components';
@@ -14,12 +25,11 @@ import { useReviewSummary } from '@/features/review/hooks/useReview';
 import { LevelProgress } from '@/features/progress/components/LevelProgress';
 import { XPChart } from '@/features/progress/components/XPChart';
 import { DailyChallengesWidget } from '@/features/challenges/components/DailyChallengesWidget';
-
-const difficultyColors = {
-  easy: 'success' as const,
-  medium: 'warning' as const,
-  hard: 'destructive' as const,
-};
+import { DomainCoverageWidget } from '@/features/learning/components/DomainCoverageWidget';
+import { RecommendationsWidget } from '@/features/learning/components/RecommendationsWidget';
+import { MistakePatternsWidget } from '@/features/learning/components/MistakePatternsWidget';
+import { DashboardQuickActions } from '../components/DashboardQuickActions';
+import { DashboardRecentWords } from '../components/DashboardRecentWords';
 
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -65,7 +75,7 @@ export function DashboardPage() {
   return (
     <PageTransition>
       <div className="mx-auto max-w-5xl space-y-8">
-        {/* Welcome Section */}
+        {/* Welcome */}
         <motion.div
           className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
           initial={{ opacity: 0, y: 20 }}
@@ -87,17 +97,14 @@ export function DashboardPage() {
           </Link>
         </motion.div>
 
-        {/* Streak & Progress Row */}
+        {/* Streak & Progress */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <LevelProgress />
           <StreakWidget />
           <DailyProgressWidget />
         </div>
 
-        {/* Daily Challenges */}
         <DailyChallengesWidget />
-
-        {/* XP Chart */}
         <XPChart />
 
         {/* Review CTA */}
@@ -132,42 +139,7 @@ export function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Test & Games Quick Actions */}
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-        >
-          <Link to="/tests">
-            <Card className="cursor-pointer border-border/50 transition-all hover:shadow-md hover:-translate-y-0.5">
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10">
-                  <ClipboardCheck className="h-6 w-6 text-indigo-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-heading text-lg font-semibold">Take a Test</p>
-                  <p className="text-sm text-muted-foreground">AI generates tests from your words</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/games">
-            <Card className="cursor-pointer border-border/50 transition-all hover:shadow-md hover:-translate-y-0.5">
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pink-500/10">
-                  <Gamepad2 className="h-6 w-6 text-pink-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-heading text-lg font-semibold">Play a Game</p>
-                  <p className="text-sm text-muted-foreground">3 game modes to boost your vocabulary</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
+        <DashboardQuickActions />
 
         {/* Stats Cards */}
         {statsLoading ? (
@@ -191,10 +163,17 @@ export function DashboardPage() {
           >
             {statsCards.map((stat) => (
               <motion.div key={stat.label} variants={listItemVariants}>
-                <motion.div variants={cardHoverVariants} initial="rest" whileHover="hover" whileTap="tap">
+                <motion.div
+                  variants={cardHoverVariants}
+                  initial="rest"
+                  whileHover="hover"
+                  whileTap="tap"
+                >
                   <Card className="cursor-pointer border-border/50">
                     <CardContent className="flex items-center gap-4 p-6">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bgColor}`}>
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bgColor}`}
+                      >
                         <stat.icon className={`h-6 w-6 ${stat.color}`} />
                       </div>
                       <div className="flex-1">
@@ -225,7 +204,7 @@ export function DashboardPage() {
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Average Confidence</p>
                   <div className="mt-1 flex items-center gap-3">
-                    <div className="h-3 flex-1 rounded-full bg-muted overflow-hidden">
+                    <div className="h-3 flex-1 overflow-hidden rounded-full bg-muted">
                       <motion.div
                         className="h-full rounded-full bg-primary"
                         initial={{ width: 0 }}
@@ -233,7 +212,9 @@ export function DashboardPage() {
                         transition={{ duration: 0.8, ease: 'easeOut' }}
                       />
                     </div>
-                    <span className="font-heading text-lg font-bold">{stats.average_confidence}%</span>
+                    <span className="font-heading text-lg font-bold">
+                      {stats.average_confidence}%
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -241,68 +222,27 @@ export function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Recent Words */}
+        {/* Domain Coverage */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
+          transition={{ duration: 0.4, delay: 0.22 }}
         >
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <BookOpen className="h-5 w-5 text-muted-foreground" />
-                Recent Words
-              </CardTitle>
-              <Link to="/words">
-                <Button variant="ghost" size="sm" className="gap-1 text-primary">
-                  View All
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {recentLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between py-3">
-                      <div className="space-y-1">
-                        <Skeleton className="h-5 w-32" />
-                        <Skeleton className="h-4 w-48" />
-                      </div>
-                      <Skeleton className="h-6 w-16 rounded-full" />
-                    </div>
-                  ))}
-                </div>
-              ) : recentWords.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {recentWords.map((word, index) => (
-                    <motion.div
-                      key={word.id}
-                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.4 + index * 0.05 }}
-                    >
-                      <div>
-                        <p className="font-medium">{word.original_word}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {word.translation || word.definition || 'No translation'}
-                        </p>
-                      </div>
-                      <Badge variant={difficultyColors[word.difficulty_level] ?? 'outline'}>
-                        {word.difficulty_level}
-                      </Badge>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <p className="py-8 text-center text-muted-foreground">
-                  No words yet. Start by adding your first word!
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <DomainCoverageWidget />
         </motion.div>
+
+        {/* Recommendations & Mistakes */}
+        <motion.div
+          className="grid gap-4 md:grid-cols-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+        >
+          <RecommendationsWidget />
+          <MistakePatternsWidget />
+        </motion.div>
+
+        <DashboardRecentWords words={recentWords} isLoading={recentLoading} />
       </div>
     </PageTransition>
   );

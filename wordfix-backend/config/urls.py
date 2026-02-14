@@ -25,6 +25,8 @@ urlpatterns = [
     path("api/v1/analytics/", include("apps.words.presentation.analytics_urls")),
     path("api/v1/challenges/", include("apps.words.presentation.challenge_urls")),
     path("api/v1/notifications/", include("apps.users.presentation.notification_urls")),
+    path("api/v1/system/", include("apps.common.urls")),
+    path("api/v1/learning-profile/", include("apps.users.presentation.learning_urls")),
 ]
 
 # Serve media files in development

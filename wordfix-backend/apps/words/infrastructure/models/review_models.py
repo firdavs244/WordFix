@@ -16,6 +16,8 @@ class ReviewSession(AbstractBaseModel):
         ("review", "Review"),
         ("quick", "Quick"),
         ("focus", "Focus"),
+        ("learn", "Learn"),
+        ("mixed", "Mixed"),
     ]
 
     user = models.ForeignKey(

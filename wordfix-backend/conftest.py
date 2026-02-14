@@ -5,6 +5,11 @@ Provides shared fixtures: api_client, user, authenticated_client,
 word factory, category factory.
 """
 
+import os
+
+# Force test settings before Django setup — Docker env sets 'development'
+os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings.test"
+
 import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken

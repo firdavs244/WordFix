@@ -93,8 +93,9 @@ export function useStartSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reviewKeys.sessions() });
     },
-    onError: () => {
-      toast.error('Failed to start review session.');
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.response?.data?.errors?.[0] || 'Failed to start review session.';
+      toast.error(message);
     },
   });
 }

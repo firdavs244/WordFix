@@ -153,6 +153,16 @@ class SubmitReviewAnswerUseCase:
             except Exception as e:
                 logger.warning(f"Confusion detection failed: {e}")
 
+        # Record mistake pattern (adaptive intelligence)
+        if not is_correct and user_answer:
+            try:
+                from apps.users.presentation.learning_deps import get_record_mistake_use_case
+                mistake_uc = get_record_mistake_use_case()
+                correct_text = word.original_word if hasattr(word, "original_word") else ""
+                mistake_uc.execute(user_id, user_answer, correct_text, context="review")
+            except Exception as e:
+                logger.warning(f"Mistake pattern recording failed: {e}")
+
         # Update daily challenge progress
         if self.challenge_repo:
             try:

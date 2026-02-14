@@ -14,6 +14,7 @@ import {
   Upload,
   MessageCircle,
   Shuffle,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/useAppStore';
@@ -30,6 +31,7 @@ const navItems = [
   { label: 'Confusing Pairs', path: '/confusing-pairs', icon: Shuffle },
   { label: 'Games', path: '/games', icon: Gamepad2 },
   { label: 'Analytics', path: '/analytics', icon: BarChart3 },
+  { label: 'Learning Profile', path: '/learning-profile', icon: Sparkles },
   { label: 'Badges', path: '/badges', icon: Award },
   { label: 'Profile', path: '/profile', icon: User },
 ];
