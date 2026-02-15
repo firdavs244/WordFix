@@ -58,6 +58,8 @@ export interface WordRecommendation {
   reason: string;
   reason_type: 'domain_gap' | 'confusion_fix' | 'level_appropriate' | 'high_frequency';
   priority: number;
+  is_accepted?: boolean;
+  ai_confidence?: number;
 }
 
 export interface DomainCoverage {

@@ -129,19 +129,24 @@ class GetWordRecommendationsUseCase:
 
     @staticmethod
     def _to_dicts(recs) -> list[dict]:
-        return [
-            {
+        seen: set[str] = set()
+        result: list[dict] = []
+        for r in recs:
+            key = r.recommended_word.strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append({
                 "id": str(r.id),
-                "recommended_word": r.recommended_word,
+                "word": r.recommended_word,
                 "translation": r.translation,
                 "reason": r.reason,
                 "reason_type": r.reason_type,
-                "priority_score": r.priority_score,
+                "priority": r.priority_score,
                 "is_accepted": r.is_accepted,
                 "ai_confidence": r.ai_confidence,
-            }
-            for r in recs
-        ]
+            })
+        return result
 
 
 class AcceptRecommendationUseCase:

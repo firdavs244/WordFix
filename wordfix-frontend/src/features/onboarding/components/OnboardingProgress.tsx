@@ -1,29 +1,26 @@
 import { motion } from 'framer-motion';
 
-interface OnboardingProgressProps {
+interface Props {
   current: number;
   total: number;
 }
 
-export function OnboardingProgress({ current, total }: OnboardingProgressProps) {
-  const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+export function OnboardingProgress({ current, total }: Props) {
+  const pct = total > 0 ? (current / total) * 100 : 0;
 
   return (
-    <div className="w-full space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-foreground">
-          Question {current} of {total}
-        </span>
-        <span className="text-muted-foreground">{percentage}%</span>
-      </div>
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+    <div className="mb-8 w-full">
+      <div className="h-1 overflow-hidden rounded-full bg-muted">
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-primary"
+          className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
           initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
+          animate={{ width: `${pct}%` }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         />
       </div>
+      <p className="mt-2.5 text-center text-xs text-muted-foreground">
+        Question <span className="font-semibold text-foreground">{current}</span> of {total}
+      </p>
     </div>
   );
 }

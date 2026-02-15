@@ -1,60 +1,81 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { testApi } from '../api/testApi';
-import type { TestAnswerRequest, TestGenerateRequest } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import apiClient from '@/api/client';
+import API_ENDPOINTS from '@/api/endpoints';
+import type {
+  TestGenerateRequest,
+  TestGenerateResponse,
+  TestAnswerRequest,
+  TestAnswerResponse,
+  TestSession,
+  TestDetailResponse,
+} from '@/types';
 
-export const testKeys = {
-  all: ['tests'] as const,
-  history: (page?: number) => [...testKeys.all, 'history', page] as const,
-  detail: (id: string) => [...testKeys.all, 'detail', id] as const,
-};
+export function useGenerateTest() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-export function useTestHistory(page = 1) {
-  return useQuery({
-    queryKey: testKeys.history(page),
-    queryFn: () => testApi.getHistory(page),
+  return useMutation({
+    mutationFn: async (config: TestGenerateRequest) => {
+      const { data } = await apiClient.post<{ data: TestGenerateResponse }>(
+        API_ENDPOINTS.TESTS.GENERATE,
+        config,
+      );
+      return data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['tests', 'history'] });
+      navigate(`/tests/session/${data.session.id}`, { state: { questions: data.questions } });
+    },
+    onError: () => toast.error('Failed to generate test. Please try again.'),
   });
 }
 
-export function useTestDetail(sessionId: string) {
+export function useTestSession(sessionId: string) {
   return useQuery({
-    queryKey: testKeys.detail(sessionId),
-    queryFn: () => testApi.getDetail(sessionId),
+    queryKey: ['tests', sessionId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: TestDetailResponse }>(
+        API_ENDPOINTS.TESTS.DETAIL(sessionId),
+      );
+      return data.data;
+    },
     enabled: !!sessionId,
   });
 }
 
-export function useGenerateTest() {
-  const qc = useQueryClient();
+export function useSubmitTestAnswer(sessionId: string) {
   return useMutation({
-    mutationFn: (data: TestGenerateRequest) => testApi.generate(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: testKeys.all });
-    },
-    onError: () => {
-      toast.error('Failed to generate test. Please try again.');
-    },
-  });
-}
-
-export function useSubmitTestAnswer() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ sessionId, data }: { sessionId: string; data: TestAnswerRequest }) =>
-      testApi.submitAnswer(sessionId, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
+    mutationFn: async (answer: TestAnswerRequest) => {
+      const { data } = await apiClient.post<{ data: TestAnswerResponse }>(
+        API_ENDPOINTS.TESTS.ANSWER(sessionId),
+        answer,
+      );
+      return data.data;
     },
   });
 }
 
 export function useCompleteTest() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (sessionId: string) => testApi.complete(sessionId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: testKeys.all });
-      qc.invalidateQueries({ queryKey: ['daily-challenges'] });
+    mutationFn: async (sessionId: string) => {
+      const { data } = await apiClient.post<{ data: TestSession }>(
+        API_ENDPOINTS.TESTS.COMPLETE(sessionId),
+      );
+      return data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tests'] }),
+  });
+}
+
+export function useRecentTests() {
+  return useQuery({
+    queryKey: ['tests', 'history'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: TestSession[] }>(API_ENDPOINTS.TESTS.HISTORY);
+      return data.data;
     },
   });
 }

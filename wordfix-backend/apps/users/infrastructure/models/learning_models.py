@@ -185,6 +185,16 @@ class WordRecommendation(models.Model):
     class Meta:
         db_table = "word_recommendations"
         ordering = ["-priority_score", "-created_at"]
+        indexes = [
+            models.Index(fields=["user", "recommended_word"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "recommended_word"],
+                condition=models.Q(is_accepted=False, is_dismissed=False),
+                name="unique_active_recommendation_per_user",
+            ),
+        ]
         verbose_name = "Word Recommendation"
         verbose_name_plural = "Word Recommendations"
 

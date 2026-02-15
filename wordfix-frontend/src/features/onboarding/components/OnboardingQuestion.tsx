@@ -1,97 +1,56 @@
 import { useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import type { OnboardingQuestion as QuestionType } from '@/features/onboarding/types';
+import { ArrowRight, Check, Loader2 } from 'lucide-react';
+import { staggerContainer, staggerItem } from '@/lib/motion';
+import type { OnboardingQuestion as QType } from '../types';
+import { OnboardingProgress } from './OnboardingProgress';
+import { OnboardingOptionCard } from './OnboardingOptionCard';
 
-interface OnboardingQuestionProps {
-  question: QuestionType;
-  selectedOption: string | null;
-  onSelect: (option: string) => void;
-  questionNumber: number;
+interface Props {
+  question: QType;
+  currentIndex: number;
+  totalQuestions: number;
+  selectedAnswer: string | null;
+  selectAnswer: (a: string) => void;
+  nextQuestion: () => void;
+  isLastQuestion: boolean;
+  isSubmitting: boolean;
 }
 
-export function OnboardingQuestion({
-  question,
-  selectedOption,
-  onSelect,
-  questionNumber,
-}: OnboardingQuestionProps) {
-  // Keyboard navigation: press 1-4 to select option
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= question.options.length) {
-        onSelect(question.options[num - 1]);
-      }
-    },
-    [question.options, onSelect],
-  );
+export function OnboardingQuestionScreen({
+  question, currentIndex, totalQuestions, selectedAnswer, selectAnswer, nextQuestion, isLastQuestion, isSubmitting,
+}: Props) {
+  const handleKey = useCallback((e: KeyboardEvent) => {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= question.options.length) selectAnswer(question.options[n - 1]);
+  }, [question.options, selectAnswer]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [handleKey]);
 
   return (
-    <motion.div
-      key={question.id}
-      initial={{ opacity: 0, x: 60 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -60 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="space-y-6"
-    >
-      <div className="space-y-2">
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Question {questionNumber}
-        </span>
-        <h2 className="text-xl font-semibold leading-relaxed text-foreground md:text-2xl">
-          {question.question_text}
-        </h2>
-      </div>
+    <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.25 }}>
+      <OnboardingProgress current={currentIndex + 1} total={totalQuestions} />
 
-      <div className="grid gap-3">
-        {question.options.map((option, i) => {
-          const isSelected = selectedOption === option;
+      <h2 className="mx-auto mt-4 mb-8 max-w-md text-center font-heading text-lg font-semibold leading-snug lg:text-xl">
+        {question.question_text}
+      </h2>
 
-          return (
-            <motion.button
-              key={option}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              onClick={() => onSelect(option)}
-              className={cn(
-                'group flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all',
-                'hover:border-primary/50 hover:bg-primary/5',
-                isSelected
-                  ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                  : 'border-border bg-card',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors',
-                  isSelected
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary',
-                )}
-              >
-                {i + 1}
-              </span>
-              <span className={cn('text-sm font-medium md:text-base', isSelected && 'text-primary')}>
-                {option}
-              </span>
-            </motion.button>
-          );
-        })}
-      </div>
+      <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-3">
+        {question.options.map((opt, i) => (
+          <OnboardingOptionCard key={opt} text={opt} index={i} isSelected={selectedAnswer === opt} onClick={() => selectAnswer(opt)} />
+        ))}
+      </motion.div>
 
-      <p className="text-center text-xs text-muted-foreground">
-        Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">1</kbd>-
-        <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{question.options.length}</kbd>{' '}
-        to select, then <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">Enter</kbd> to continue
-      </p>
+      <button
+        onClick={nextQuestion}
+        disabled={!selectedAnswer || isSubmitting}
+        className="mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/90 text-sm font-semibold text-white transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : isLastQuestion ? <><Check className="h-4 w-4" /> Finish Assessment</> : <>Next Question <ArrowRight className="h-4 w-4" /></>}
+      </button>
     </motion.div>
   );
 }

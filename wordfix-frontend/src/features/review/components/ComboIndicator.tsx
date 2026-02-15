@@ -2,107 +2,37 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ComboIndicatorProps {
+interface Props {
   combo: number;
   multiplier: number;
-  isActive: boolean;
 }
 
-function getComboStyle(multiplier: number) {
-  if (multiplier >= 5) {
-    return {
-      text: 'text-purple-500 dark:text-purple-400',
-      bg: 'bg-purple-500/15',
-      border: 'border-purple-500/30',
-      glow: 'shadow-purple-500/25',
-      pulse: true,
-    };
-  }
-  if (multiplier >= 3) {
-    return {
-      text: 'text-red-500 dark:text-red-400',
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/30',
-      glow: 'shadow-red-500/20',
-      pulse: false,
-    };
-  }
-  if (multiplier >= 2) {
-    return {
-      text: 'text-orange-500 dark:text-orange-400',
-      bg: 'bg-orange-500/10',
-      border: 'border-orange-500/30',
-      glow: '',
-      pulse: false,
-    };
-  }
-  return {
-    text: 'text-yellow-500 dark:text-yellow-400',
-    bg: 'bg-yellow-500/10',
-    border: 'border-yellow-500/30',
-    glow: '',
-    pulse: false,
-  };
+function getStyle(combo: number) {
+  if (combo >= 20) return 'bg-primary/10 border-primary/20 text-primary shadow-glow-primary';
+  if (combo >= 10) return 'bg-red-500/10 border-red-500/20 text-red-600';
+  if (combo >= 5) return 'bg-orange-500/10 border-orange-500/20 text-orange-600';
+  return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600';
 }
 
-export function ComboIndicator({ combo, multiplier, isActive }: ComboIndicatorProps) {
-  if (combo < 2 || !isActive) return null;
-
-  const style = getComboStyle(multiplier);
-
+export default function ComboIndicator({ combo, multiplier }: Props) {
   return (
     <AnimatePresence>
-      <motion.div
-        key={`combo-${combo}`}
-        className={cn(
-          'flex items-center justify-center gap-2 rounded-xl border px-4 py-2',
-          style.bg,
-          style.border,
-          style.glow && `shadow-lg ${style.glow}`,
-        )}
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{
-          scale: [1.2, 1],
-          opacity: 1,
-        }}
-        transition={{ type: 'spring', stiffness: 400, damping: 15, duration: 0.3 }}
-        aria-live="polite"
-        aria-label={`${combo} combo, ${multiplier}x XP multiplier`}
-      >
+      {combo > 1 && (
         <motion.div
-          animate={style.pulse ? { scale: [1, 1.2, 1] } : { scale: [1, 1.1, 1] }}
-          transition={{ repeat: Infinity, duration: style.pulse ? 1.5 : 2 }}
+          key={combo}
+          initial={{ scale: 0.3, opacity: 0 }}
+          animate={{ scale: [1.2, 1], opacity: 1 }}
+          exit={{ scale: 0.3, opacity: 0 }}
+          className={cn('fixed right-4 top-20 z-20 rounded-2xl border px-4 py-2.5 shadow-lg lg:right-8', getStyle(combo))}
+          data-testid="combo-indicator"
         >
-          <Flame className={cn('h-5 w-5', style.text)} />
+          <div className="flex items-center gap-1.5">
+            <Flame className="h-4 w-4" />
+            <span className="font-heading text-lg font-bold">{combo}</span>
+          </div>
+          <p className="text-xs font-semibold">×{multiplier}</p>
         </motion.div>
-        <div className="flex items-baseline gap-1.5">
-          <motion.span
-            key={`combo-num-${combo}`}
-            className={cn('font-heading text-lg font-bold', style.text)}
-            initial={{ scale: 1.3 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-          >
-            x{combo}
-          </motion.span>
-          <span className={cn('text-xs font-semibold uppercase tracking-wider', style.text)}>
-            Combo!
-          </span>
-        </div>
-        <motion.div
-          className={cn(
-            'rounded-md px-2 py-0.5 text-xs font-bold',
-            style.bg,
-            style.text,
-          )}
-          key={`mult-${multiplier}`}
-          initial={{ scale: 1.4 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 300, delay: 0.1 }}
-        >
-          {multiplier}x XP
-        </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }
