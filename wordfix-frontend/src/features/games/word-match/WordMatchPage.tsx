@@ -19,7 +19,15 @@ export default function WordMatchPage() {
 
   useEffect(() => {
     if (game.phase === 'complete' && game.result) {
-      navigate(`/games/result/${game.result.id}`);
+      navigate(`/games/result/${game.result.id}`, {
+        state: {
+          correct: game.result.correct_answers,
+          total: game.result.correct_answers + game.result.incorrect_answers,
+          time: game.result.duration_seconds,
+          xp: game.result.xp_earned,
+          gameType: 'word-match',
+        }
+      });
     }
   }, [game.phase, game.result, navigate]);
 

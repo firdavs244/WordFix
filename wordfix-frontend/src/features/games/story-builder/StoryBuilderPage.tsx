@@ -15,7 +15,7 @@ export default function StoryBuilderPage() {
   if (game.phase === 'complete') {
     return (
       <div className="mx-auto max-w-lg px-4 py-8">
-        <StoryComplete fullStory={game.fullStory} totalScore={game.totalScore} maxScore={game.totalRounds * 10} />
+        <StoryComplete fullStory={game.fullStory} totalScore={game.totalScore} maxScore={game.totalRounds * 20} />
       </div>
     );
   }

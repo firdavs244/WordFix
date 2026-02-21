@@ -14,7 +14,8 @@ describe('QuestionCountSlider', () => {
 
   it('displays the current value', () => {
     render(<QuestionCountSlider value={15} onChange={onChange} />);
-    expect(screen.getByText('15')).toBeInTheDocument();
+    const matches = screen.getAllByText('15');
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders range input with accessible label', () => {

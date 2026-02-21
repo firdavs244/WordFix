@@ -12,6 +12,7 @@ class GetWordRecommendationsUseCase:
     """Return current recommendations, generating new ones if needed."""
 
     FALLBACK_WORDS = [
+        # --- Academic / High-frequency ---
         {"word": "analyze", "translation": "tahlil qilmoq", "reason": "Academic vocabulary", "reason_type": "high_frequency"},
         {"word": "approach", "translation": "yondashuv", "reason": "Common academic word", "reason_type": "high_frequency"},
         {"word": "benefit", "translation": "foyda", "reason": "Versatile word", "reason_type": "high_frequency"},
@@ -22,6 +23,61 @@ class GetWordRecommendationsUseCase:
         {"word": "factor", "translation": "omil", "reason": "Commonly used", "reason_type": "high_frequency"},
         {"word": "generate", "translation": "yaratmoq", "reason": "Academic verb", "reason_type": "high_frequency"},
         {"word": "indicate", "translation": "ko'rsatmoq", "reason": "Academic verb", "reason_type": "high_frequency"},
+        # --- Level-appropriate / Professional ---
+        {"word": "investigate", "translation": "tekshirmoq", "reason": "Academic verb", "reason_type": "high_frequency"},
+        {"word": "justify", "translation": "asoslamoq", "reason": "Formal writing", "reason_type": "level_appropriate"},
+        {"word": "maintain", "translation": "saqlamoq", "reason": "Common verb", "reason_type": "high_frequency"},
+        {"word": "obtain", "translation": "olmoq, qo'lga kiritmoq", "reason": "Formal verb", "reason_type": "level_appropriate"},
+        {"word": "participate", "translation": "ishtirok etmoq", "reason": "Active vocabulary", "reason_type": "high_frequency"},
+        {"word": "perceive", "translation": "idrok qilmoq", "reason": "Advanced verb", "reason_type": "level_appropriate"},
+        {"word": "pursue", "translation": "quvmoq, intilmoq", "reason": "Goal-oriented word", "reason_type": "level_appropriate"},
+        {"word": "require", "translation": "talab qilmoq", "reason": "Essential verb", "reason_type": "high_frequency"},
+        {"word": "significant", "translation": "muhim, sezilarli", "reason": "Academic adjective", "reason_type": "high_frequency"},
+        {"word": "sufficient", "translation": "yetarli", "reason": "Formal adjective", "reason_type": "level_appropriate"},
+        # --- Intermediate ---
+        {"word": "acquire", "translation": "egallamoq", "reason": "Formal synonym of 'get'", "reason_type": "level_appropriate"},
+        {"word": "acknowledge", "translation": "tan olmoq", "reason": "Professional word", "reason_type": "level_appropriate"},
+        {"word": "accomplish", "translation": "bajarmoq", "reason": "Achievement vocabulary", "reason_type": "high_frequency"},
+        {"word": "consequence", "translation": "oqibat", "reason": "Cause-effect vocabulary", "reason_type": "high_frequency"},
+        {"word": "contribute", "translation": "hissa qo'shmoq", "reason": "Community vocabulary", "reason_type": "high_frequency"},
+        {"word": "crucial", "translation": "juda muhim", "reason": "Emphasis word", "reason_type": "high_frequency"},
+        {"word": "diminish", "translation": "kamaymoq", "reason": "Advanced verb", "reason_type": "level_appropriate"},
+        {"word": "elaborate", "translation": "batafsil tushuntirmoq", "reason": "Academic discourse", "reason_type": "level_appropriate"},
+        {"word": "emphasize", "translation": "ta'kidlamoq", "reason": "Communication skill", "reason_type": "high_frequency"},
+        {"word": "enhance", "translation": "yaxshilamoq", "reason": "Improvement vocabulary", "reason_type": "high_frequency"},
+        # --- Upper-intermediate ---
+        {"word": "fluctuate", "translation": "o'zgarib turmoq", "reason": "Data/trends vocabulary", "reason_type": "level_appropriate"},
+        {"word": "guarantee", "translation": "kafolatlamoq", "reason": "Business vocabulary", "reason_type": "high_frequency"},
+        {"word": "hypothesis", "translation": "faraziya", "reason": "Scientific term", "reason_type": "level_appropriate"},
+        {"word": "implement", "translation": "amalga oshirmoq", "reason": "Professional verb", "reason_type": "high_frequency"},
+        {"word": "incorporate", "translation": "qo'shib yubormoq", "reason": "Business vocabulary", "reason_type": "level_appropriate"},
+        {"word": "inevitable", "translation": "muqarrar", "reason": "Advanced adjective", "reason_type": "level_appropriate"},
+        {"word": "infrastructure", "translation": "infratuzilma", "reason": "Modern vocabulary", "reason_type": "level_appropriate"},
+        {"word": "negotiate", "translation": "muzokara qilmoq", "reason": "Professional skill", "reason_type": "high_frequency"},
+        {"word": "phenomenon", "translation": "hodisa", "reason": "Scientific/academic", "reason_type": "level_appropriate"},
+        {"word": "preliminary", "translation": "dastlabki", "reason": "Formal adjective", "reason_type": "level_appropriate"},
+        # --- Advanced / Idiomatic ---
+        {"word": "comprehensive", "translation": "har tomonlama", "reason": "Academic adjective", "reason_type": "level_appropriate"},
+        {"word": "controversy", "translation": "munozara, tortishuv", "reason": "Discussion vocabulary", "reason_type": "level_appropriate"},
+        {"word": "deteriorate", "translation": "yomonlashmoq", "reason": "Advanced verb", "reason_type": "level_appropriate"},
+        {"word": "distinguish", "translation": "farqlamoq", "reason": "Critical thinking", "reason_type": "high_frequency"},
+        {"word": "enormous", "translation": "ulkan", "reason": "Descriptive vocabulary", "reason_type": "high_frequency"},
+        {"word": "prosperity", "translation": "farovonlik", "reason": "Economic vocabulary", "reason_type": "level_appropriate"},
+        {"word": "reluctant", "translation": "istamaydigan", "reason": "Emotional vocabulary", "reason_type": "level_appropriate"},
+        {"word": "simultaneously", "translation": "bir vaqtda", "reason": "Advanced adverb", "reason_type": "level_appropriate"},
+        {"word": "straightforward", "translation": "oddiy, tushunarli", "reason": "Communication word", "reason_type": "high_frequency"},
+        {"word": "substantial", "translation": "sezilarli, katta", "reason": "Formal adjective", "reason_type": "level_appropriate"},
+        # --- Additional useful words ---
+        {"word": "accommodate", "translation": "joylashtirmoq", "reason": "Hospitality vocabulary", "reason_type": "level_appropriate"},
+        {"word": "ambiguous", "translation": "noaniq", "reason": "Critical thinking", "reason_type": "level_appropriate"},
+        {"word": "anticipate", "translation": "kutmoq, oldindan bilmoq", "reason": "Planning vocabulary", "reason_type": "high_frequency"},
+        {"word": "compatible", "translation": "mos keladigan", "reason": "Tech/relationship vocabulary", "reason_type": "high_frequency"},
+        {"word": "contemplate", "translation": "o'ylab ko'rmoq", "reason": "Thoughtful vocabulary", "reason_type": "level_appropriate"},
+        {"word": "deceptive", "translation": "aldamchi", "reason": "Advanced adjective", "reason_type": "level_appropriate"},
+        {"word": "diligent", "translation": "tirishqoq", "reason": "Character vocabulary", "reason_type": "level_appropriate"},
+        {"word": "endeavor", "translation": "harakat qilmoq", "reason": "Formal verb", "reason_type": "level_appropriate"},
+        {"word": "legitimate", "translation": "qonuniy, to'g'ri", "reason": "Legal/formal vocabulary", "reason_type": "level_appropriate"},
+        {"word": "magnificent", "translation": "ajoyib, ulug'vor", "reason": "Descriptive vocabulary", "reason_type": "level_appropriate"},
     ]
 
     def __init__(self, recommendation_repo, ai_provider=None, word_repo=None):
@@ -30,7 +86,7 @@ class GetWordRecommendationsUseCase:
         self.word_repo = word_repo
 
     def _get_excluded_words(self, user_id: UUID) -> set[str]:
-        """Get words that should NOT be recommended (already in word bank or active recs)."""
+        """Get words that should NOT be recommended (already in word bank, active recs, or previously accepted)."""
         excluded: set[str] = set()
         # Words already in user's word bank
         if self.word_repo:
@@ -45,6 +101,12 @@ class GetWordRecommendationsUseCase:
             excluded.update(w.lower() for w in active_words if w)
         except Exception:
             logger.warning("Failed to get active recommendation words")
+        # Words previously accepted (prevent re-recommendation of same word)
+        try:
+            accepted_words = self.recommendation_repo.get_accepted_words(user_id)
+            excluded.update(w.lower() for w in accepted_words if w)
+        except Exception:
+            logger.warning("Failed to get accepted recommendation words")
         return excluded
 
     def execute(self, user_id: UUID, count: int = 10) -> list[dict]:

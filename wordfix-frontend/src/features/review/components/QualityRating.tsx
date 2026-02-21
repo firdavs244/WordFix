@@ -6,6 +6,7 @@ import type { ReviewQuality } from '@/types';
 
 interface Props {
   onRate: (quality: ReviewQuality) => void;
+  disabled?: boolean;
 }
 
 const qualities = [
@@ -17,15 +18,16 @@ const qualities = [
   { quality: 5 as ReviewQuality, emoji: '🤩', label: 'Perfect', shortcut: '6' },
 ];
 
-export default function QualityRating({ onRate }: Props) {
+export default function QualityRating({ onRate, disabled }: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (disabled) return;
       const num = parseInt(e.key);
       if (num >= 1 && num <= 6) onRate((num - 1) as ReviewQuality);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onRate]);
+  }, [onRate, disabled]);
 
   return (
     <motion.div variants={fadeInUp} initial="initial" animate="animate" className="mt-6 grid w-full grid-cols-3 gap-2 lg:grid-cols-6">

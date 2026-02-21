@@ -338,21 +338,39 @@ class SubmitStoryRoundUseCase:
         text_lower = user_text.lower()
         used = [w for w in target_words if w.lower() in text_lower]
         not_used = [w for w in target_words if w.lower() not in text_lower]
+
+        # Count actual words in user text
+        word_count = len(text_lower.split())
+
         score = 0
-        if used:
-            score += 8
-        if len(user_text) > 20:
-            score += 7
-        score += 5  # default creativity
+
+        # If text has fewer than 3 words, it's too short / meaningless
+        if word_count < 3:
+            score = 0
+        else:
+            # Target word usage: +8
+            if used:
+                score += 8
+            # Reasonable length (>20 chars): +7
+            if len(user_text) > 20:
+                score += 7
+            # Creativity: only if text has 5+ words and target word is used
+            if word_count >= 5 and used:
+                score += 5
 
         continuation = "The story continues..." if not is_last else ""
+
+        feedback = "Good job! Keep going!" if score >= 10 else (
+            "Try using the target word and write longer sentences." if score > 0
+            else "Please write a meaningful sentence using the target word."
+        )
 
         return {
             "words_used_correctly": used,
             "words_not_used": not_used,
             "grammar_corrections": [],
-            "is_grammar_good": True,
-            "feedback": "Good job! Keep going!",
+            "is_grammar_good": word_count >= 3,
+            "feedback": feedback,
             "continuation": continuation,
             "score": min(score, 20),
         }

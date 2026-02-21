@@ -9,7 +9,7 @@ class AnalyzeTextSerializer(serializers.Serializer):
     """Serializer for text analysis request."""
 
     text = serializers.CharField(max_length=5000, min_length=1)
-    max_words = serializers.IntegerField(default=20, min_value=1, max_value=50)
+    max_words = serializers.IntegerField(default=50, min_value=1, max_value=100)
 
     def validate_text(self, value: str) -> str:
         if not value.strip():

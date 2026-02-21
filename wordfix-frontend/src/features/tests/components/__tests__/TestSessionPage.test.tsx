@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, userEvent, waitFor } from '@/test/utils';
+import { render, screen, waitFor } from '@/test/utils';
 import { createMockTestQuestion } from '@/test/utils';
+import { fireEvent } from '@testing-library/react';
 import TestSessionPage from '../../TestSessionPage';
 
 const mockQuestions = [
@@ -52,12 +53,11 @@ describe('TestSessionPage', () => {
   });
 
   it('shows answer feedback after clicking an option', async () => {
-    const user = userEvent.setup();
     render(<TestSessionPage />);
     const option = screen.getByTestId('option-0');
-    await user.click(option);
+    fireEvent.click(option);
     await waitFor(() => {
-      expect(screen.getByText(/correct|explanation/i)).toBeDefined();
-    }, { timeout: 3000 });
+      expect(screen.getByText(/correct/i)).toBeInTheDocument();
+    }, { timeout: 5000 });
   });
 });

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, userEvent, waitFor } from '@/test/utils';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, userEvent } from '@/test/utils';
 import AddWordModal from '../AddWordModal';
 
 // Mock AddWordForm so we can test the modal wrapper in isolation

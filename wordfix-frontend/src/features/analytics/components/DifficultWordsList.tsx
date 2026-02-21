@@ -1,45 +1,28 @@
-import { AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { AlertCircle } from 'lucide-react';
+import DifficultWordItem from './DifficultWordItem';
 import type { DifficultWord } from '@/types';
 
-// ─── Difficult Words List ──────────────────────────────────────────────────────
+interface DifficultWordsListProps {
+  words: DifficultWord[];
+}
 
-export function DifficultWordsList({ words }: { words: DifficultWord[] }) {
+export default function DifficultWordsList({ words }: DifficultWordsListProps) {
+  if (words.length === 0) return null;
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-          Most Difficult Words
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {words.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No difficult words yet. Keep studying!
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {words.slice(0, 10).map((word) => (
-              <div key={word.id} className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-foreground">{word.original_word}</span>
-                  <span className="ml-2 text-sm text-muted-foreground">{word.translation}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-24">
-                    <Progress value={word.accuracy_rate} className="h-2" />
-                  </div>
-                  <span className="w-12 text-right text-sm font-medium text-foreground">
-                    {word.accuracy_rate.toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="rounded-2xl border border-border/50 p-5 shadow-card">
+      <div className="flex items-center gap-2">
+        <AlertCircle className="h-4 w-4 text-destructive/70" />
+        <span className="font-heading text-sm font-semibold">Needs Attention</span>
+        <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
+          {words.length}
+        </span>
+      </div>
+      <div className="mt-4 space-y-2">
+        {words.slice(0, 10).map((w, i) => (
+          <DifficultWordItem key={w.id} word={w} rank={i} />
+        ))}
+      </div>
+    </div>
   );
 }

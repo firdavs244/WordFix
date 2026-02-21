@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { staggerContainer } from '@/lib/motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMistakePatterns } from '@/features/learning/hooks/useLearning';
+import { useMistakePatterns } from '@/features/learning-profile/hooks/useLearning';
 import MistakePatternItem from './MistakePatternItem';
 
 export default function MistakePatternsWidget() {

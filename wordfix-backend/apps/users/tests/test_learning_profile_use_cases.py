@@ -154,56 +154,75 @@ class TestGetMistakePatterns:
 
 class TestGetWordRecommendations:
 
-    def test_get_recommendations_cached(self):
+    @staticmethod
+    def _make_rec(word="analyze", translation="tahlil qilmoq", reason="Academic",
+                  reason_type="high_frequency", priority=0.7, ai_confidence=0.5):
         rec = MagicMock()
         rec.id = uuid.uuid4()
-        rec.recommended_word = "analyze"
-        rec.translation = "tahlil qilmoq"
-        rec.reason = "Academic"
-        rec.reason_type = "high_frequency"
-        rec.priority_score = 0.7
+        rec.recommended_word = word
+        rec.translation = translation
+        rec.reason = reason
+        rec.reason_type = reason_type
+        rec.priority_score = priority
         rec.is_accepted = False
-        rec.ai_confidence = 0.5
+        rec.ai_confidence = ai_confidence
+        return rec
+
+    def test_get_recommendations_cached(self):
+        """When enough active recommendations exist, they are returned directly."""
+        words = ["analyze", "approach", "benefit", "concept", "demonstrate",
+                 "establish", "evident", "factor", "generate", "indicate"]
+        recs = [self._make_rec(word=w) for w in words]
         repo = MagicMock()
-        repo.get_active.return_value = [rec] * 10
+        repo.get_active.return_value = recs
         uc = GetWordRecommendationsUseCase(repo)
         result = uc.execute(uuid.uuid4(), count=10)
         assert len(result) == 10
 
     def test_get_recommendations_generates(self):
+        """When no active recs exist, fallback words are generated."""
+        fallback_words = GetWordRecommendationsUseCase.FALLBACK_WORDS
         repo = MagicMock()
         repo.get_active.return_value = []
-        new_rec = MagicMock()
-        new_rec.id = uuid.uuid4()
-        new_rec.recommended_word = "analyze"
-        new_rec.translation = "tahlil qilmoq"
-        new_rec.reason = "Academic vocabulary"
-        new_rec.reason_type = "high_frequency"
-        new_rec.priority_score = 0.5
-        new_rec.is_accepted = False
-        new_rec.ai_confidence = 0.0
-        repo.create.return_value = new_rec
+        repo.get_active_words.return_value = []
+        repo.exists_for_word.return_value = False
+
+        created_recs = [
+            self._make_rec(word=fw["word"], translation=fw["translation"],
+                           reason=fw["reason"], reason_type=fw["reason_type"],
+                           priority=0.5, ai_confidence=0.0)
+            for fw in fallback_words
+        ]
+        repo.create.side_effect = created_recs
+
         uc = GetWordRecommendationsUseCase(repo, ai_provider=None)
         result = uc.execute(uuid.uuid4(), count=5)
         assert len(result) == 5
+        repo.create.assert_called()
 
     def test_recommendations_fallback(self):
         """When AI is unavailable, fallback words are used."""
+        fallback_words = GetWordRecommendationsUseCase.FALLBACK_WORDS
         repo = MagicMock()
         repo.get_active.return_value = []
-        new_rec = MagicMock()
-        new_rec.id = uuid.uuid4()
-        new_rec.recommended_word = "analyze"
-        new_rec.translation = "tahlil qilmoq"
-        new_rec.reason = "Academic vocabulary"
-        new_rec.reason_type = "high_frequency"
-        new_rec.priority_score = 0.5
-        new_rec.is_accepted = False
-        new_rec.ai_confidence = 0.0
-        repo.create.return_value = new_rec
+        repo.get_active_words.return_value = []
+        repo.exists_for_word.return_value = False
+
+        created_recs = [
+            self._make_rec(word=fw["word"], translation=fw["translation"],
+                           reason=fw["reason"], reason_type=fw["reason_type"],
+                           priority=0.5, ai_confidence=0.0)
+            for fw in fallback_words
+        ]
+        repo.create.side_effect = created_recs
+
         uc = GetWordRecommendationsUseCase(repo, ai_provider=None)
         result = uc.execute(uuid.uuid4(), count=3)
         assert len(result) == 3
+        # Verify fallback words are from the hardcoded list
+        fallback_word_set = {fw["word"] for fw in fallback_words}
+        for r in result:
+            assert r["word"] in fallback_word_set
 
 
 class TestAcceptRecommendation:

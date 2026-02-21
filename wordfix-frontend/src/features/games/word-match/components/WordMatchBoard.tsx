@@ -7,9 +7,14 @@ interface Pair {
   matched: boolean;
 }
 
+interface MatchedTranslation {
+  text: string;
+  matched: boolean;
+}
+
 interface Props {
   pairs: Pair[];
-  translations: string[];
+  translations: MatchedTranslation[];
   selectedWord: string | null;
   selectedTranslation: string | null;
   wrongPair: { word: string; translation: string } | null;
@@ -21,8 +26,6 @@ export default function WordMatchBoard({
   pairs, translations, selectedWord, selectedTranslation, wrongPair,
   onSelectWord, onSelectTranslation,
 }: Props) {
-  const matchedTranslations = pairs.filter((p) => p.matched).map((p) => p.translation);
-
   return (
     <div className="grid grid-cols-2 gap-6" data-testid="match-board">
       <div className="space-y-3">
@@ -41,15 +44,15 @@ export default function WordMatchBoard({
       </div>
       <div className="space-y-3">
         <p className="text-center text-xs font-medium text-muted-foreground">Translations</p>
-        {translations.map((t) => (
+        {translations.map((t, idx) => (
           <WordMatchItem
-            key={t}
-            text={t}
+            key={`${t.text}-${idx}`}
+            text={t.text}
             type="translation"
-            isSelected={selectedTranslation === t}
-            isMatched={matchedTranslations.includes(t)}
-            isWrong={wrongPair?.translation === t}
-            onClick={() => onSelectTranslation(t)}
+            isSelected={selectedTranslation === t.text}
+            isMatched={t.matched}
+            isWrong={wrongPair?.translation === t.text}
+            onClick={() => onSelectTranslation(t.text)}
           />
         ))}
       </div>

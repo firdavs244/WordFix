@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, userEvent } from '@/test/utils';
 import { createMockWord } from '@/test/utils';
 import FlashCard from '../FlashCard';

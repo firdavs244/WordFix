@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 interface Props {
   combo: number;
   multiplier: number;
+  isActive?: boolean;
 }
 
 function getStyle(combo: number) {
@@ -14,7 +15,7 @@ function getStyle(combo: number) {
   return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600';
 }
 
-export default function ComboIndicator({ combo, multiplier }: Props) {
+export default function ComboIndicator({ combo, multiplier, isActive: _isActive }: Props) {
   return (
     <AnimatePresence>
       {combo > 1 && (

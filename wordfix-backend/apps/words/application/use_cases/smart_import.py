@@ -20,7 +20,7 @@ class AnalyzeTextUseCase:
         self.prompt_template = prompt_template
         self.language_map = language_map
 
-    def execute(self, user_id, text: str, max_words: int = 20) -> list[dict]:
+    def execute(self, user_id, text: str, max_words: int = 50) -> list[dict]:
         user_id = UUID(str(user_id))
 
         if not text or not text.strip():
@@ -88,7 +88,7 @@ class AnalyzeTextUseCase:
         words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
         word_counts = Counter(words)
 
-        # Common English words to skip
+        # Extended stop words: top 200 most common English words
         stop_words = {
             "the", "and", "for", "are", "but", "not", "you", "all", "can",
             "had", "her", "was", "one", "our", "out", "has", "his", "how",
@@ -99,24 +99,49 @@ class AnalyzeTextUseCase:
             "like", "just", "over", "such", "take", "year", "them", "some",
             "than", "then", "very", "about", "would", "these", "other",
             "into", "more", "also", "been", "could", "your", "after",
+            "first", "made", "before", "many", "being", "where", "most",
+            "much", "only", "through", "back", "long", "come", "good",
+            "know", "still", "down", "should", "because", "right",
+            "think", "does", "another", "well", "even", "here", "must",
+            "same", "those", "every", "between", "own", "under", "last",
+            "never", "great", "little", "while", "time", "people", "part",
+            "help", "line", "turn", "move", "thing", "look", "place",
+            "work", "play", "run", "want", "need", "went", "read",
+            "hand", "high", "again", "next", "give", "name", "went",
+            "keep", "head", "start", "might", "show", "began", "life",
+            "seem", "call", "world", "going", "point", "live", "left",
+            "found", "both", "number", "day", "water", "word", "write",
+            "open", "side", "told", "home", "small", "large", "end",
+            "along", "own", "house", "away", "ask", "men", "got",
+            "off", "put", "three", "kind", "set", "few", "really",
+            "something", "man", "came", "anything", "without", "always",
+            "until", "used", "done", "enough", "though", "quite",
+            "across", "once", "almost", "often", "since", "ever",
         }
 
-        suggestions = []
-        for word, count in word_counts.most_common(max_words * 3):
+        # Collect eligible words
+        candidates = []
+        for word, count in word_counts.items():
             if word in known_words or word in stop_words:
                 continue
             if len(word) < 4:
                 continue
+            candidates.append((word, count, len(word)))
+
+        # Sort by difficulty: longer words first (harder), then less frequent (less familiar)
+        candidates.sort(key=lambda x: (-x[2], x[1]))
+
+        suggestions = []
+        for word, count, length in candidates[:max_words]:
+            difficulty = "hard" if length >= 8 else ("medium" if length >= 6 else "easy")
             suggestions.append({
                 "word": word,
                 "translation": "",
                 "part_of_speech": "",
                 "context_sentence": "",
-                "difficulty": "medium",
+                "difficulty": difficulty,
                 "reason": f"Appears {count} time(s) in the text",
             })
-            if len(suggestions) >= max_words:
-                break
 
         return suggestions
 

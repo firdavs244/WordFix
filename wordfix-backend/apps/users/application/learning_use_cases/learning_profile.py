@@ -17,18 +17,34 @@ class GetLearningProfileUseCase:
 
     def execute(self, user_id: UUID) -> dict:
         profile = self.profile_repo.get_or_create(user_id)
+
+        # Build analysis_data-based skills or use flat fields
+        analysis = getattr(profile, "analysis_data", None) or {}
+        skills_data = analysis.get("skills", {})
+        skills_scores = skills_data.get("all", {}) if isinstance(skills_data, dict) else {}
+
         return {
             "id": str(profile.id),
             "user_id": str(profile.user_id),
             "preferred_style": profile.preferred_style,
             "style_confidence": profile.style_confidence,
-            "current_difficulty_level": profile.current_difficulty_level,
-            "best_hour_start": profile.best_hour_start,
-            "best_hour_end": profile.best_hour_end,
-            "best_days": profile.best_days,
-            "strongest_skills": profile.strongest_skills,
-            "weakest_skills": profile.weakest_skills,
-            "last_analyzed_at": (
+            "difficulty_level": profile.current_difficulty_level,
+            "best_time": {
+                "start_hour": profile.best_hour_start or 9,
+                "end_hour": profile.best_hour_end or 12,
+                "best_days": profile.best_days or [],
+            },
+            "session_stats": {
+                "avg_duration": 15,
+                "optimal_words": 20,
+                "retention_rate": 0.0,
+            },
+            "skills": {
+                "strongest": profile.strongest_skills or [],
+                "weakest": profile.weakest_skills or [],
+                "scores": skills_scores,
+            },
+            "last_analyzed": (
                 profile.last_analyzed_at.isoformat() if profile.last_analyzed_at else None
             ),
         }
@@ -138,9 +154,20 @@ class AnalyzeLearningProfileUseCase:
             recommendations.append(f"Best study hours: {hours_str}")
 
         return {
-            "learning_style": style_result,
+            "learning_style": {
+                "style": style_result.get("style", "visual"),
+                "confidence": style_result.get("confidence", 0.0),
+                "breakdown": style_result.get("breakdown", {
+                    "visual": 0.25, "auditory": 0.25,
+                    "reading": 0.25, "kinesthetic": 0.25,
+                }),
+            },
             "optimal_time": time_result,
-            "skills": skills,
+            "skills": {
+                "strongest": skills.get("strongest", []),
+                "weakest": skills.get("weakest", []),
+                "scores": skills.get("all", {}),
+            },
             "recommendations": recommendations,
         }
 

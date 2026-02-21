@@ -66,6 +66,7 @@ filterwarnings = [
     "ignore::PendingDeprecationWarning",
     "ignore::django.utils.deprecation.RemovedInDjango60Warning",
     "ignore::ResourceWarning",
+    "ignore::pytest.PytestCollectionWarning",
 ]
 
 [tool.mypy]

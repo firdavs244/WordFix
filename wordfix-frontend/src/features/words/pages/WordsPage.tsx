@@ -18,7 +18,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { listContainerVariants, listItemVariants, cardHoverVariants } from '@/components/animations/PageTransition';
 import { useWords, useDeleteWord, useWordStats } from '../hooks/useWords';
-import { AddWordModal } from '../components/AddWordModal';
+import AddWordModal from '../components/AddWordModal';
 import type { DifficultyLevel, WordFilters } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 

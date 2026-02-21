@@ -44,6 +44,9 @@ Object.defineProperty(window, 'ResizeObserver', {
   value: MockResizeObserver,
 });
 
+// Mock scrollIntoView (not implemented in jsdom)
+Element.prototype.scrollIntoView = vi.fn();
+
 // Mock framer-motion
 vi.mock('framer-motion', async () => {
   const actual = await vi.importActual('framer-motion');

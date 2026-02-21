@@ -1,0 +1,649 @@
+================================================================
+01_PROJECT_ARCHITECTURE.txt
+WordFix — AI-Powered English Vocabulary Learning Platform
+Hujjat yaratilgan sana: 2026-02-21
+Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+================================================================
+
+================================================================
+1. TEXNOLOGIYALAR
+================================================================
+
+### Backend Stack
+| Texnologiya           | Versiya         | Izoh                                |
+|-----------------------|-----------------|-------------------------------------|
+| Python                | >=3.11, <4.0    | Runtime: 3.12.12 (Docker ichida)    |
+| Django                | ^5.1            | Runtime: 5.2.11                     |
+| Django REST Framework | ^3.15           | API layer                           |
+| PostgreSQL            | 16-alpine       | Asosiy database                     |
+| Redis                 | 7-alpine        | Cache + Celery broker               |
+| Celery                | ^5.4            | Background task queue               |
+| django-celery-beat    | ^2.7            | Periodic task scheduler             |
+| Gunicorn              | ^23.0           | Production WSGI server              |
+
+### Backend Dependencies (pyproject.toml dan)
+| Paket                         | Versiya     | Vazifasi                          |
+|-------------------------------|-------------|-----------------------------------|
+| django-cors-headers           | ^4.6        | CORS headers                      |
+| django-filter                 | ^24.3       | QuerySet filtering                |
+| djangorestframework-simplejwt | ^5.3        | JWT authentication                |
+| psycopg2-binary               | ^2.9        | PostgreSQL driver                 |
+| redis                         | ^5.2        | Redis client                      |
+| django-redis                  | ^5.4        | Django cache backend              |
+| python-decouple               | ^3.8        | Env variable management           |
+| whitenoise                    | ^6.8        | Static files serving              |
+| structlog                     | ^24.4       | Structured logging                |
+| drf-spectacular               | >=0.27.0    | OpenAPI/Swagger documentation     |
+| groq                          | >=0.12.0    | Groq AI API client                |
+| openai                        | >=1.50.0    | OpenAI API client                 |
+| gTTS                          | >=2.5.0     | Google Text-to-Speech             |
+| Pillow                        | >=10.0.0    | Image processing                  |
+| django-allauth                | >=65.0      | Social authentication             |
+| dj-rest-auth                  | >=7.0       | REST auth endpoints               |
+
+### Backend Dev Dependencies
+| Paket                         | Versiya     | Vazifasi                          |
+|-------------------------------|-------------|-----------------------------------|
+| pytest                        | ^8.3        | Test framework                    |
+| pytest-django                 | ^4.9        | Django test integration           |
+| pytest-cov                    | ^6.0        | Code coverage                     |
+| factory-boy                   | ^3.3        | Test factories                    |
+| faker                         | ^33.0       | Fake data generation              |
+| black                         | ^24.10      | Code formatter                    |
+| isort                         | ^5.13       | Import sorter                     |
+| flake8                        | ^7.1        | Linter                            |
+| mypy                          | ^1.13       | Static type checker               |
+| django-stubs                  | ^5.1        | Django type stubs                 |
+| djangorestframework-stubs     | ^3.15       | DRF type stubs                    |
+| django-debug-toolbar          | ^4.4        | Debug toolbar                     |
+| freezegun                     | ^1.4        | Time mocking in tests             |
+
+### Frontend Stack
+| Texnologiya           | Versiya         | Izoh                                |
+|-----------------------|-----------------|-------------------------------------|
+| React                 | ^19.0.0         | UI framework                        |
+| TypeScript            | ~5.6.0          | Type safety                         |
+| Vite                  | ^6.0.0          | Build tool + dev server             |
+| React Router DOM      | ^7.1.0          | Client-side routing                 |
+| TanStack React Query  | ^5.62.0         | Server state management             |
+| Zustand               | ^5.0.2          | Client state management             |
+| Axios                 | ^1.7.9          | HTTP client                         |
+| Tailwind CSS          | ^3.4.17         | Utility-first CSS                   |
+| Framer Motion         | ^12.0.0         | Animations                          |
+| Radix UI              | Multiple        | Headless UI primitives              |
+| Lucide React          | ^0.468.0        | Icon library                        |
+| Sonner                | ^1.7.1          | Toast notifications                 |
+| canvas-confetti       | ^1.9.4          | Celebration effects                 |
+| date-fns              | ^4.1.0          | Date utilities                      |
+| cmdk                  | ^1.0.4          | Command menu                        |
+| Vitest                | ^4.0.18         | Test framework                      |
+
+### Frontend Radix UI komponentlari:
+- @radix-ui/react-avatar, dialog, dropdown-menu, label, popover
+- @radix-ui/react-select, separator, slot, switch, tabs, tooltip
+
+### Frontend Dev Dependencies:
+| Paket                         | Versiya     | Vazifasi                          |
+|-------------------------------|-------------|-----------------------------------|
+| @testing-library/react        | ^16.3.2     | React testing utilities           |
+| @testing-library/jest-dom     | ^6.9.1      | DOM matchers                      |
+| @testing-library/user-event   | ^14.6.1     | User interaction simulation       |
+| msw                           | ^2.12.10    | API mocking (Mock Service Worker) |
+| jsdom                         | ^28.1.0     | DOM environment for tests         |
+| eslint                        | ^9.17.0     | Linter                            |
+
+================================================================
+2. DOCKER TUZILMASI
+================================================================
+
+### docker-compose.yml — 167 qator, 7 ta service
+
+| Service         | Image                  | Port           | Depends On    |
+|-----------------|------------------------|----------------|---------------|
+| db              | postgres:16-alpine     | 127.0.0.1:5433 | -             |
+| pgadmin         | dpage/pgadmin4:9.8     | 5050           | db            |
+| redis           | redis:7-alpine         | 127.0.0.1:6379 | -             |
+| web             | ./wordfix-backend      | 8000           | db, redis     |
+| celery_worker   | ./wordfix-backend      | -              | web           |
+| celery_beat     | ./wordfix-backend      | -              | web           |
+| frontend        | ./wordfix-frontend     | 5173           | -             |
+
+### Service tafsilotlari:
+
+#### db (PostgreSQL)
+- Image: postgres:16-alpine
+- Volume: postgres_data → /var/lib/postgresql/data
+- Environment: POSTGRES_DB=wordfix, POSTGRES_USER=wordfix_user, POSTGRES_PASSWORD=wordfix_pass
+- Healthcheck: pg_isready -U wordfix_user -d wordfix (5s interval)
+
+#### pgadmin (PgAdmin4)
+- Image: dpage/pgadmin4:9.8
+- Port: 5050:80
+- Environment: PGADMIN_DEFAULT_EMAIL, PGADMIN_DEFAULT_PASSWORD
+- Volume: pgadmin_data
+
+#### redis (Redis)
+- Image: redis:7-alpine
+- Port: 127.0.0.1:6379:6379
+- Volume: redis_data
+- Healthcheck: redis-cli ping
+
+#### web (Django API Server)
+- Build: ./wordfix-backend/docker/Dockerfile
+- Port: 8000:8000
+- Volumes: ./wordfix-backend → /app, media_data → /app/media
+- Command: python manage.py runserver 0.0.0.0:8000
+- Healthcheck: curl -sf http://localhost:8000/api/v1/health/
+- Environment:
+  - DJANGO_SETTINGS_MODULE=config.settings.development
+  - POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST=db, POSTGRES_PORT=5432
+  - REDIS_URL=redis://redis:6379/0
+  - CELERY_BROKER_URL=redis://redis:6379/1
+  - CELERY_RESULT_BACKEND=redis://redis:6379/2
+
+#### celery_worker
+- Same build as web
+- Command: celery -A config worker -l info
+- Same env variables
+
+#### celery_beat
+- Same build as web
+- Command: sleep 15 && celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+- Same env variables
+
+#### frontend (Vite Dev Server)
+- Build: ./wordfix-frontend/Dockerfile
+- Port: 5173:5173
+- Volumes: ./wordfix-frontend → /app, /app/node_modules (anonymous)
+- Command: npm run dev -- --host 0.0.0.0
+- Environment: VITE_API_URL=http://localhost:8000/api/v1
+
+### Volumes:
+- postgres_data, redis_data, media_data, pgadmin_data
+
+### Network:
+- wordfix-network (bridge driver)
+
+================================================================
+3. CLEAN ARCHITECTURE
+================================================================
+
+Loyiha Clean Architecture (Robert C. Martin) tamoyiliga asoslangan.
+Har bir app (users, words) 4 ta qatlamdan iborat:
+
+```
+┌──────────────────────────────────────────────┐
+│            PRESENTATION LAYER                │
+│  views/ serializers/ urls/ dependencies/     │
+│  HTTP so'rovlarni qabul qilish/javob berish  │
+├──────────────────────────────────────────────┤
+│            APPLICATION LAYER                 │
+│  use_cases/                                  │
+│  Biznes logika orkestratsiyasi               │
+├──────────────────────────────────────────────┤
+│              DOMAIN LAYER                    │
+│  entities/ repositories(abstract)/           │
+│  services/ value_objects/                    │
+│  Asosiy biznes qoidalari va modellar         │
+├──────────────────────────────────────────────┤
+│          INFRASTRUCTURE LAYER                │
+│  models/ repositories(concrete)/             │
+│  tasks/ adapters/                            │
+│  Database, AI, external service integration  │
+└──────────────────────────────────────────────┘
+```
+
+### Dependency yo'nalishi:
+Presentation → Application → Domain ← Infrastructure
+
+- **Domain Layer** hech narsaga bog'liq emas (pure Python dataclasses)
+- **Application Layer** faqat Domain ga bog'liq (abstract repos)
+- **Infrastructure Layer** Domain ni implement qiladi (concrete repos)
+- **Presentation Layer** Application ni chaqiradi (DI orqali)
+
+### Har bir qatlam vazifalari:
+
+#### Domain Layer
+- entities.py — @dataclass asosidagi biznes ob'ektlari (UserEntity, WordEntity, etc.)
+- repositories.py — Abstract base classes (AbstractUserRepository, AbstractWordRepository)
+- services/ — Pure biznes logika (SpacedRepetitionService, XPService, ComboService)
+- value_objects.py — Immutable value objects (ProficiencyLevel, EmailAddress)
+
+#### Application Layer
+- use_cases/ — Har bir foydalanuvchi harakati uchun alohida class
+  - execute() metodi — asosiy mantiq
+  - __init__ da dependency injection (repo, service)
+  - Django/DRF import lari yo'q (toza Python)
+
+#### Infrastructure Layer
+- models/ — Django ORM modellari
+- repositories/ — Abstract repo larning concrete implementatsiyasi
+- tasks.py — Celery background tasks
+- adapters.py — External service adapterlari
+
+#### Presentation Layer
+- views/ — DRF APIView klasslar
+- serializers/ — Request/Response validation
+- urls.py — URL routing
+- dependencies.py — Factory funksiyalar (DI container)
+
+================================================================
+4. FAYL STRUKTURASI
+================================================================
+
+### BACKEND: 315 Python fayllar, ~28,575 qator
+
+```
+wordfix-backend/
+├── manage.py                                    # Django CLI entry point
+├── pyproject.toml                               # Poetry config + tool settings
+├── conftest.py                                  # Global test fixtures
+├── config/
+│   ├── __init__.py
+│   ├── asgi.py                                  # ASGI config
+│   ├── celery.py                                # Celery app config
+│   ├── wsgi.py                                  # WSGI config
+│   ├── urls.py                                  # Root URL config (37 qator)
+│   └── settings/
+│       ├── __init__.py
+│       ├── base.py                     (346 qator) # Asosiy sozlamalar
+│       ├── development.py              (57 qator)  # Dev sozlamalari
+│       ├── production.py               (36 qator)  # Prod sozlamalari
+│       └── test.py                     (98 qator)  # Test sozlamalari
+├── apps/
+│   ├── common/                                  # Umumiy utility lar
+│   │   ├── models.py                   (56 qator)  # AbstractBaseModel
+│   │   ├── circuit_breaker.py                   # Circuit breaker pattern
+│   │   ├── config.py                            # Config validator
+│   │   ├── exception_handler.py                 # Global exception handler
+│   │   ├── exceptions.py                        # Custom exception types
+│   │   ├── health.py                            # Health check registry
+│   │   ├── idempotency.py                       # Idempotency middleware
+│   │   ├── logging.py                           # JSON formatter + request logging
+│   │   ├── pagination.py                        # Standard pagination
+│   │   ├── permissions.py                       # Custom permissions
+│   │   ├── rate_limiter.py                      # CRUD rate throttle
+│   │   ├── renderers.py                         # Custom JSON renderer
+│   │   ├── urls.py                     (16 qator)
+│   │   ├── views.py                             # Health + Config views
+│   │   ├── middleware/
+│   │   │   └── request_id.py                    # X-Request-ID middleware
+│   │   ├── utils/
+│   │   │   └── helpers.py                       # build_success/error_response
+│   │   └── tests/                               # 13+ test fayllar
+│   ├── users/                                   # Foydalanuvchilar app
+│   │   ├── apps.py
+│   │   ├── models.py                            # Proxy import
+│   │   ├── domain/
+│   │   │   ├── entities.py             (59 qator)  # UserEntity dataclass
+│   │   │   ├── repositories.py         (62 qator)  # AbstractUserRepository
+│   │   │   ├── value_objects.py        (71 qator)  # ProficiencyLevel, EmailAddress
+│   │   │   └── services/
+│   │   │       ├── xp_service.py       (172 qator) # XP hisoblash, level up
+│   │   │       ├── badge_service.py    (185 qator) # Badge tekshirish/berish
+│   │   │       ├── notification_service.py (31 qator) # Notification yaratish
+│   │   │       ├── onboarding_service.py (57 qator) # Level aniqlash algo
+│   │   │       ├── learning_profile_service.py (120 qator) # Profil tahlili
+│   │   │       └── mistake_pattern_service.py (152 qator) # Xato patternlar
+│   │   ├── application/
+│   │   │   ├── use_cases/
+│   │   │   │   ├── __init__.py         (35 qator)
+│   │   │   │   ├── auth_use_cases.py   (131 qator) # Register, Login, GoogleLogin
+│   │   │   │   └── profile_use_cases.py (165 qator) # Profile, Onboarding
+│   │   │   └── learning_use_cases/
+│   │   │       ├── __init__.py         (31 qator)
+│   │   │       ├── learning_profile.py (192 qator) # Get/Analyze profile
+│   │   │       ├── mistake_patterns.py (75 qator)  # Get/Record mistakes
+│   │   │       ├── recommendations.py  (186 qator) # Get/Accept recommendations
+│   │   │       ├── domain_coverage.py  (82 qator)  # Domain coverage calc
+│   │   │       └── performance.py      (60 qator)  # Session performance
+│   │   ├── infrastructure/
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py         (42 qator)
+│   │   │   │   ├── user_models.py      (109 qator) # CustomUser, CustomUserManager
+│   │   │   │   ├── progress_models.py  (202 qator) # UserProgress, XP, Badge, etc.
+│   │   │   │   └── learning_models.py  (214 qator) # LearningProfile, Mistakes, etc.
+│   │   │   ├── repositories/
+│   │   │   │   ├── user_repo.py        (100 qator)
+│   │   │   │   ├── progress_repo.py    (49 qator)
+│   │   │   │   ├── xp_repo.py          (52 qator)
+│   │   │   │   ├── badge_repo.py       (81 qator)
+│   │   │   │   ├── notification_repo.py (61 qator)
+│   │   │   │   └── learning_repo.py    (153 qator)
+│   │   │   ├── tasks.py                         # Celery tasks
+│   │   │   └── adapters.py                      # Social account adapter
+│   │   ├── presentation/
+│   │   │   ├── urls.py                 (46 qator)
+│   │   │   ├── onboarding_urls.py      (21 qator)
+│   │   │   ├── learning_urls.py        (27 qator)
+│   │   │   ├── notification_urls.py    (21 qator)
+│   │   │   ├── serializers.py                   # Auth/Profile serializers
+│   │   │   ├── learning_serializers.py          # Learning serializers
+│   │   │   ├── dependencies.py                  # Auth DI factory
+│   │   │   ├── learning_deps.py                 # Learning DI factory
+│   │   │   ├── onboarding_dependencies.py       # Onboarding DI factory
+│   │   │   ├── progress_dependencies.py         # Progress DI factory
+│   │   │   ├── views/
+│   │   │   │   ├── auth_views.py       (228 qator) # Register, Login, Google, etc.
+│   │   │   │   ├── profile_views.py             # Profile, ChangePassword, Health
+│   │   │   │   └── helpers.py                   # _user_entity_to_dict
+│   │   │   ├── onboarding_views.py              # 4 ta onboarding view
+│   │   │   ├── progress_views.py                # Progress, XP, Badges, Notifications
+│   │   │   └── learning_views.py                # Learning profile views
+│   │   ├── management/commands/
+│   │   │   ├── create_badges.py                 # Badge seed data
+│   │   │   └── seed_onboarding_questions.py     # Onboarding questions seed
+│   │   └── tests/                               # 20+ test fayllar
+│   └── words/                                   # So'zlar app
+│       ├── apps.py
+│       ├── models.py                            # Proxy import
+│       ├── domain/
+│       │   ├── entities/
+│       │   │   ├── word_entities.py    (96 qator)  # WordEntity, CategoryEntity
+│       │   │   └── session_entities.py (247 qator) # Review/Test/Game/Chat entities
+│       │   ├── repositories/
+│       │   │   ├── word_repositories.py (93 qator) # Abstract word repos
+│       │   │   └── session_repositories.py (187 qator) # Abstract session repos
+│       │   ├── value_objects.py        (42 qator)
+│       │   └── services/
+│       │       ├── review_service.py   (186 qator) # SM-2, WordDomain, Enrichment
+│       │       └── combo_service.py    (147 qator) # Combo, DailyChallenge
+│       ├── application/use_cases/
+│       │   ├── word_crud.py            (108 qator)
+│       │   ├── enrichment.py           (146 qator)
+│       │   ├── review.py               (267 qator)
+│       │   ├── streak.py               (40 qator)
+│       │   ├── analytics.py            (246 qator)
+│       │   ├── chat.py                 (240 qator)
+│       │   ├── confusing_pairs.py      (257 qator)
+│       │   ├── daily_challenges.py     (130 qator)
+│       │   ├── smart_import.py         (318 qator)
+│       │   ├── testing/
+│       │   │   ├── test_generation.py  (223 qator)
+│       │   │   └── test_session.py     (188 qator)
+│       │   └── games/
+│       │       ├── speed_round.py      (152 qator)
+│       │       ├── word_match.py       (148 qator)
+│       │       ├── word_context.py     (192 qator)
+│       │       ├── story_builder.py    (387 qator)
+│       │       ├── listening.py        (320 qator)
+│       │       └── game_stats.py       (31 qator)
+│       ├── infrastructure/
+│       │   ├── models/
+│       │   │   ├── word_models.py      (187 qator) # Word, WordCategory, WordDistractor
+│       │   │   ├── review_models.py    (139 qator) # ReviewSession, Log, Streak, Activity
+│       │   │   ├── test_models.py      (103 qator) # TestSession, TestQuestion
+│       │   │   ├── game_models.py      (113 qator) # GameSession, StoryRound, ListeningRound
+│       │   │   ├── chat_models.py      (66 qator)  # ChatSession, ChatMessage
+│       │   │   ├── confusing_models.py (41 qator)  # ConfusingPair
+│       │   │   └── challenge_models.py (34 qator)  # DailyChallenge
+│       │   ├── repositories/
+│       │   │   ├── word_repo.py        (234 qator)
+│       │   │   ├── word_stats_repo.py  (166 qator)
+│       │   │   ├── review_repo.py      (175 qator)
+│       │   │   ├── test_repo.py        (121 qator)
+│       │   │   ├── game_repo.py        (198 qator)
+│       │   │   ├── chat_repo.py        (112 qator)
+│       │   │   ├── confusing_repo.py   (84 qator)
+│       │   │   ├── distractor_repo.py  (49 qator)
+│       │   │   └── challenge_repo.py   (72 qator)
+│       │   └── tasks.py                         # Word enrichment Celery tasks
+│       ├── presentation/
+│       │   ├── urls.py                 (44 qator)
+│       │   ├── review_urls.py          (33 qator)
+│       │   ├── testing_urls.py         (21 qator)
+│       │   ├── game_urls.py            (41 qator)
+│       │   ├── chat_urls.py            (23 qator)
+│       │   ├── analytics_urls.py       (24 qator)
+│       │   ├── confusing_urls.py       (23 qator)
+│       │   ├── challenge_urls.py       (17 qator)
+│       │   ├── serializers/            # 10+ serializer fayllar
+│       │   ├── dependencies/           # 10+ DI factory fayllar
+│       │   └── views/
+│       │       ├── word_views.py               # CRUD, bulk, stats views
+│       │       ├── review_views.py             # Review session views
+│       │       ├── test_views.py               # Test session views
+│       │       ├── game_views.py               # 5 game type views
+│       │       ├── chat_views.py               # Chat session views
+│       │       ├── analytics_views.py          # Analytics views
+│       │       ├── confusing_views.py          # Confusing pair views
+│       │       ├── challenge_views.py          # Daily challenge views
+│       │       ├── enrichment_views.py         # Word enrichment views
+│       │       └── import_views.py             # Smart import views
+│       ├── management/commands/
+│       │   └── seed_test_data.py       (373 qator)
+│       └── tests/                               # 40+ test fayllar
+├── core/                                        # AI va TTS providerlar
+│   ├── interfaces/
+│   │   ├── ai_provider.py              (72 qator)  # AbstractAIProvider
+│   │   └── tts_provider.py             (32 qator)  # AbstractTTSProvider
+│   ├── services/
+│   │   ├── ai/
+│   │   │   ├── ai_factory.py           (143 qator) # AIProviderFactory + Fallback
+│   │   │   ├── groq_provider.py        (168 qator) # Groq API implementation
+│   │   │   ├── openai_provider.py                  # OpenAI API implementation
+│   │   │   └── prompts/                            # AI prompt templates
+│   │   └── tts/
+│   │       └── gtts_provider.py                    # Google TTS implementation
+│   └── tests/                                   # 8 test fayllar
+├── docker/
+│   ├── Dockerfile
+│   └── entrypoint.sh
+└── tests/
+    ├── test_docker_health.py
+    └── test_settings.py
+```
+
+### FRONTEND: 523 TS/TSX fayllar, ~22,757 qator
+
+```
+wordfix-frontend/
+├── src/
+│   ├── App.tsx                                  # Root component (providers)
+│   ├── main.tsx                                 # Entry point (ReactDOM.createRoot)
+│   ├── index.css                                # Global styles
+│   ├── api/
+│   │   ├── client.ts               (96 qator)  # Axios instance + JWT interceptors
+│   │   └── endpoints.ts            (113 qator)  # API endpoint constants
+│   ├── routes/
+│   │   └── index.tsx               (199 qator)  # All routes + guards
+│   ├── stores/
+│   │   ├── useAuthStore.ts         (89 qator)   # Auth state (Zustand)
+│   │   ├── useAppStore.ts          (23 qator)   # App UI state
+│   │   └── useReviewStore.ts       (82 qator)   # Review session state
+│   ├── types/
+│   │   └── index.ts                             # Global TypeScript types
+│   ├── providers/
+│   │   └── QueryProvider.tsx                    # React Query provider
+│   ├── lib/
+│   │   └── utils.ts                             # cn() utility (clsx + tailwind-merge)
+│   ├── hooks/                                   # Global hooks
+│   ├── styles/                                  # Theme styles
+│   ├── components/
+│   │   ├── ui/                                  # shadcn/ui components (18+ files)
+│   │   │   ├── button.tsx, card.tsx, dialog.tsx, badge.tsx
+│   │   │   ├── input.tsx, label.tsx, select.tsx, switch.tsx
+│   │   │   ├── tabs.tsx, tooltip.tsx, skeleton.tsx, separator.tsx
+│   │   │   ├── avatar.tsx, dropdown-menu.tsx, popover.tsx
+│   │   │   ├── progress.tsx, command.tsx
+│   │   │   └── sonner.tsx
+│   │   ├── layout/
+│   │   │   ├── RootLayout.tsx                   # Main app layout
+│   │   │   ├── AuthLayout.tsx                   # Auth pages layout
+│   │   │   ├── Sidebar.tsx                      # Navigation sidebar
+│   │   │   └── Header.tsx                       # Top header
+│   │   ├── common/
+│   │   │   └── LoadingScreen.tsx                # Full-screen loading
+│   │   ├── shared/
+│   │   │   └── NotFoundPage.tsx                 # 404 page
+│   │   └── animations/
+│   │       └── AnimationWrappers.tsx            # Framer Motion wrappers
+│   └── features/                                # 20 feature modullari
+│       ├── analytics/                           # 13+ komponentlar
+│       ├── auth/                                # 13+ komponentlar
+│       ├── badges/                              # 8 komponentlar
+│       ├── challenges/                          # 3 komponentlar
+│       ├── chat/                                # 17 komponentlar
+│       ├── confusing-pairs/                     # 8 komponentlar
+│       ├── dashboard/                           # 29 komponentlar
+│       ├── games/                               # 7+ komponentlar
+│       ├── import/                              # 13 komponentlar
+│       ├── landing/                             # 12 komponentlar
+│       ├── learning-profile/                    # 19 komponentlar (learning/ bilan birlashtirilgan)
+│       ├── notifications/                       # 6 komponentlar
+│       ├── onboarding/                          # 11 komponentlar
+│       ├── profile/                             # 9 komponentlar
+│       ├── progress/                            # 6 komponentlar
+│       ├── review/                              # 24 komponentlar
+│       ├── system/                              # 1 komponent
+│       ├── tests/                               # 19 komponentlar
+│       └── words/                               # 15 komponentlar
+├── public/assets/images/                        # Static images
+├── tailwind.config.ts                           # Tailwind configuration
+├── tsconfig.json                                # TypeScript config
+├── vite.config.ts                               # Vite build config
+└── vitest.config.ts                             # Vitest test config
+```
+
+================================================================
+5. KONFIGURATSIYA
+================================================================
+
+### config/settings/base.py (346 qator)
+
+#### INSTALLED_APPS:
+Django Apps:
+  - django.contrib.admin
+  - django.contrib.auth
+  - django.contrib.contenttypes
+  - django.contrib.sessions
+  - django.contrib.messages
+  - django.contrib.staticfiles
+  - django.contrib.sites
+
+Third-Party Apps:
+  - rest_framework
+  - rest_framework_simplejwt.token_blacklist
+  - corsheaders
+  - django_celery_beat
+  - django_filters
+  - drf_spectacular
+  - allauth
+  - allauth.account
+  - allauth.socialaccount
+  - allauth.socialaccount.providers.google
+  - dj_rest_auth
+  - dj_rest_auth.registration
+
+Local Apps:
+  - apps.common
+  - apps.users.apps.UsersConfig
+  - apps.words.apps.WordsConfig
+
+#### MIDDLEWARE (tartib bilan):
+  1. django.middleware.security.SecurityMiddleware
+  2. whitenoise.middleware.WhiteNoiseMiddleware
+  3. corsheaders.middleware.CorsMiddleware
+  4. django.contrib.sessions.middleware.SessionMiddleware
+  5. django.middleware.common.CommonMiddleware
+  6. django.middleware.csrf.CsrfViewMiddleware
+  7. django.contrib.auth.middleware.AuthenticationMiddleware
+  8. django.contrib.messages.middleware.MessageMiddleware
+  9. django.middleware.clickjacking.XFrameOptionsMiddleware
+  10. apps.common.middleware.request_id.RequestIDMiddleware
+  11. apps.common.idempotency.IdempotencyMiddleware
+  12. apps.common.logging.RequestLoggingMiddleware
+  13. allauth.account.middleware.AccountMiddleware
+
+#### REST_FRAMEWORK sozlamalari:
+  - DEFAULT_AUTHENTICATION: JWTAuthentication
+  - DEFAULT_PERMISSION: IsAuthenticated
+  - DEFAULT_PAGINATION: StandardResultsPagination (PAGE_SIZE=20)
+  - DEFAULT_RENDERER: CustomJSONRenderer (success wrapper)
+  - DEFAULT_FILTER_BACKENDS: DjangoFilterBackend, SearchFilter, OrderingFilter
+  - EXCEPTION_HANDLER: custom_exception_handler
+  - DEFAULT_THROTTLE_CLASSES: AnonRateThrottle, UserRateThrottle, CRUDRateThrottle
+  - DEFAULT_THROTTLE_RATES: anon=100/hour, user=1000/hour
+  - DEFAULT_SCHEMA: drf-spectacular AutoSchema
+
+#### SIMPLE_JWT:
+  - ACCESS_TOKEN_LIFETIME: 60 daqiqa
+  - REFRESH_TOKEN_LIFETIME: 7 kun
+  - ROTATE_REFRESH_TOKENS: True
+  - BLACKLIST_AFTER_ROTATION: True
+
+#### CORS:
+  - Allowed origins: localhost:5173, localhost:3000, 127.0.0.1:5173
+  - CORS_ALLOW_CREDENTIALS: True
+  - Development: CORS_ALLOW_ALL_ORIGINS = True
+
+#### CACHE:
+  - Docker: django_redis (redis://redis:6379/0, prefix: wordfix)
+  - Fallback: LocMemCache
+
+#### CELERY:
+  - BROKER: redis://redis:6379/1
+  - RESULT_BACKEND: redis://redis:6379/2
+  - Fallback: TASK_ALWAYS_EAGER=True
+  - SERIALIZER: json
+  - TASK_TIME_LIMIT: 300s
+  - BEAT_SCHEDULER: DatabaseScheduler
+
+#### AI PROVIDER:
+  - AI_PROVIDER: groq (default)
+  - GROQ_MODEL: llama-3.3-70b-versatile
+  - OPENAI_MODEL: gpt-4o-mini
+  - AI_MAX_RETRIES: 3
+  - AI_TIMEOUT: 30s
+  - WORD_ENRICHMENT_ENABLED: True (test da False)
+
+#### LOGGING:
+  - Formatters: json (JSONFormatter), verbose
+  - Handlers: console (StreamHandler), file (logs/wordfix.log)
+  - Root: console, INFO
+  - django: console, INFO
+  - apps: console + file, DEBUG (development), INFO (production)
+
+#### ALLAUTH:
+  - ACCOUNT_LOGIN_METHODS: {email}
+  - ACCOUNT_EMAIL_VERIFICATION: none
+  - Google OAuth: client_id/secret from env
+  - AUTHENTICATION_BACKENDS: ModelBackend + AuthenticationBackend
+
+#### REST_AUTH:
+  - USE_JWT: True
+  - JWT_AUTH_HTTPONLY: False
+  - USER_DETAILS_SERIALIZER: UserProfileSerializer
+
+#### test.py (98 qator):
+  - Database: SQLite :memory:
+  - Password hasher: MD5 (speed)
+  - Cache: LocMemCache
+  - Celery: always_eager
+  - Throttling: disabled
+  - AI: disabled (WORD_ENRICHMENT_ENABLED=False)
+  - File storage: InMemoryStorage
+
+#### production.py (36 qator):
+  - DEBUG: False
+  - SSL/HSTS: enabled
+  - Secure cookies: enabled
+  - X_FRAME_OPTIONS: DENY
+  - Logging: WARNING+ for django, INFO+ for apps
+
+================================================================
+UMUMIY STATISTIKA
+================================================================
+
+| Ko'rsatkich              | Backend    | Frontend   | Jami       |
+|--------------------------|------------|------------|------------|
+| Fayllar soni             | 315        | 523        | 838        |
+| Umumiy qator soni        | ~28,575    | ~22,757    | ~51,332    |
+| Model soni               | 28         | -          | 28         |
+| API endpoint soni        | ~75        | -          | ~75        |
+| Use case soni            | ~30        | -          | ~30        |
+| Repository soni          | ~15        | -          | ~15        |
+| Frontend sahifalar       | -          | ~30        | ~30        |
+| Frontend komponentlar    | -          | ~250+      | ~250+      |
+| Test soni (backend)      | 1053       | -          | 1053       |
+| Feature modullari        | -          | 19         | 19         |

@@ -50,6 +50,6 @@ describe('useCompleteTest', () => {
   it('completes a test session', async () => {
     const { result } = renderHook(() => useCompleteTest(), { wrapper: createWrapper() });
     await result.current.mutateAsync('ts-1');
-    expect(result.current.isSuccess).toBe(true);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 });

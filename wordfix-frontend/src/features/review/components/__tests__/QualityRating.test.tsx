@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, userEvent } from '@/test/utils';
 import QualityRating from '../QualityRating';
-import type { ReviewQuality } from '@/types';
 
 describe('QualityRating', () => {
   const onRate = vi.fn();

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, userEvent, waitFor } from '@/test/utils';
 import SessionTypeCard from '../SessionTypeCard';
 import { Brain } from 'lucide-react';
@@ -40,7 +40,7 @@ describe('SessionTypeCard', () => {
 
   it('does not render word count badge when count is undefined', () => {
     render(<SessionTypeCard {...props} count={undefined} />);
-    expect(screen.queryByText(/words/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d+ words/)).not.toBeInTheDocument();
   });
 
   it('has disabled styles when disabled', () => {

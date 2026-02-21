@@ -31,7 +31,7 @@ class StartWordMatchUseCase:
         selected = eligible[:min(pair_count, len(eligible))]
 
         word_items = [
-            {"word_id": str(w.id), "word": w.original_word}
+            {"word_id": str(w.id), "word": w.original_word, "translation": w.translation}
             for w in selected
         ]
         translations = [w.translation for w in selected]

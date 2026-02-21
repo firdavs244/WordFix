@@ -124,9 +124,17 @@ class SubmitAnswerView(APIView):
             "session": _session_to_dict(result["session"]),
             "is_correct": result["is_correct"],
         }
+
+        # Add combo data
+        combo_data = result.get("combo", {})
+        response_data["combo"] = combo_data.get("current", 0)
+        response_data["multiplier"] = combo_data.get("multiplier", 1.0)
+
         if xp_result:
             response_data["xp_earned"] = xp_result.get("xp_gained", 0)
             response_data["xp_details"] = xp_result
+        else:
+            response_data["xp_earned"] = 0
 
         return Response(build_success_response(data=response_data))
 

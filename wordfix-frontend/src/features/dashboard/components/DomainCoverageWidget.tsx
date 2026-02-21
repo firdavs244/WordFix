@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDomainCoverage } from '@/features/learning/hooks/useLearning';
+import { useDomainCoverage } from '@/features/learning-profile/hooks/useLearning';
 import DomainBar from './DomainBar';
 
 const DOMAIN_COLORS: Record<string, string> = {

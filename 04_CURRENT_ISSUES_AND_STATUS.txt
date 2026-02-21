@@ -1,0 +1,318 @@
+================================================================
+04_CURRENT_ISSUES_AND_STATUS.txt
+WordFix — Joriy muammolar va holat
+Hujjat yaratilgan sana: 2026-02-21
+Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+================================================================
+
+================================================================
+1. UMUMIY HOLATLAR JADVALI
+================================================================
+
+| Metrika                     | Qiymat     | Status     |
+|-----------------------------|------------|------------|
+| Backend testlar             | 1053/1053 | ✅ All pass|
+| Backend test coverage       | 96%        | ✅ Yaxshi  |
+| Frontend TypeScript build   | 0 xato     | ✅ PASS    |
+| Migratsiyalar               | Barchasi   | ✅ Applied |
+| Docker xizmatlari           | 7/7        | ✅ Healthy |
+| AI provider (Groq)          | Connected  | ✅ Ishlaydi|
+| Redis cache                 | Connected  | ✅ Ishlaydi|
+| PostgreSQL database         | Connected  | ✅ Ishlaydi|
+| Celery Worker               | Running    | ✅ Ishlaydi|
+| Celery Beat                 | Running    | ✅ Ishlaydi|
+
+================================================================
+2. BACKEND TEST NATIJALARI
+================================================================
+
+### Umumiy natija:
+- Jami testlar: 1053
+- ✅ PASSED: 1053
+- ✅ FAILED: 0
+- ✅ Warnings: 0
+- Coverage: 96% (15,109 statements, 651 missed)
+- Vaqt: ~467 soniya (7:47)
+
+### FAIL bo'lgan testlar: YO'Q ✅
+Barcha 1053 ta test muvaffaqiyatli o'tadi.
+
+### Pytest Warnings: YO'Q ✅
+pyproject.toml da PytestCollectionWarning filterlandi.
+
+================================================================
+3. BACKEND COVERAGE TAHLILI
+================================================================
+
+### Umumiy: 96% (15,109 stmts, 651 missed)
+
+### Eng past coverage fayllar:
+
+| Fayl                                          | Coverage | Missed |
+|-----------------------------------------------|----------|--------|
+| distractor_deps.py                            | 57%      | 3      |
+| enrichment_deps.py                            | 59%      | 12     |
+| challenge_deps.py                             | 71%      | 6      |
+| core/interfaces/tts_provider.py               | 75%      | 2      |
+| core/interfaces/ai_provider.py                | 77%      | 5      |
+| game_deps.py                                  | 80%      | 14     |
+| confusing_deps.py                             | 83%      | 3      |
+| import_deps.py                                | 83%      | 2      |
+| common_deps.py                                | 85%      | 7      |
+| import_serializers.py                          | 91%     | 4      |
+| confusing_views.py                            | 92%      | 3      |
+| word_views.py                                 | 93%      | 12     |
+| ai_factory.py                                 | 93%      | 5      |
+| distractor_service.py                         | 89%      | 7      |
+| review_views.py                               | 94%      | 7      |
+| test_views.py                                 | 94%      | 4      |
+
+TREND: Dependency injection fayllar eng past coverage ga ega.
+Bu fayllar asosan factory/provider logikasi bo'lib, ba'zi
+error handling branchlar testlanmagan.
+
+### 100% Coverage bo'lgan sohalar:
+- Barcha model fayllari
+- Barcha URL fayllari
+- Barcha test fayllari (o'zlari)
+- Barcha domain service fayllari
+- Ko'pchilik serializer fayllari
+- Ko'pchilik use case fayllari
+- Barcha repository fayllari (xp_repo 96% dan tashqari)
+
+================================================================
+4. FRONTEND BUILD XATOLARI
+================================================================
+
+### TypeScript Compilation: ✅ 0 xato (Sprint 10.3 da tuzatildi)
+
+Barcha 12 ta xato bartaraf etildi:
+- TS6133: 7 ta unused import olib tashlandi
+- TS2741: ChatMessage.showAvatar optional qilindi (default: true)
+- TS6196: 2 ta unused type import olib tashlandi
+
+================================================================
+5. ARXITEKTURA MUAMMOLARI
+================================================================
+
+### 5.1 Learning Feature Duplikatsiyasi
+✅ BARTARAF ETILDI (Sprint 10.3):
+learning/ papkasi learning-profile/ ga to'liq birlashtirildi.
+Endi faqat bitta learning-profile/ module mavjud.
+
+### 5.2 Duplicate Page Files
+✅ BARTARAF ETILDI (Sprint 10.3):
+- features/profile/ProfilePage.tsx (root) — o'chirildi
+- features/words/WordsPage.tsx (root) — o'chirildi
+- Orphan komponentlar (WordsFilterBar, WordsGrid, WordsList) ham o'chirildi
+Faqat pages/ papkadagi fayllar qoldi.
+
+### 5.3 Katta fayllar (300+ qator)
+Backend refactoring candidates:
+| Qator | Fayl                                    | Tavsiya                        |
+|-------|-----------------------------------------|--------------------------------|
+| 404   | test_all_apis.py                        | Test modullarga bo'lish        |
+| 387   | story_builder.py (use case)             | StoryBuilder ni kichik use case larga ajratish |
+| 373   | seed_test_data.py                       | Normal, bu management command  |
+| 346   | config/settings/base.py                 | Normal, settings fayl          |
+| 320   | listening.py (use case)                 | 3 ta use case bitta faylda — aloqhida faylga ajratish mumkin |
+| 318   | smart_import.py                         | 4 ta use case bitta faylda     |
+
+================================================================
+6. FEATURE HOLATLARI
+================================================================
+
+### To'liq ishlaydigan featurelar:
+| #  | Feature              | Backend | Frontend | Testlar | Status |
+|----|----------------------|---------|----------|---------|--------|
+| 1  | Auth (Register/Login/Google) | ✅ | ✅ | ✅ | ✅ Production ready |
+| 2  | Profile Management   | ✅      | ✅       | ✅      | ✅ Production ready |
+| 3  | Onboarding           | ✅      | ✅       | ✅      | ✅ Production ready |
+| 4  | Word CRUD            | ✅      | ✅       | ✅      | ✅ Production ready |
+| 5  | Word Enrichment (AI) | ✅      | ✅       | ✅      | ✅ Production ready |
+| 6  | Review (SM-2)        | ✅      | ✅       | ✅      | ✅ Production ready |
+| 7  | Streak & Daily Progress | ✅  | ✅       | ✅      | ✅ Production ready |
+| 8  | Tests (AI generated) | ✅      | ✅       | ✅      | ✅ Production ready |
+| 9  | Speed Round Game     | ✅      | ✅       | ✅      | ✅ Production ready |
+| 10 | Word Match Game      | ✅      | ✅       | ✅      | ✅ Production ready |
+| 11 | Word Context Game    | ✅      | ✅       | ✅      | ✅ Production ready |
+| 12 | Story Builder Game   | ✅      | ✅       | ✅      | ✅ Production ready |
+| 13 | Listening Challenge  | ✅      | ✅       | ✅      | ✅ Production ready |
+| 14 | AI Chat              | ✅      | ✅       | ✅      | ✅ Production ready |
+| 15 | Smart Import (AI)    | ✅      | ✅       | ✅      | ✅ Production ready |
+| 16 | CSV Import           | ✅      | ✅       | ✅      | ✅ Production ready |
+| 17 | Analytics            | ✅      | ✅       | ✅      | ✅ Production ready |
+| 18 | XP & Leveling System | ✅      | ✅       | ✅      | ✅ Production ready |
+| 19 | Badge System         | ✅      | ✅       | ✅      | ✅ Production ready |
+| 20 | Notifications        | ✅      | ✅       | ✅      | ✅ Production ready |
+| 21 | Confusing Pairs      | ✅      | ✅       | ✅      | ✅ Production ready |
+| 22 | Daily Challenges     | ✅      | ✅       | ✅      | ✅ Production ready |
+| 23 | Combo System         | ✅      | ✅       | ✅      | ✅ Production ready |
+
+### Qisman ishlaydigan featurelar: YO'Q ✅
+Sprint 10.4 da barcha featurelar to'liq ishlaydi.
+
+================================================================
+7. ENTERPRISE PATTERNS HOLATI
+================================================================
+
+### Circuit Breaker:
+- ✅ Groq provider uchun ishlaydi
+- ✅ OpenAI fallback ishlaydi
+- ✅ FallbackAIProvider (hardcoded) — oxirgi fallback
+- ✅ States: CLOSED → OPEN → HALF_OPEN
+- Coverage: 93% (ai_factory.py)
+
+### Rate Limiter:
+- ✅ apps/common/rate_limiter.py mavjud
+- DRF throttle classes bilan integratsiya
+
+### Idempotency:
+- ✅ apps/common/idempotency.py mavjud
+- POST requestlar uchun idempotency key
+
+### Middleware:
+- ✅ RequestLoggingMiddleware
+- ✅ CorrelationIDMiddleware (request tracing)
+- ✅ PerformanceMonitoringMiddleware
+
+### Standardized Response Format:
+- ✅ CustomRenderer: { success, data, message, errors, meta }
+- Frontend ApiResponse<T> interface mos keladi
+
+================================================================
+8. XAVFSIZLIK
+================================================================
+
+### Autentifikatsiya:
+- JWT (SimpleJWT): access_token 60 min, refresh_token 7 kun
+- Token blacklisting (logout)
+- Google OAuth2 (allauth + dj-rest-auth)
+- CORS: CORS_ALLOWED_ORIGINS konfiguratsiya qilingan
+
+### Permission:
+- 8 ta AllowAny endpoint (register, login, refresh, google, onboarding questions, health)
+- 82 ta IsAuthenticated endpoint
+- Barcha view larda permission_classes explicit belgilangan
+
+### Data Validation:
+- Django model validators
+- DRF serializer validation
+- Frontend form validation
+
+================================================================
+9. PERFORMANCE
+================================================================
+
+### Database:
+- 28 ta model, ~15 ta index
+- unique_together constraints
+- db_index on frequently queried fields
+- Soft delete pattern (is_active flag)
+
+### Caching:
+- Redis (production) / LocMemCache (development)
+- DEFAULT_TIMEOUT: 300 soniya
+- Session backend: Redis
+- QuerySet caching (ba'zi view larda)
+
+### Frontend:
+- Lazy loading (28 sahifa)
+- TanStack Query caching
+- Debounce on search inputs (300ms)
+- Optimistic updates (ba'zi joylarda)
+
+================================================================
+10. SPRINT 10.4 — MANTIQIY XATOLAR TUZATISH
+================================================================
+
+### Sprint 10.4 da tuzatilgan 10 ta mantiqiy xato:
+
+| #  | Muammo                          | Sabab                                      | Yechim                                     |
+|----|----------------------------------|--------------------------------------------|--------------------------------------------|
+| 1  | Speed Round natija ko'rinmaydi   | GameResultPage searchParams kutadi, lekin navigate state bilan o'tkazilmagan | Barcha games navigate(state) bilan o'tkazadi |
+| 2  | Word Match juftliklar noto'g'ri  | Backend translations shuffle qiladi, frontend index bo'yicha map qiladi | Backend har word ga translation qo'shadi, frontend word.translation ishlatadi |
+| 3  | Story Builder baholash noto'g'ri | Fallback scoring har doim 5+ ball beradi (creativity default) | 3 dan kam so'z = 0 ball, target word ishlatilmasa = ball yo'q |
+| 4  | Import Words kam so'z (20 ta)   | max_words default 20, stop words kam       | max_words=50, stop words 200+, qiyinlik bo'yicha tartiblash |
+| 5  | Review combo/multiplier yo'q     | View response da combo va multiplier qaytarilmagan | SubmitAnswerView ga combo, multiplier, xp_earned qo'shildi |
+| 6  | Learning Profile ko'rinmaydi     | Backend flat fields, frontend nested objects kutadi | Backend nested structure qaytaradi: best_time{}, skills{}, session_stats{} |
+| 7  | Recommended Words har doim 10    | FALLBACK_WORDS 10 ta, ai_provider=None     | FALLBACK_WORDS 60 taga oshirildi, accepted words exclusion qo'shildi |
+| 8  | Badges ko'rinmaydi               | Badge lar DB da yo'q edi                   | create_badges management command bajarildi (31 ta badge) |
+| 9  | Game Results sahifasi ishlamaydi  | Barcha o'yinlar GameResultPage ga navigate qilganda data bermagan | useLocation().state orqali data oladi, searchParams ga fallback |
+| 10 | API-UI coverage gaps             | enrichment-retry, enrich-all centralizatsiya qilinmagan | API_ENDPOINTS ga ENRICHMENT_RETRY, ENRICH_ALL qo'shildi |
+
+### Sprint 10.4 da o'zgartirilgan fayllar:
+
+**Backend (8 fayl):**
+1. apps/words/application/use_cases/games/word_match.py — word_items ga translation qo'shildi
+2. apps/words/application/use_cases/games/story_builder.py — _fallback_analyze() to'liq qayta yozildi
+3. apps/users/application/learning_use_cases/learning_profile.py — nested data structure
+4. apps/users/application/learning_use_cases/recommendations.py — 60 ta fallback word, accepted exclusion
+5. apps/users/infrastructure/repositories/learning_repo.py — get_accepted_words() method qo'shildi
+6. apps/words/application/use_cases/smart_import.py — max_words=50, stop words 200+, sorting
+7. apps/words/presentation/views/review_views.py — combo, multiplier, xp_earned response da
+8. core/services/ai/prompts/import_prompts.py — prompt difficulty priority qo'shildi
+
+**Frontend (10 fayl):**
+1. features/games/GameResultPage.tsx — useLocation().state support, GameResultState interface
+2. features/games/speed-round/SpeedRoundPage.tsx — navigate state + auto-submit on all answered
+3. features/games/word-match/hooks/useWordMatch.ts — word.translation ishlatish, MatchedTranslation type
+4. features/games/word-match/components/WordMatchBoard.tsx — MatchedTranslation[] prop type
+5. features/games/word-match/WordMatchPage.tsx — navigate state bilan GameResultPage ga o'tkazish
+6. features/games/word-context/WordContextPage.tsx — navigate state bilan GameResultPage ga o'tkazish
+7. features/games/story-builder/StoryBuilderPage.tsx — maxScore: totalRounds * 20 (10 emas)
+8. features/review/api/reviewApi.ts — API_ENDPOINTS.WORDS.ENRICH_ALL ishlatadi
+9. api/endpoints.ts — ENRICHMENT_RETRY, ENRICH_ALL qo'shildi
+10. words/presentation/serializers/import_serializers.py — max_words default=50, max=100
+
+### Test natijalari (Sprint 10.4):
+- Backend: 1053/1053 PASSED ✅ (0 failed, 0 errors)
+- Frontend build: 0 TypeScript xato ✅
+- Django check: 0 issue ✅
+
+================================================================
+11. KELAJAK SPRINTLAR UCHUN TAVSIYALAR
+================================================================
+
+### Birinchi navbat (bug fixes):
+1. ✅ 3 ta FAIL testlar tuzatildi (Sprint 10.3)
+2. ✅ 12 ta TypeScript xatolari tuzatildi (Sprint 10.3)
+3. ✅ 21 ta pytest warning bartaraf etildi (Sprint 10.3)
+
+### Ikkinchi navbat (code quality):
+4. ✅ learning/ va learning-profile/ birlashtirildi (Sprint 10.3)
+5. ✅ Duplicate page fayllar tozalandi (Sprint 10.3)
+6. 300+ qator use case fayllarini refactor qilish (story_builder, listening, smart_import)
+7. Dependency injection fayllar coverage ni oshirish (57-85% → 90%+)
+
+### Uchinchi navbat (yangi features):
+8. Real-time notifications (WebSocket/SSE)
+9. Spaced repetition statistikalar (SM-2 parameter visualization)
+10. Word pronunciation audio (TTS integration — backend interface tayyor)
+11. Social features (leaderboard, challenge friends)
+12. Offline mode (PWA/service worker)
+13. Multi-language UI (i18n)
+14. Admin dashboard
+
+### To'rtinchi navbat (infrastructure):
+15. CI/CD pipeline (GitHub Actions)
+16. Production deployment (AWS/GCP)
+17. Monitoring (Sentry, Prometheus)
+18. Database backup automation
+19. Load testing
+20. API versioning v2 strategiyasi
+
+================================================================
+12. LOYIHA STATISTIKASI (UMUMIY)
+================================================================
+
+| Metrika                      | Backend      | Frontend     | Jami         |
+|------------------------------|-------------|--------------|--------------|
+| Fayllar                      | 315          | 523          | 838+         |
+| Qatorlar                     | ~28,575      | ~22,757      | ~51,332      |
+| Testlar                      | 1,053        | ~80+ fayl    | 1,100+       |
+| Test Coverage                | 96%          | N/A          | -            |
+| Modellar                     | 28           | -            | 28           |
+| API Endpoints                | ~90          | ~90 mapped   | ~90          |
+| Feature Modules              | 2 app + core | 19           | 22           |
+| Docker Services              | -            | -            | 7            |

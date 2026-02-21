@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useGenerateDrill, useResolvePair } from '../hooks/useConfusingPairs';
 import type { DrillData } from '../types';
 import confetti from 'canvas-confetti';
+import DrillLoading from './DrillLoading';
 import { DrillExplanation } from './DrillExplanation';
 import { DrillQuiz } from './DrillQuiz';
 import { DrillResult } from './DrillResult';
@@ -23,22 +24,22 @@ export function DrillModal({ pairId, isOpen, onClose }: DrillModalProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
-
   const generateDrill = useGenerateDrill();
   const resolvePair = useResolvePair();
+
+  const resetQuiz = () => {
+    setQuizIndex(0);
+    setScore({ correct: 0, total: 0 });
+    setSelectedAnswer(null);
+    setAnswered(false);
+  };
 
   useEffect(() => {
     if (isOpen && pairId) {
       setStep('loading');
-      setQuizIndex(0);
-      setScore({ correct: 0, total: 0 });
-      setSelectedAnswer(null);
-      setAnswered(false);
+      resetQuiz();
       generateDrill.mutate(pairId, {
-        onSuccess: (res) => {
-          setDrill(res.data);
-          setStep('explanation');
-        },
+        onSuccess: (res) => { setDrill(res.data); setStep('explanation'); },
         onError: () => onClose(),
       });
     }
@@ -48,19 +49,15 @@ export function DrillModal({ pairId, isOpen, onClose }: DrillModalProps) {
   const currentQuestion = drill?.test_questions[quizIndex] ?? null;
   const totalQuestions = drill?.test_questions.length ?? 0;
 
-  const handleAnswer = useCallback(
-    (answer: string) => {
-      if (answered || !currentQuestion) return;
-      setSelectedAnswer(answer);
-      setAnswered(true);
-      const isCorrect = answer === currentQuestion.correct_answer;
-      setScore((s) => ({
-        correct: s.correct + (isCorrect ? 1 : 0),
-        total: s.total + 1,
-      }));
-    },
-    [answered, currentQuestion],
-  );
+  const handleAnswer = useCallback((answer: string) => {
+    if (answered || !currentQuestion) return;
+    setSelectedAnswer(answer);
+    setAnswered(true);
+    setScore((s) => ({
+      correct: s.correct + (answer === currentQuestion.correct_answer ? 1 : 0),
+      total: s.total + 1,
+    }));
+  }, [answered, currentQuestion]);
 
   const handleNext = () => {
     if (quizIndex + 1 < totalQuestions) {
@@ -69,25 +66,14 @@ export function DrillModal({ pairId, isOpen, onClose }: DrillModalProps) {
       setAnswered(false);
     } else {
       setStep('result');
-      const pct = totalQuestions > 0 ? (score.correct / totalQuestions) * 100 : 0;
-      if (pct === 100) {
+      if (totalQuestions > 0 && score.correct === totalQuestions) {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }
     }
   };
 
-  const handleResolve = () => {
-    resolvePair.mutate(pairId);
-    onClose();
-  };
-
-  const handleRetry = () => {
-    setStep('explanation');
-    setQuizIndex(0);
-    setScore({ correct: 0, total: 0 });
-    setSelectedAnswer(null);
-    setAnswered(false);
-  };
+  const handleResolve = () => { resolvePair.mutate(pairId); onClose(); };
+  const handleRetry = () => { setStep('explanation'); resetQuiz(); };
 
   if (!isOpen) return null;
 
@@ -109,12 +95,7 @@ export function DrillModal({ pairId, isOpen, onClose }: DrillModalProps) {
             </Button>
           </div>
 
-          {step === 'loading' && (
-            <div className="flex flex-col items-center justify-center gap-4 py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-muted-foreground">Generating drill...</p>
-            </div>
-          )}
+          {step === 'loading' && <DrillLoading />}
 
           {step === 'explanation' && drill && (
             <DrillExplanation drill={drill} onStartQuiz={() => setStep('quiz')} />

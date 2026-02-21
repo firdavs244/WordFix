@@ -131,6 +131,15 @@ class WordRecommendationRepository:
             ).values_list("recommended_word", flat=True)
         )
 
+    def get_accepted_words(self, user_id: UUID) -> list[str]:
+        """Return list of previously accepted recommendation words."""
+        return list(
+            WordRecommendation.objects.filter(
+                user_id=user_id,
+                is_accepted=True,
+            ).values_list("recommended_word", flat=True)
+        )
+
     def get_by_id(self, rec_id: UUID, user_id: UUID) -> WordRecommendation | None:
         """Get a single recommendation by id, scoped to user."""
         try:

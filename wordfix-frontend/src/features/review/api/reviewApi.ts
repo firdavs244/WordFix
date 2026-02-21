@@ -1,4 +1,5 @@
 import apiClient from '@/api/client';
+import API_ENDPOINTS from '@/api/endpoints';
 import type {
   ApiResponse,
   DailyProgress,
@@ -106,7 +107,7 @@ export const enrichmentApi = {
 
   enrichAll: async () => {
     const res = await apiClient.post<ApiResponse<{ count: number }>>(
-      '/words/enrich-all/',
+      API_ENDPOINTS.WORDS.ENRICH_ALL,
     );
     return res.data;
   },

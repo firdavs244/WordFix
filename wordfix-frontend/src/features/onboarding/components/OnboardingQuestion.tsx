@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Loader2 } from 'lucide-react';
-import { staggerContainer, staggerItem } from '@/lib/motion';
+import { staggerContainer } from '@/lib/motion';
 import type { OnboardingQuestion as QType } from '../types';
 import { OnboardingProgress } from './OnboardingProgress';
 import { OnboardingOptionCard } from './OnboardingOptionCard';

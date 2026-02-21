@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { render, screen } from '@/test/utils';
 import ReviewSessionPage from '../../ReviewSessionPage';
 import { useReviewStore } from '@/stores/useReviewStore';
 import { createMockWord } from '@/test/utils';
@@ -17,7 +17,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock child components
-vi.mock('../components/SessionTopBar', () => ({
+vi.mock('../SessionTopBar', () => ({
   default: ({ currentIndex, total, onQuit }: { currentIndex: number; total: number; onQuit: () => void }) => (
     <div data-testid="session-top-bar">
       <span data-testid="word-counter">{currentIndex + 1}/{total}</span>
@@ -25,31 +25,31 @@ vi.mock('../components/SessionTopBar', () => ({
     </div>
   ),
 }));
-vi.mock('../components/SessionProgressBar', () => ({
+vi.mock('../SessionProgressBar', () => ({
   default: ({ progress }: { progress: number }) => <div data-testid="session-progress" data-progress={progress} />,
 }));
-vi.mock('../components/FlashCardContainer', () => ({
+vi.mock('../FlashCardContainer', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="flashcard-container">{children}</div>,
 }));
-vi.mock('../components/FlashCard', () => ({
+vi.mock('../FlashCard', () => ({
   default: ({ word, onFlip }: { word: { original_word: string }; onFlip: () => void }) => (
     <div data-testid="flashcard" onClick={onFlip}>{word.original_word}</div>
   ),
 }));
-vi.mock('../components/QualityRating', () => ({
+vi.mock('../QualityRating', () => ({
   default: ({ onRate }: { onRate: (q: number) => void }) => (
     <div data-testid="quality-rating">
       <button data-testid="rate-good" onClick={() => onRate(3)}>Good</button>
     </div>
   ),
 }));
-vi.mock('../components/ComboIndicator', () => ({
+vi.mock('../ComboIndicator', () => ({
   default: () => <div data-testid="combo-indicator" />,
 }));
-vi.mock('../components/ComboBreakEffect', () => ({
+vi.mock('../ComboBreakEffect', () => ({
   default: () => <div data-testid="combo-break" />,
 }));
-vi.mock('../components/XPGainPopup', () => ({
+vi.mock('../XPGainPopup', () => ({
   default: () => <div data-testid="xp-popup" />,
 }));
 

@@ -10,7 +10,7 @@ interface Props {
   index: number;
 }
 
-export function OnboardingOptionCard({ text, isSelected, onClick, index }: Props) {
+export function OnboardingOptionCard({ text, isSelected, onClick, index: _index }: Props) {
   return (
     <motion.button
       variants={staggerItem}

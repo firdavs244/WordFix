@@ -27,6 +27,8 @@ const API_ENDPOINTS = {
     CATEGORY_DETAIL: (id: string) => `/words/categories/${id}/`,
     ENRICH: (id: string) => `/words/${id}/enrich/`,
     ENRICHMENT_STATUS: (id: string) => `/words/${id}/enrichment-status/`,
+    ENRICHMENT_RETRY: (id: string) => `/words/${id}/enrichment-retry/`,
+    ENRICH_ALL: '/words/enrich-all/',
   },
   REVIEW: {
     WORDS: '/review/words/',

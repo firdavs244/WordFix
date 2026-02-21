@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { render, screen } from '@/test/utils';
 import ReviewPage from '../../ReviewPage';
 
 vi.mock('../ReviewStats', () => ({ default: () => <div data-testid="review-stats">Stats</div> }));

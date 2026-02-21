@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { staggerContainer } from '@/lib/motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useWordRecommendations } from '@/features/learning/hooks/useLearning';
+import { useWordRecommendations } from '@/features/learning-profile/hooks/useLearning';
 import RecommendationItem from './RecommendationItem';
 
 export default function RecommendationsWidget() {

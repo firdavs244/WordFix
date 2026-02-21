@@ -14,9 +14,12 @@ The student already knows these words (EXCLUDE them): {known_words}
 
 Instructions:
 1. Find up to {max_words} words the student likely does NOT know
-2. Focus on useful, practical vocabulary
-3. Prioritize more important/common words first
-4. Exclude proper nouns, numbers, and very basic words (a, the, is, etc.)
+2. Prioritize: rare/advanced words first, then medium, then common last
+3. Sort by difficulty: hardest first
+4. Skip very common words (the, is, are, have, do, go, get, make, take, etc.)
+5. Include: academic, professional, and idiomatic words
+6. Exclude proper nouns, numbers, and basic function words
+7. Focus on useful, practical vocabulary worth memorizing
 
 Respond ONLY with a valid JSON array:
 [

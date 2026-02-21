@@ -1,19 +1,18 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { listContainerVariants, listItemVariants } from '@/components/animations/PageTransition';
 import { ConfusingPairCard } from '../components/ConfusingPairCard';
 import { DrillModal } from '../components/DrillModal';
+import ResolvedPairsSection from '../components/ResolvedPairsSection';
 import { useConfusingPairs, useResolvePair } from '../hooks/useConfusingPairs';
 
 export function ConfusingPairsPage() {
   const { data, isLoading } = useConfusingPairs();
   const resolvePair = useResolvePair();
   const [drillPairId, setDrillPairId] = useState<string | null>(null);
-  const [showResolved, setShowResolved] = useState(false);
 
   const pairs = data?.data ?? [];
 
@@ -112,34 +111,7 @@ export function ConfusingPairsPage() {
         )}
 
         {/* Resolved pairs */}
-        {resolved.length > 0 && (
-          <div className="space-y-3">
-            <Button
-              variant="ghost"
-              className="gap-2 text-muted-foreground"
-              onClick={() => setShowResolved(!showResolved)}
-            >
-              {showResolved ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              Resolved Pairs ({resolved.length})
-            </Button>
-            {showResolved && (
-              <motion.div
-                className="space-y-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {resolved.map((pair) => (
-                  <ConfusingPairCard
-                    key={pair.id}
-                    pair={pair}
-                    onDrill={handleDrill}
-                    onResolve={handleResolve}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </div>
-        )}
+        <ResolvedPairsSection pairs={resolved} onDrill={handleDrill} onResolve={handleResolve} />
 
         {/* Drill Modal */}
         <DrillModal

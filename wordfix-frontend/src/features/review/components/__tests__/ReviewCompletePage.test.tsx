@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@/test/utils';
+import { fireEvent } from '@testing-library/react';
 import ReviewCompletePage from '../../ReviewCompletePage';
 
 const mockNavigate = vi.fn();
@@ -51,19 +52,15 @@ describe('ReviewCompletePage', () => {
     expect(screen.getByTestId('completion-actions')).toBeInTheDocument();
   });
 
-  it('navigates to dashboard when Dashboard button clicked', async () => {
-    const { userEvent: ue } = await import('@testing-library/user-event');
-    const user = ue.setup();
+  it('navigates to dashboard when Dashboard button clicked', () => {
     render(<ReviewCompletePage />);
-    await user.click(screen.getByTestId('go-dashboard'));
+    fireEvent.click(screen.getByTestId('go-dashboard'));
     expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
-  it('navigates to review when Review Again button clicked', async () => {
-    const { userEvent: ue } = await import('@testing-library/user-event');
-    const user = ue.setup();
+  it('navigates to review when Review Again button clicked', () => {
     render(<ReviewCompletePage />);
-    await user.click(screen.getByTestId('go-review'));
+    fireEvent.click(screen.getByTestId('go-review'));
     expect(mockNavigate).toHaveBeenCalledWith('/review');
   });
 

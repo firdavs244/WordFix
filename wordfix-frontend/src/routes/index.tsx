@@ -4,6 +4,7 @@ import { RootLayout } from '@/components/layout/RootLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { LoadingScreen } from '@/components/common/LoadingScreen';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { NotFoundPage } from '@/components/shared/NotFoundPage';
 
 // Lazy-loaded pages
 const LandingPage = lazy(() =>
@@ -42,52 +43,16 @@ const ReviewHistoryPage = lazy(() =>
     default: m.ReviewHistoryPage,
   })),
 );
-const TestPage = lazy(() =>
-  import('@/features/tests/pages/TestPage').then((m) => ({ default: m.TestPage })),
-);
-const TestSessionPage = lazy(() =>
-  import('@/features/tests/pages/TestSessionPage').then((m) => ({
-    default: m.TestSessionPage,
-  })),
-);
-const TestResultPage = lazy(() =>
-  import('@/features/tests/pages/TestResultPage').then((m) => ({
-    default: m.TestResultPage,
-  })),
-);
-const GamesPage = lazy(() =>
-  import('@/features/games/pages/GamesPage').then((m) => ({ default: m.GamesPage })),
-);
-const SpeedRoundPage = lazy(() =>
-  import('@/features/games/pages/SpeedRoundPage').then((m) => ({
-    default: m.SpeedRoundPage,
-  })),
-);
-const WordMatchPage = lazy(() =>
-  import('@/features/games/pages/WordMatchPage').then((m) => ({
-    default: m.WordMatchPage,
-  })),
-);
-const WordContextPage = lazy(() =>
-  import('@/features/games/pages/WordContextPage').then((m) => ({
-    default: m.WordContextPage,
-  })),
-);
-const GameResultPage = lazy(() =>
-  import('@/features/games/pages/GameResultPage').then((m) => ({
-    default: m.GameResultPage,
-  })),
-);
-const StoryBuilderPage = lazy(() =>
-  import('@/features/games/pages/StoryBuilderPage').then((m) => ({
-    default: m.StoryBuilderPage,
-  })),
-);
-const ListeningPage = lazy(() =>
-  import('@/features/games/pages/ListeningPage').then((m) => ({
-    default: m.ListeningPage,
-  })),
-);
+const TestPage = lazy(() => import('@/features/tests/TestPage'));
+const TestSessionPage = lazy(() => import('@/features/tests/TestSessionPage'));
+const TestResultPage = lazy(() => import('@/features/tests/TestResultPage'));
+const GamesPage = lazy(() => import('@/features/games/GamesPage'));
+const SpeedRoundPage = lazy(() => import('@/features/games/speed-round/SpeedRoundPage'));
+const WordMatchPage = lazy(() => import('@/features/games/word-match/WordMatchPage'));
+const WordContextPage = lazy(() => import('@/features/games/word-context/WordContextPage'));
+const GameResultPage = lazy(() => import('@/features/games/GameResultPage'));
+const StoryBuilderPage = lazy(() => import('@/features/games/story-builder/StoryBuilderPage'));
+const ListeningPage = lazy(() => import('@/features/games/listening/ListeningPage'));
 const BadgesPage = lazy(() =>
   import('@/features/progress/pages/BadgesPage').then((m) => ({
     default: m.BadgesPage,
@@ -98,9 +63,7 @@ const NotificationsPage = lazy(() =>
     default: m.NotificationsPage,
   })),
 );
-const ImportPage = lazy(() =>
-  import('@/features/import/pages/ImportPage').then((m) => ({ default: m.ImportPage })),
-);
+const ImportPage = lazy(() => import('@/features/import/pages/ImportPage'));
 const ChatPage = lazy(() =>
   import('@/features/chat/pages/ChatPage').then((m) => ({ default: m.ChatPage })),
 );
@@ -114,11 +77,7 @@ const ChatHistoryPage = lazy(() =>
     default: m.ChatHistoryPage,
   })),
 );
-const AnalyticsPage = lazy(() =>
-  import('@/features/analytics/pages/AnalyticsPage').then((m) => ({
-    default: m.AnalyticsPage,
-  })),
-);
+const AnalyticsPage = lazy(() => import('@/features/analytics/pages/AnalyticsPage'));
 const ConfusingPairsPage = lazy(() =>
   import('@/features/confusing-pairs/pages/ConfusingPairsPage').then((m) => ({
     default: m.ConfusingPairsPage,
@@ -130,7 +89,7 @@ const OnboardingPage = lazy(() =>
   })),
 );
 const LearningProfilePage = lazy(() =>
-  import('@/features/learning/pages/LearningProfilePage').then((m) => ({
+  import('@/features/learning-profile/LearningProfilePage').then((m) => ({
     default: m.LearningProfilePage,
   })),
 );
@@ -158,20 +117,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) return <LoadingScreen />;
   if (isAuthenticated) return <Navigate to="/" replace />;
   return <>{children}</>;
-}
-
-// ─── 404 Page ──────────────────────────────────────────────────────────────────
-
-function NotFoundPage() {
-  return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4">
-      <h1 className="font-heading text-6xl font-bold text-primary">404</h1>
-      <p className="text-lg text-muted-foreground">Page not found</p>
-      <a href="/" className="text-primary hover:underline">
-        Go Home
-      </a>
-    </div>
-  );
 }
 
 // ─── App Routes ────────────────────────────────────────────────────────────────

@@ -1,0 +1,610 @@
+================================================================
+03_FRONTEND_FULL_STATE.txt
+WordFix Frontend — To'liq holat hujjati
+Hujjat yaratilgan sana: 2026-02-21
+Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+================================================================
+
+================================================================
+1. TECH STACK va KONFIGURATSIYA
+================================================================
+
+### Asosiy texnologiyalar:
+| Texnologiya       | Versiya  | Vazifasi                          |
+|--------------------|----------|-----------------------------------|
+| React              | ^19.0.0  | UI framework                      |
+| TypeScript         | ~5.6.0   | Tip xavfsizligi                   |
+| Vite               | ^6.0.0   | Build tool + dev server           |
+| React Router DOM   | ^7.1.0   | Routing                           |
+| TanStack Query     | ^5.62.0  | Server state management           |
+| Zustand            | ^5.0.2   | Client state management           |
+| Tailwind CSS       | ^3.4.17  | Utility-first CSS                 |
+| Framer Motion      | ^12.0.0  | Animatsiyalar                     |
+| Axios              | ^1.7.9   | HTTP client                       |
+| Sonner             | ^1.7.2   | Toast notifications               |
+| Vitest             | ^3.0.4   | Unit test framework               |
+| React Testing Lib  | ^16.1.0  | Component testing                 |
+
+### UI Komponentlar:
+| Kutubxona            | Versiya  | Vazifasi                        |
+|-----------------------|----------|---------------------------------|
+| Radix UI              | various  | Headless UI primitives          |
+| Lucide React          | ^0.469.0 | Ikonkalar                      |
+| class-variance-authority | ^0.7.1 | Variant-based styling          |
+| clsx                  | ^2.1.1   | Conditional classnames          |
+| tailwind-merge        | ^2.6.0   | Class merging                   |
+| @google/generative-ai | ^0.21.0  | Google AI SDK (unused?)         |
+| recharts              | ^2.15.0  | Grafik va chartlar              |
+| date-fns              | ^4.1.0   | Sana formatlash                 |
+
+### Build konfiguratsiya:
+- vite.config.ts: path alias @/ → src/
+- tsconfig.json: strict mode, paths alias
+- postcss.config.js: tailwindcss + autoprefixer
+- tailwind.config.ts: custom CSS variables bilan tema
+- vitest.config.ts: jsdom environment, @testing-library
+- index.html: SPA entry point
+
+### Environment:
+- VITE_API_URL: Backend API base URL (default: http://localhost:8000/api/v1)
+- VITE_GOOGLE_CLIENT_ID: Google OAuth client ID
+
+================================================================
+2. ENTRY POINT va PROVIDERLAR
+================================================================
+
+### main.tsx — Ilova boshlang'ich nuqtasi
+```
+StrictMode
+ └── BrowserRouter
+      └── ThemeProvider (defaultTheme="system", storageKey="wordfix-theme")
+           └── QueryProvider (TanStack React Query)
+                ├── App
+                └── Toaster (sonner, position="top-right", richColors)
+```
+
+### App.tsx
+- Faqat <AppRoutes /> ni render qiladi
+
+### Providerlar:
+1. ThemeProvider — dark/light/system tema boshqaruvi
+   - ThemeContext orqali useTheme() hook
+   - localStorage da "wordfix-theme" kaliti
+2. QueryProvider — TanStack React Query
+   - QueryClient konfiguratsiyasi
+
+================================================================
+3. API LAYER
+================================================================
+
+### api/client.ts — Axios instance
+- baseURL: VITE_API_URL || "http://localhost:8000/api/v1"
+- timeout: 30000ms
+- Headers: Content-Type: application/json, Accept: application/json
+
+Request Interceptor:
+- JWT token → Authorization: Bearer {token}
+- Token localStorage["access_token"] dan olinadi
+
+Response Interceptor:
+- 401 → Token refresh logikasi:
+  - refresh_token bilan /auth/token/refresh/ ga so'rov
+  - Yangi access_token → localStorage ga saqlash
+  - Original request qayta yuborish
+  - Queue mexanizmi (isRefreshing + failedQueue) — bir vaqtda ko'p 401 bo'lganda
+  - Refresh fail → localStorage tozalash + /login ga redirect
+- 403 → toast.error("Permission denied")
+- 500 → toast.error("Server error")
+- No response → toast.error("Network error")
+
+### api/endpoints.ts — Barcha API endpoint yo'llari
+Tuzilishi (13 ta guruh):
+```
+API_ENDPOINTS = {
+  AUTH:            9 ta endpoint
+  ONBOARDING:      4 ta endpoint
+  WORDS:          13 ta endpoint (3 ta dynamic id bilan)
+  REVIEW:          8 ta endpoint (3 ta dynamic id bilan)
+  TESTS:           5 ta endpoint (3 ta dynamic id bilan)
+  GAMES:          14 ta endpoint
+  PROGRESS:        4 ta endpoint
+  NOTIFICATIONS:   3 ta endpoint
+  IMPORT:          4 ta endpoint
+  CHAT:            5 ta endpoint (3 ta dynamic id bilan)
+  ANALYTICS:       6 ta endpoint
+  CONFUSING_PAIRS: 5 ta endpoint (3 ta dynamic id bilan)
+  CHALLENGES:      2 ta endpoint
+  SYSTEM:          2 ta endpoint
+  LEARNING:        6 ta endpoint
+} as const
+```
+Jami: ~90 ta frontend endpoint mapping
+
+================================================================
+4. ROUTING — Barcha sahifalar
+================================================================
+
+### Route Guards (3 ta):
+| Guard          | Shartlar                                      |
+|----------------|-----------------------------------------------|
+| ProtectedRoute | isAuthenticated + has_completed_onboarding     |
+| OnboardingRoute| isAuthenticated (onboarding tekshirmaydi)      |
+| PublicRoute    | !isAuthenticated (authenticated → / ga redirect)|
+
+### Public Routes (auth talab qilinmaydi):
+| Path       | Page          | Layout     | Lazy |
+|------------|---------------|------------|------|
+| /welcome   | LandingPage   | none       | ✅   |
+| /login     | LoginPage     | AuthLayout | ✅   |
+| /register  | RegisterPage  | AuthLayout | ✅   |
+
+### Onboarding Route:
+| Path         | Page           | Guard           | Lazy |
+|--------------|----------------|-----------------|------|
+| /onboarding  | OnboardingPage | OnboardingRoute | ✅   |
+
+### Protected Routes (auth + onboarding talab qilinadi):
+| Path                            | Page                | Feature           |
+|---------------------------------|---------------------|--------------------|
+| /                               | DashboardPage       | dashboard          |
+| /words                          | WordsPage           | words              |
+| /review                         | ReviewPage          | review             |
+| /review/session/:sessionId      | ReviewSessionPage   | review             |
+| /review/complete/:sessionId     | ReviewCompletePage  | review             |
+| /review/history                 | ReviewHistoryPage   | review             |
+| /profile                        | ProfilePage         | profile            |
+| /tests                          | TestPage            | tests              |
+| /tests/session/:sessionId       | TestSessionPage     | tests              |
+| /tests/result/:sessionId        | TestResultPage      | tests              |
+| /games                          | GamesPage           | games              |
+| /games/speed-round              | SpeedRoundPage      | games/speed-round  |
+| /games/word-match               | WordMatchPage       | games/word-match   |
+| /games/word-context             | WordContextPage     | games/word-context |
+| /games/story-builder            | StoryBuilderPage    | games/story-builder|
+| /games/listening                | ListeningPage       | games/listening    |
+| /games/result/:sessionId        | GameResultPage      | games              |
+| /badges                         | BadgesPage          | progress           |
+| /notifications                  | NotificationsPage   | progress           |
+| /import                         | ImportPage          | import             |
+| /chat                           | ChatPage            | chat               |
+| /chat/session/:sessionId        | ChatSessionPage     | chat               |
+| /chat/history                   | ChatHistoryPage     | chat               |
+| /analytics                      | AnalyticsPage       | analytics          |
+| /confusing-pairs                | ConfusingPairsPage  | confusing-pairs    |
+| /learning-profile               | LearningProfilePage | learning-profile   |
+| *                               | NotFoundPage        | (shared)           |
+
+Jami: 30 ta route (3 public + 1 onboarding + 26 protected + 1 404)
+Barcha sahifalar lazy-loaded (React.lazy + dynamic import)
+
+Layout:
+- PublicRoute + AuthLayout → login/register
+- ProtectedRoute + RootLayout → Sidebar + content area
+
+================================================================
+5. STATE MANAGEMENT
+================================================================
+
+### 5.1 Zustand Stores (3 ta)
+
+#### useAuthStore (89 qator)
+State:
+- user: User | null
+- isAuthenticated: boolean
+- isLoading: boolean (default: true)
+
+Actions:
+- setUser(user) → user, isAuthenticated, isLoading yangilash
+- setLoading(loading) → isLoading yangilash
+- login(credentials) → authApi.login → token saqlash → user set
+- register(data) → authApi.register → token saqlash → user set
+- googleLogin(credential) → authApi.googleLogin → token saqlash
+- logout() → authApi.logout → localStorage tozalash → state reset
+- fetchProfile() → authApi.getProfile → user set
+- initialize() → localStorage["access_token"] tekshirish → fetchProfile()
+
+Token saqlash: localStorage (access_token, refresh_token)
+
+#### useAppStore (23 qator)
+State:
+- sidebarCollapsed: boolean (default: false)
+
+Actions:
+- toggleSidebar() → sidebarCollapsed toggle
+- setSidebarCollapsed(collapsed) → to'g'ridan-to'g'ri set
+
+#### useReviewStore (82 qator)
+State:
+- currentSession: ReviewSession | null
+- words: Word[]
+- currentIndex: number
+- isFlipped: boolean
+- answers: Map<string, ReviewQuality>
+
+Actions:
+- setSession(session) → session set
+- setWords(words) → words set + reset index/flip/answers
+- flipCard() → isFlipped toggle
+- setFlipped(flipped) → to'g'ridan-to'g'ri set
+- recordAnswer(wordId, quality) → answers Map ga qo'shish
+- nextWord() → currentIndex++, isFlipped=false
+- previousWord() → currentIndex--, isFlipped=false
+- reset() → barcha state ni boshlang'ich holatga qaytarish
+
+Computed:
+- currentWord() → words[currentIndex]
+- progress() → (answers.size / words.length) * 100
+- isLastWord() → currentIndex >= words.length - 1
+- totalAnswered() → answers.size
+
+### 5.2 TanStack React Query
+Server state management:
+- Har bir feature module da hooks/ papkasida custom hooks
+- Query keys bilan cache boshqaruvi
+- Automatic background refetching
+- Optimistic updates (ba'zi joylarda)
+
+================================================================
+6. TYPE SYSTEM — TypeScript Interfeyslari
+================================================================
+
+### types/ directory (16 ta type module):
+| Fayl               | Asosiy exportlar                                      |
+|--------------------|-------------------------------------------------------|
+| core.ts            | Theme, DifficultyLevel, ProficiencyLevel, ReviewQuality, SessionType, EnrichmentStatus, TestType, TestDifficulty, GameType, BadgeRarity, BadgeCategory, NotificationType |
+| user.ts            | User, AuthTokens, LoginCredentials, RegisterData, ChangePasswordData, UpdateProfileData |
+| word.ts            | WordCategory, Word (36 field), WordCreateData, WordUpdateData, BulkWordCreateData, WordStats, WordFilters |
+| api.ts             | ApiResponse<T>, PaginationMeta, HealthCheckResponse      |
+| review.ts          | ReviewSession, ReviewAnswer, ReviewAnswerResult, ReviewSummary, DailyStreak, DailyProgress, EnrichmentStatusResponse, PredictedIntervals |
+| test.ts            | TestQuestion, TestSession, TestGenerateRequest/Response, TestAnswerRequest/Response, TestDetailResponse |
+| game.ts            | GameSession, SpeedRoundWord, SpeedRoundStartResponse, SpeedRoundAnswer, WordMatchStartResponse, WordMatchPair, WordContextQuestion/StartResponse/Answer, GameStats, StoryStartResponse, StoryRoundResult, StorySubmitResponse, StoryCompleteResponse, ListeningStartResponse, ListeningAnswerResponse, ListeningCompleteResponse |
+| progress.ts        | UserProgressData, XPHistoryEntry, XPResult               |
+| badge.ts           | BadgeData, UserBadgesResponse, NewBadgeInfo               |
+| notification.ts    | NotificationData, NotificationListResponse                |
+| smart-import.ts    | WordSuggestion, AnalyzeTextRequest/Response, ImportWordsRequest/Response, CSVValidateResult, CSVImportResult |
+| chat.ts            | ChatSession, ChatMessage, ChatCorrection, StartChatRequest/Response, SendMessageRequest/Response, ChatSessionListResponse, ChatSessionDetailResponse |
+| analytics.ts       | AnalyticsOverview, DailyStatsEntry, DifficultWord, WordProgressData, CalendarDay |
+| system.ts          | ServiceHealth, SystemHealth, ConfigStatus                 |
+| learning.ts        | LearningProfile, AnalyzeResult, MistakePattern, WordRecommendation, DomainCoverage, DifficultyInfo |
+
+ApiResponse<T> interfeysi:
+```
+{
+  success: boolean
+  data: T
+  message: string
+  errors: Record<string, string[]> | null
+  meta: PaginationMeta | null
+}
+```
+
+================================================================
+7. FEATURE MODULES (19 ta)
+================================================================
+
+### Feature Architecture Pattern:
+Har bir feature module quyidagi tuzilishga ega:
+```
+features/{feature-name}/
+├── api/           → API funksiyalari (axios calls)
+├── components/    → UI komponentlar
+│   └── __tests__/ → Component testlar
+├── hooks/         → TanStack Query hooks (useQuery, useMutation)
+│   └── __tests__/ → Hook testlar
+├── pages/         → Sahifa komponentlari
+│   └── __tests__/ → Page testlar
+└── types/         → (ba'zi features da) Tiplari
+```
+
+### 7.1 analytics/
+- API: analyticsApi.ts
+- Hooks: useAnalytics.ts
+- Page: AnalyticsPage.tsx
+- Komponentlar: AnalyticsOverview, AnalyticsStatCard, CalendarCell, CalendarLegend, ConfidenceBar, ConfidenceChart, DifficultyDistribution, DifficultWordItem, DifficultWordsList, StudyCalendar, WeeklyChart, WeeklyChartBar, WordDistribution
+- Testlar: 5 ta test fayl
+
+### 7.2 auth/
+- API: authApi.ts
+- Hooks: usePasswordValidation.ts
+- Pages: LoginPage, RegisterPage
+- Komponentlar: AuthDivider, AuthInput, FloatingShapes, GoogleLoginButton, LoginForm, PasswordInput, PasswordStrengthBar, RegisterStepAccount, RegisterStepConfirm, RegisterStepIndicator, RegisterStepPassword, RegisterSteps, SocialProofBadge
+- Register 3-step form: Account → Password → Confirm
+
+### 7.3 badges/
+- Page: BadgesPage.tsx
+- Hooks: useBadges.ts
+- Komponentlar: BadgeCard, BadgeCardEarned, BadgeCardLocked, BadgeIcon, BadgeRarityGlow, BadgesCategoryFilter, BadgesGrid, BadgesProgress
+- Testlar: 5 ta test fayl
+
+### 7.4 challenges/
+- API: challengeApi.ts
+- Hooks: useChallenges.ts
+- Komponentlar: ChallengeCard, ChallengeBonusModal, DailyChallengesWidget
+- Types: types/index.ts
+
+### 7.5 chat/
+- API: chatApi.ts
+- Hooks: useChat.ts
+- Pages: ChatPage, ChatSessionPage, ChatHistoryPage
+- Komponentlar: ChatCorrection, ChatHistoryItem, ChatHistoryList, ChatInputArea, ChatMessage, ChatMessageArea, ChatMessageBubble, ChatSessionHeader, ChatTargetWord, ChatTargetWordsBar, ChatTopicSelector, ChatTypingIndicator, ConversationItem, CustomTopicInput, RecentConversations, StartChatButton, TopicChip
+- Testlar: 9 ta test fayl
+
+### 7.6 confusing-pairs/
+- API: confusingApi.ts
+- Hooks: useConfusingPairs.ts
+- Page: ConfusingPairsPage.tsx
+- Komponentlar: ConfusingPairBadge, ConfusingPairCard, DrillExplanation, DrillLoading, DrillModal, DrillQuiz, DrillResult, ResolvedPairsSection
+- Testlar: 7 ta test fayl
+- Types: types/index.ts
+
+### 7.7 dashboard/
+- Hooks: useDashboardData.ts
+- Page: DashboardPage.tsx
+- Komponentlar (29 ta): AverageConfidenceBar, ChallengeCard, ChallengeBonusButton, ChallengeBonusModal, DailyChallengesSection, DailyProgressCard, DashboardStatsRow, DomainBar, DomainCoverageWidget, GlowingBorder, LevelCard, LevelRing, MistakePatternItem, MistakePatternsWidget, MouseTiltCard, ProgressCardsRow, QuickActionCard, QuickActionsGrid, RecentWordItem, RecentWordsList, RecommendationItem, RecommendationsWidget, ReviewCTABanner, StreakCard, StreakFlame, StreakWeekDots, WelcomeHeader, XPChart, XPChartBar
+- Dashboard eng ko'p komponentli feature
+
+### 7.8 games/ (5 ta sub-feature)
+- Main: GamesPage.tsx, GameResultPage.tsx
+- Hooks: useGameStats.ts
+- Shared: GameCard, GameComboIndicator, GamePreScreen, GameResultActions, GameResultDisplay, GameResultStars, GameResultStats
+
+#### games/speed-round/
+- Page: SpeedRoundPage.tsx
+- Hooks: useSpeedRound.ts
+- Komponentlar: SpeedRoundCountdown, SpeedRoundOption, SpeedRoundOptions, SpeedRoundTimer, SpeedRoundWord
+
+#### games/word-match/
+- Page: WordMatchPage.tsx
+- Hooks: useWordMatch.ts
+- Komponentlar: WordMatchBoard, WordMatchConnector, WordMatchItem
+
+#### games/word-context/
+- Page: WordContextPage.tsx
+- Hooks: useWordContext.ts
+- Komponentlar: ContextFeedback, ContextInput, ContextParagraph
+
+#### games/story-builder/
+- Page: StoryBuilderPage.tsx
+- Hooks: useStoryBuilder.ts
+- Komponentlar: GenreCard, GenreSelector, StoryComplete, StoryDisplay, StoryRoundScore, StoryWritingArea
+
+#### games/listening/
+- Page: ListeningPage.tsx
+- Hooks: useListening.ts
+- Komponentlar: AttemptIndicator, AudioPlayer, AudioWaveform, ListeningComplete, ListeningFeedback, ListeningInput
+
+Jami games: 40+ komponent, 6 hook, 6 sahifa, 13 test
+
+### 7.9 import/
+- API: importApi.ts
+- Hooks: useCSVImport.ts, useTextImport.ts
+- Page: ImportPage.tsx
+- Komponentlar: CSVDropZone, CSVImportFlow, CSVPreview, CSVPreviewTable, CSVResult, ImportStepIndicator, ImportTabs, TextAnalyzeButton, TextImportFlow, TextImportResult, TextImportReview, TextImportWordRow, TextInputStep
+- Testlar: 7 ta test fayl
+- 2 import usuli: Text Analysis (AI) va CSV Upload
+
+### 7.10 landing/
+- Page: LandingPage.tsx
+- Komponentlar: CTASection, FeatureCard, FeaturesSection, FloatingWordCard, HeroSection, HeroVisual, HowItWorksSection, HowItWorksStep, LandingFooter, LandingNav, StatsBar, TestimonialsSection
+- Marketing sahifasi, autentifikatsiya yo'q
+
+### 7.11 learning-profile/ (birlashtirilgan — Sprint 10.3)
+- API: learningApi.ts
+- Hooks: useLearning.ts, useLearningProfile.ts
+- Page: LearningProfilePage.tsx
+- Helpers: learningProfileHelpers.ts
+- Komponentlar: DomainCoverageWidget, LearningMistakeItem, LearningMistakes, LearningProfileHeader, LearningRecommendationItem, LearningRecommendations, LearningStyleBar, LearningStyleCard, MistakePatternsWidget, OptimalDayIndicator, OptimalTimeCard, RecommendationsWidget, SkillsCard
+- Testlar: 6 ta test fayl
+- ESLATMA: learning/ papkasi learning-profile/ ga birlashtirildi (Sprint 10.3)
+
+### 7.12 notifications/
+- Page: NotificationsPage.tsx
+- Hooks: useNotifications.ts
+- Komponentlar: NotificationBell, NotificationItem, NotificationList, NotificationPanel, NotificationTimeAgo, NotificationTypeIcon
+- Testlar: 6 ta test fayl
+
+### 7.13 onboarding/
+- API: onboardingApi.ts
+- Hooks: useOnboarding.ts
+- Page: OnboardingPage.tsx
+- Komponentlar: LevelBadge, LevelBadgeGlow, LevelIndicator, OnboardingBackground, OnboardingOptionCard, OnboardingProgress, OnboardingQuestion, OnboardingResult, OnboardingStats, OnboardingWelcome, SkipButton
+- Types: types/index.ts
+- Foydalanuvchi birinchi kirganida ko'rinadigan assessment
+
+### 7.14 profile/
+- Pages: ProfilePage.tsx (pages/ papkada, root dagi duplicate olib tashlandi — Sprint 10.3)
+- Hooks: useProfile.ts
+- Komponentlar: ChangePasswordCard, ChangePasswordForm, LearningLevelCard, ProfileAvatar, ProfileDailyGoalSlider, ProfileEditForm, ProfileHeader, ProfileInfoCard, ProficiencyLevelSelector
+- Testlar: 6 ta test fayl
+
+### 7.15 progress/
+- API: progressApi.ts
+- Hooks: useProgress.ts
+- Pages: BadgesPage.tsx, NotificationsPage.tsx
+- Komponentlar: BadgeCard, BadgeGrid, LevelProgress, NotificationBell, XPChart, XPPopup
+- Testlar: 1 ta test fayl
+
+### 7.16 review/
+- API: reviewApi.ts
+- Hooks: useReview.ts
+- Pages: ReviewPage, ReviewSessionPage, ReviewCompletePage, ReviewHistoryPage
+- Komponentlar: ComboBreakEffect, ComboIndicator, CompletionActions, CompletionCelebration, CompletionStats, DailyProgressWidget, DueWordItem, DueWordsPreview, FlashCard, FlashCardBack, FlashCardContainer, FlashCardFront, PerformanceTier, QualityButton, QualityRating, ReviewHistoryItem, ReviewHistoryList, ReviewStats, SessionProgressBar, SessionTopBar, SessionTypeCard, SessionTypeCards, StreakWidget, XPGainPopup
+- Testlar: 10 ta test fayl
+- SM-2 asosidagi spaced repetition flashcard system
+
+### 7.17 system/
+- API: systemApi.ts
+- Hooks: useSystemHealth.ts
+- Komponentlar: HealthBanner
+- Tizim salomatligi monitoringi
+
+### 7.18 tests/
+- Pages: TestPage, TestSessionPage, TestResultPage
+- Hooks: useTests.ts
+- Komponentlar: AnswerFeedbackPanel, DifficultySelector, FillBlankQuestion, MultipleChoiceOption, MultipleChoiceQuestion, QuestionCountSlider, QuestionTypeCard, QuestionTypeSelector, RecentTestItem, RecentTestsList, TestConfigPanel, TestGenerateButton, TestGradeBadge, TestQuestionCard, TestQuestionReview, TestQuestionReviewItem, TestResultHeader, TestResultStats, TestSessionTopBar
+- Testlar: 12 ta test fayl
+
+### 7.19 words/ (tozalangan — Sprint 10.3)
+- API: wordApi.ts
+- Hooks: useWords.ts
+- Pages: WordsPage.tsx (pages/ papkada, root dagi duplicate olib tashlandi)
+- Komponentlar: AddWordDifficultySelector, AddWordForm, AddWordModal, WordCard, WordCardBadges, WordListItem, WordsHeader, WordsPagination, WordsSegmentedControl, WordsStatPill, WordsStatsBar, WordsViewToggle
+- O'chirilgan (orphan): WordsFilterBar, WordsGrid, WordsList — faqat eski WordsPage ishlatgan
+- Testlar: 5 ta test fayl (2 ta orphan test olib tashlandi)
+
+================================================================
+8. SHARED COMPONENTS
+================================================================
+
+### components/ directory tuzilishi:
+```
+components/
+├── animations/          → Animatsiya komponentlar
+├── common/              → LoadingScreen, ErrorBoundary
+├── layout/              → RootLayout, AuthLayout, Sidebar, Header
+├── shared/              → NotFoundPage, va umumiy komponentlar
+└── ui/                  → shadcn/ui primitive komponentlar
+    ├── accordion.tsx
+    ├── alert.tsx
+    ├── badge.tsx
+    ├── button.tsx
+    ├── card.tsx
+    ├── dialog.tsx
+    ├── dropdown-menu.tsx
+    ├── input.tsx
+    ├── label.tsx
+    ├── popover.tsx
+    ├── progress.tsx
+    ├── scroll-area.tsx
+    ├── select.tsx
+    ├── separator.tsx
+    ├── sheet.tsx
+    ├── skeleton.tsx
+    ├── slider.tsx
+    ├── switch.tsx
+    ├── table.tsx
+    ├── tabs.tsx
+    ├── textarea.tsx
+    ├── tooltip.tsx
+    └── ... (boshqa shadcn primitivelar)
+```
+
+### Layout komponentlar:
+- RootLayout: Sidebar + Header + main content (Outlet)
+- AuthLayout: Centered form layout (Outlet)
+- Sidebar: Navigation links, toggle (useAppStore)
+- Header: User avatar, notifications, theme toggle
+
+================================================================
+9. HOOKS (Global)
+================================================================
+
+| Hook           | Fayl               | Vazifasi                           |
+|----------------|--------------------|------------------------------------|
+| useDebounce    | hooks/useDebounce.ts | Input debouncing (default 300ms) |
+| useMediaQuery  | hooks/useMediaQuery.ts | CSS media query matching        |
+| useTheme       | hooks/useTheme.ts  | ThemeContext consumer              |
+
+Har bir feature module o'zining hooks/ papkasida TanStack Query hooklar:
+- useAnalytics, useAuth (implied via store), useBadges, useChallenges, useChat, useConfusingPairs, useDashboardData, useCSVImport, useTextImport, useLearning, useLearningProfile, useNotifications, useOnboarding, useProfile, useProgress, useReview, useGameStats, useSpeedRound, useWordMatch, useWordContext, useStoryBuilder, useListening, useSystemHealth, useTests, useWords, usePasswordValidation
+
+Jami: ~28 ta custom hook
+
+================================================================
+10. FEATURE API MODULES
+================================================================
+
+Har bir feature module api/ papkasida API funksiyalar:
+
+| Feature         | API fayl          | Asosiy funksiyalar                     |
+|-----------------|-------------------|----------------------------------------|
+| analytics       | analyticsApi.ts   | getOverview, getWeekly, getMonthly, getDifficultWords, getWordProgress, getCalendar |
+| auth            | authApi.ts        | login, register, googleLogin, logout, getProfile, updateProfile, changePassword |
+| challenges      | challengeApi.ts   | getTodayChallenges, claimBonus         |
+| chat            | chatApi.ts        | startChat, sendMessage, endChat, getHistory, getSessionDetail |
+| confusing-pairs | confusingApi.ts   | getList, getDetail, getDrill, resolve, getCount |
+| import          | importApi.ts      | analyzeText, importWords, csvValidate, csvImport |
+| learning        | learningApi.ts    | getProfile, analyze, getMistakes, getRecommendations, getDomainCoverage, getDifficulty |
+| onboarding      | onboardingApi.ts  | getQuestions, submit, skip, getStatus  |
+| progress        | progressApi.ts    | getProgress, getXPHistory, getUserBadges, getAllBadges |
+| review          | reviewApi.ts      | getWords, createSession, getDetail, submitAnswer, complete, getSummary, getStreak, getDailyProgress |
+| system          | systemApi.ts      | getHealth, getConfig                   |
+| tests           | (in hooks)        | generate, getHistory, getDetail, submitAnswer, complete |
+| words           | wordApi.ts        | getWords, getWord, createWord, updateWord, deleteWord, bulkCreate, getStats, getCategories, createCategory, deleteCategory, enrich, getEnrichmentStatus |
+
+================================================================
+11. STYLING va TEMA
+================================================================
+
+### Tailwind CSS konfiguratsiya:
+- CSS Variables asosida tema (dark/light)
+- Custom ranglar: background, foreground, card, primary, secondary, muted, accent, destructive, border, input, ring
+- Custom animatsiyalar: accordion-down, accordion-up
+- Container: center, screens (2xl: 1400px)
+- darkMode: "class" (class-based toggling)
+
+### Font:
+- Custom font (assets/fonts/ da)
+- Tailwind orqali defaultlangan
+
+### Responsive:
+- Mobile-first yondashuv
+- Sidebar responsive (collapse on mobile)
+- useMediaQuery hook orqali adaptive UI
+
+================================================================
+12. STATISTIKA
+================================================================
+
+| Metrika                      | Qiymat   |
+|------------------------------|----------|
+| Jami TS/TSX fayllar          | ~523     |
+| Jami qatorlar                | ~22,757  |
+| Feature modulelar            | 19       |
+| Sahifalar (pages)            | ~35      |
+| UI Komponentlar              | ~250+    |
+| Custom hooks                 | ~28      |
+| Type/Interface fayllar       | 16       |
+| Zustand stores               | 3        |
+| API endpoint mappings        | ~90      |
+| Test fayllar                 | ~80+     |
+| Routes                       | 30       |
+| Lazy-loaded sahifalar        | 28       |
+
+================================================================
+13. BUILD HOLATI
+================================================================
+
+### TypeScript Compilation: ✅ 0 xato (Sprint 10.3/10.4)
+
+Barcha 12 ta xato Sprint 10.3 da bartaraf etildi.
+Sprint 10.4 da 10 ta fayl o'zgartirildi — 0 yangi xato.
+
+================================================================
+14. SPRINT 10.4 FRONTEND O'ZGARISHLAR
+================================================================
+
+### O'zgartirilgan fayllar:
+
+1. **GameResultPage.tsx**: useLocation().state dan data oladi (searchParams fallback)
+   - GameResultState interface qo'shildi
+   - gameRoute auto-derive from gameType
+
+2. **SpeedRoundPage.tsx**: navigate state: {correct, total, time, xp, gameType}
+   - Auto-submit useEffect: barcha so'zlar javob berilganda avtomatik submit
+
+3. **useWordMatch.ts**: word.translation ishlatish (index-based mapping emas)
+   - MatchedTranslation interface: {text: string, matched: boolean}
+   - To'g'ri juftlik tekshirish logikasi
+
+4. **WordMatchBoard.tsx**: translations prop: string[] → MatchedTranslation[]
+
+5. **WordMatchPage.tsx**: navigate state bilan GameResultPage ga o'tkazish
+
+6. **WordContextPage.tsx**: navigate state bilan GameResultPage ga o'tkazish
+
+7. **StoryBuilderPage.tsx**: maxScore = totalRounds * 20 (10 emas)
+
+8. **reviewApi.ts**: API_ENDPOINTS.WORDS.ENRICH_ALL centralizatsiya
+
+9. **endpoints.ts**: ENRICHMENT_RETRY, ENRICH_ALL qo'shildi

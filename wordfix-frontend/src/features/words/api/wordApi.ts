@@ -25,8 +25,9 @@ export const wordsApi = {
       if (filters.page) params.set('page', String(filters.page));
       if (filters.page_size) params.set('page_size', String(filters.page_size));
     }
+    const qs = params.toString();
     const res = await apiClient.get<ApiResponse<Word[]>>(
-      `/words/?${params.toString()}`,
+      qs ? `/words/?${qs}` : '/words/',
     );
     return res.data;
   },

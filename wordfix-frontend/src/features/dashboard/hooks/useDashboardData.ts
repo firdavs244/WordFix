@@ -2,7 +2,7 @@ import { useWordStats, useWords } from '@/features/words/hooks/useWords';
 import { useUserProgress, useXPHistory } from '@/features/progress/hooks/useProgress';
 import { useDailyChallenges } from '@/features/challenges/hooks/useChallenges';
 import { useReviewSummary, useStreak, useDailyProgress } from '@/features/review/hooks/useReview';
-import { useDomainCoverage, useMistakePatterns, useWordRecommendations } from '@/features/learning/hooks/useLearning';
+import { useDomainCoverage, useMistakePatterns, useWordRecommendations } from '@/features/learning-profile/hooks/useLearning';
 
 export function useDashboardData() {
   const stats = useWordStats();

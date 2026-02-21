@@ -26,13 +26,38 @@ export default function SpeedRoundPage() {
     const interval = setInterval(() => {
       setRemaining((t) => {
         if (t <= 1) { clearInterval(interval); game.endGame().then((r) => {
-          if (r) navigate(`/games/result/${r.id}`);
+          if (r) navigate(`/games/result/${r.id}`, {
+            state: {
+              correct: r.correct_answers,
+              total: r.correct_answers + r.incorrect_answers,
+              time: r.duration_seconds,
+              xp: r.xp_earned,
+              gameType: 'speed-round',
+            }
+          });
         }); return 0; }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [game.phase, game.endGame, navigate]);
+
+  // Auto-submit when all words answered
+  useEffect(() => {
+    if (game.phase === 'playing' && game.answers.length > 0 && game.answers.length >= game.words.length) {
+      game.endGame().then((r) => {
+        if (r) navigate(`/games/result/${r.id}`, {
+          state: {
+            correct: r.correct_answers,
+            total: r.correct_answers + r.incorrect_answers,
+            time: r.duration_seconds,
+            xp: r.xp_earned,
+            gameType: 'speed-round',
+          }
+        });
+      });
+    }
+  }, [game.answers.length, game.words.length, game.phase, game.endGame, navigate]);
 
   const handleAnswer = useCallback((wordId: string, selected: string, correct: boolean) => {
     game.answerWord(wordId, selected, correct);

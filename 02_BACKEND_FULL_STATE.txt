@@ -1,0 +1,1110 @@
+================================================================
+02_BACKEND_FULL_STATE.txt
+WordFix Backend — To'liq holat hujjati
+Hujjat yaratilgan sana: 2026-02-21
+Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+================================================================
+
+================================================================
+1. BARCHA MODELLAR (28 ta model, 13 fayl, ~1,314 qator)
+================================================================
+
+### 1.1 AbstractBaseModel (Bazaviy model)
+Fayl: apps/common/models.py (56 qator)
+
+| Field       | Type            | Default  | Notes                    |
+|-------------|-----------------|----------|--------------------------|
+| id          | UUIDField (pk)  | uuid4    | editable=False           |
+| created_at  | DateTimeField   | auto_now_add | Yaratilgan vaqt      |
+| updated_at  | DateTimeField   | auto_now | Yangilangan vaqt         |
+| is_active   | BooleanField    | True     | Soft-delete flag         |
+
+Meta: abstract=True, ordering=["-created_at"]
+Metodlar: soft_delete(), restore()
+
+---
+
+### 1.2 CustomUser
+Fayl: apps/users/infrastructure/models/user_models.py (109 qator)
+Extends: AbstractBaseUser, PermissionsMixin
+Manager: CustomUserManager
+
+| Field                      | Type              | Default        | Notes                    |
+|----------------------------|-------------------|----------------|--------------------------|
+| id                         | UUIDField (pk)    | uuid4          |                          |
+| email                      | EmailField        | -              | unique, db_index         |
+| username                   | CharField(30)     | -              | unique, regex validator  |
+| full_name                  | CharField(100)    | ""             | blank=True               |
+| avatar                     | ImageField        | null           | upload_to=avatars/       |
+| native_language            | CharField(10)     | "uz"           |                          |
+| learning_language          | CharField(10)     | "en"           |                          |
+| proficiency_level          | CharField(2)      | "A1"           | choices: A1-C2           |
+| daily_goal                 | PositiveIntegerField | 10          |                          |
+| timezone                   | CharField(50)     | "Asia/Tashkent"|                          |
+| is_premium                 | BooleanField      | False          |                          |
+| premium_until              | DateTimeField     | null           |                          |
+| is_active                  | BooleanField      | True           |                          |
+| is_staff                   | BooleanField      | False          |                          |
+| has_completed_onboarding   | BooleanField      | False          |                          |
+| date_joined                | DateTimeField     | auto_now_add   |                          |
+| last_login                 | DateTimeField     | null           |                          |
+
+Meta: db_table="users", ordering=["-date_joined"]
+USERNAME_FIELD: email
+REQUIRED_FIELDS: ["username"]
+Property: is_premium_active → bool (premium + premium_until check)
+
+---
+
+### 1.3 UserProgress
+Fayl: apps/users/infrastructure/models/progress_models.py
+Extends: models.Model
+
+| Field                   | Type              | Default | Notes                    |
+|-------------------------|-------------------|---------|--------------------------|
+| id                      | UUIDField (pk)    | uuid4   |                          |
+| user                    | OneToOneField     | -       | → CustomUser, related_name="progress" |
+| total_xp                | PositiveIntegerField | 0    |                          |
+| level                   | PositiveIntegerField | 1    |                          |
+| words_learned_total     | PositiveIntegerField | 0    |                          |
+| words_mastered_total    | PositiveIntegerField | 0    |                          |
+| tests_completed         | PositiveIntegerField | 0    |                          |
+| games_played            | PositiveIntegerField | 0    |                          |
+| reviews_completed       | PositiveIntegerField | 0    |                          |
+| perfect_scores          | PositiveIntegerField | 0    |                          |
+| total_study_time_seconds | PositiveIntegerField | 0   |                          |
+| created_at              | DateTimeField     | auto_now_add |                     |
+| updated_at              | DateTimeField     | auto_now |                         |
+
+Meta: db_table="user_progress"
+
+---
+
+### 1.4 XPTransaction
+Fayl: apps/users/infrastructure/models/progress_models.py
+
+| Field       | Type              | Default | Notes                    |
+|-------------|-------------------|---------|--------------------------|
+| id          | UUIDField (pk)    | uuid4   |                          |
+| user        | ForeignKey        | -       | → CustomUser, related_name="xp_transactions" |
+| amount      | IntegerField      | -       | + yoki - bo'lishi mumkin |
+| reason      | CharField(20)     | -       | choices: 16 ta (word_added, review_correct, test_complete, etc.) |
+| description | CharField(200)    | ""      |                          |
+| created_at  | DateTimeField     | auto_now_add |                     |
+
+Meta: db_table="xp_transactions", ordering=["-created_at"]
+
+---
+
+### 1.5 Badge
+Fayl: apps/users/infrastructure/models/progress_models.py
+
+| Field       | Type              | Default   | Notes                    |
+|-------------|-------------------|-----------|--------------------------|
+| id          | UUIDField (pk)    | uuid4     |                          |
+| code        | CharField(50)     | -         | unique                   |
+| name        | CharField(100)    | -         |                          |
+| description | CharField(255)    | -         |                          |
+| icon        | CharField(50)     | "award"   |                          |
+| category    | CharField(10)     | -         | choices: words, streak, review, test, game, mastery, level |
+| xp_reward   | PositiveIntegerField | 0      |                          |
+| rarity      | CharField(10)     | "common"  | choices: common, rare, epic, legendary |
+| created_at  | DateTimeField     | auto_now_add |                     |
+
+Meta: db_table="badges", ordering=["category", "code"]
+
+---
+
+### 1.6 UserBadge
+Fayl: apps/users/infrastructure/models/progress_models.py
+
+| Field     | Type          | Default | Notes                    |
+|-----------|---------------|---------|--------------------------|
+| id        | UUIDField     | uuid4   |                          |
+| user      | ForeignKey    | -       | → CustomUser, related_name="badges" |
+| badge     | ForeignKey    | -       | → Badge, related_name="user_badges" |
+| earned_at | DateTimeField | auto_now_add |                     |
+
+Meta: db_table="user_badges", unique_together=["user","badge"]
+
+---
+
+### 1.7 Notification
+Fayl: apps/users/infrastructure/models/progress_models.py
+
+| Field      | Type          | Default | Notes                    |
+|------------|---------------|---------|--------------------------|
+| id         | UUIDField     | uuid4   |                          |
+| user       | ForeignKey    | -       | → CustomUser, related_name="notifications" |
+| type       | CharField(25) | -       | choices: review_reminder, streak_warning, badge_earned, level_up, daily_goal_complete, word_mastered, weekly_report |
+| title      | CharField(200)| -       |                          |
+| message    | TextField     | -       |                          |
+| is_read    | BooleanField  | False   |                          |
+| data       | JSONField     | {}      |                          |
+| created_at | DateTimeField | auto_now_add |                     |
+
+Meta: db_table="notifications", ordering=["-created_at"]
+
+---
+
+### 1.8 OnboardingQuestion
+Fayl: apps/users/infrastructure/models/progress_models.py
+
+| Field          | Type          | Default | Notes                    |
+|----------------|---------------|---------|--------------------------|
+| id             | UUIDField     | uuid4   |                          |
+| level          | CharField(2)  | -       | choices: A1-C2           |
+| question_text  | TextField     | -       |                          |
+| correct_answer | CharField(200)| -       |                          |
+| options        | JSONField     | []      |                          |
+| order          | PositiveIntegerField | 0|                          |
+
+Meta: db_table="onboarding_questions", ordering=["level","order"]
+
+---
+
+### 1.9 OnboardingResult
+Fayl: apps/users/infrastructure/models/progress_models.py
+
+| Field            | Type          | Default | Notes                    |
+|------------------|---------------|---------|--------------------------|
+| id               | UUIDField     | uuid4   |                          |
+| user             | OneToOneField | -       | → CustomUser, related_name="onboarding_result" |
+| answers          | JSONField     | []      |                          |
+| determined_level | CharField(2)  | "A1"    |                          |
+| completed_at     | DateTimeField | auto_now_add |                     |
+| total_correct    | PositiveIntegerField | 0|                          |
+| total_questions  | PositiveIntegerField | 0|                          |
+
+Meta: db_table="onboarding_results"
+
+---
+
+### 1.10 LearningProfile
+Fayl: apps/users/infrastructure/models/learning_models.py (214 qator)
+
+| Field                       | Type              | Default  | Notes                    |
+|-----------------------------|-------------------|----------|--------------------------|
+| id                          | UUIDField         | uuid4    |                          |
+| user                        | OneToOneField     | -        | → CustomUser, related_name="learning_profile" |
+| preferred_style             | CharField(15)     | "visual" | choices: visual, auditory, reading, kinesthetic |
+| style_confidence            | FloatField        | 0.0      |                          |
+| best_hour_start             | PositiveIntegerField | 9     |                          |
+| best_hour_end               | PositiveIntegerField | 12    |                          |
+| best_days                   | JSONField         | []       | e.g. [0,1,2,3,4]        |
+| avg_session_duration        | PositiveIntegerField | 15    | daqiqalarda              |
+| optimal_words_per_session   | PositiveIntegerField | 10    |                          |
+| avg_retention_rate          | FloatField        | 0.0      |                          |
+| strongest_skills            | JSONField         | []       |                          |
+| weakest_skills              | JSONField         | []       |                          |
+| current_difficulty_level    | FloatField        | 0.5      |                          |
+| difficulty_adjustment_rate  | FloatField        | 0.05     |                          |
+| last_analyzed_at            | DateTimeField     | null     |                          |
+| analysis_data               | JSONField         | {}       |                          |
+
+Meta: db_table="learning_profiles"
+
+---
+
+### 1.11 MistakePattern
+Fayl: apps/users/infrastructure/models/learning_models.py
+
+| Field                     | Type              | Default | Notes                    |
+|---------------------------|-------------------|---------|--------------------------|
+| id                        | UUIDField         | uuid4   |                          |
+| user                      | ForeignKey        | -       | → CustomUser, related_name="mistake_patterns" |
+| pattern_type              | CharField(20)     | -       | choices: l1_interference, morphological, semantic, phonological, spelling, collocation, grammar |
+| description               | TextField         | ""      |                          |
+| examples                  | JSONField         | []      |                          |
+| occurrence_count          | PositiveIntegerField | 1   |                          |
+| last_occurred_at          | DateTimeField     | auto_now|                          |
+| is_resolved               | BooleanField      | False   |                          |
+| drills_completed          | PositiveIntegerField | 0   |                          |
+| success_rate_after_drills | FloatField        | 0.0     |                          |
+| related_words             | JSONField         | []      |                          |
+
+Meta: db_table="mistake_patterns", indexes=[user+pattern_type, user+is_resolved]
+
+---
+
+### 1.12 DomainCoverage
+Fayl: apps/users/infrastructure/models/learning_models.py
+
+| Field                 | Type              | Default | Notes                    |
+|-----------------------|-------------------|---------|--------------------------|
+| id                    | UUIDField         | uuid4   |                          |
+| user                  | ForeignKey        | -       | → CustomUser, related_name="domain_coverages" |
+| domain                | CharField(15)     | -       | choices: academic, business, technology, daily_life, science, arts, travel, medical, legal, social |
+| total_words_in_domain | PositiveIntegerField | 0   |                          |
+| coverage_percentage   | FloatField        | 0.0     |                          |
+| mastered_count        | PositiveIntegerField | 0   |                          |
+| learning_count        | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="domain_coverages", unique_together=["user","domain"]
+
+---
+
+### 1.13 WordRecommendation
+Fayl: apps/users/infrastructure/models/learning_models.py
+
+| Field             | Type              | Default            | Notes                    |
+|-------------------|-------------------|--------------------|--------------------------|
+| id                | UUIDField         | uuid4              |                          |
+| user              | ForeignKey        | -                  | → CustomUser, related_name="word_recommendations" |
+| recommended_word  | CharField(100)    | -                  |                          |
+| translation       | CharField(200)    | ""                 |                          |
+| reason            | TextField         | ""                 |                          |
+| reason_type       | CharField(20)     | "level_appropriate"| choices: domain_gap, confusion_fix, level_appropriate, high_frequency, user_interest |
+| priority_score    | FloatField        | 0.5                |                          |
+| is_accepted       | BooleanField      | False              |                          |
+| is_dismissed      | BooleanField      | False              |                          |
+| accepted_at       | DateTimeField     | null               |                          |
+| ai_confidence     | FloatField        | 0.0                |                          |
+| source_data       | JSONField         | {}                 |                          |
+
+Meta: db_table="word_recommendations"
+UniqueConstraint: [user, recommended_word] WHERE is_accepted=False AND is_dismissed=False
+
+---
+
+### 1.14 SessionPerformance
+Fayl: apps/users/infrastructure/models/learning_models.py
+
+| Field               | Type              | Default | Notes                    |
+|---------------------|-------------------|---------|--------------------------|
+| id                  | UUIDField         | uuid4   |                          |
+| user                | ForeignKey        | -       | → CustomUser, related_name="session_performances" |
+| session_type        | CharField(10)     | -       | choices: review, test, game, chat |
+| started_at          | DateTimeField     | -       |                          |
+| ended_at            | DateTimeField     | -       |                          |
+| hour_of_day         | PositiveIntegerField | 0   | 0-23                     |
+| day_of_week         | PositiveIntegerField | 0   | 0=Mon, 6=Sun             |
+| accuracy            | FloatField        | 0.0     |                          |
+| completion_rate     | FloatField        | 0.0     |                          |
+| engagement_score    | FloatField        | 0.0     |                          |
+| effectiveness_score | FloatField        | 0.0     |                          |
+
+Meta: db_table="session_performances", indexes=[user+hour_of_day, user+day_of_week]
+
+---
+
+### 1.15 WordCategory
+Fayl: apps/words/infrastructure/models/word_models.py (187 qator)
+Extends: AbstractBaseModel
+
+| Field       | Type              | Default   | Notes                    |
+|-------------|-------------------|-----------|--------------------------|
+| user        | ForeignKey        | -         | → User, related_name="word_categories" |
+| name        | CharField(50)     | -         |                          |
+| color       | CharField(7)      | "#6C5CE7" | hex validator            |
+| icon        | CharField(50)     | "book"    |                          |
+| words_count | PositiveIntegerField | 0      |                          |
+
+Meta: db_table="word_categories", unique_together=["user","name"]
+
+---
+
+### 1.16 Word (asosiy model)
+Fayl: apps/words/infrastructure/models/word_models.py
+Extends: AbstractBaseModel
+
+| Field                | Type              | Default   | Notes                    |
+|----------------------|-------------------|-----------|--------------------------|
+| user                 | ForeignKey        | -         | → User, related_name="words" |
+| original_word        | CharField(100)    | -         | db_index                 |
+| translation          | CharField(200)    | ""        |                          |
+| pronunciation        | CharField(200)    | ""        |                          |
+| part_of_speech       | CharField(15)     | ""        | choices: noun, verb, adjective, adverb, preposition, conjunction, pronoun, interjection, phrase, other |
+| definition           | TextField         | ""        |                          |
+| example_sentence     | TextField         | ""        |                          |
+| example_translation  | TextField         | ""        |                          |
+| synonyms             | JSONField         | []        |                          |
+| antonyms             | JSONField         | []        |                          |
+| collocations         | JSONField         | []        |                          |
+| word_family          | JSONField         | []        |                          |
+| image_url            | URLField          | ""        |                          |
+| audio_url            | URLField          | ""        |                          |
+| notes                | TextField         | ""        |                          |
+| mnemonic             | TextField         | ""        |                          |
+| usage_notes          | TextField         | ""        |                          |
+| category             | ForeignKey        | null      | → WordCategory, SET_NULL |
+| tags                 | JSONField         | []        |                          |
+| difficulty_level     | CharField(6)      | "medium"  | choices: easy, medium, hard |
+| is_enriched          | BooleanField      | False     |                          |
+| enrichment_status    | CharField(10)     | "pending" | choices: pending, enriching, enriched, failed |
+| enrichment_error     | TextField         | ""        |                          |
+| enriched_at          | DateTimeField     | null      |                          |
+| confidence_score     | FloatField        | 0         | 0-100                    |
+| next_review_at       | DateTimeField     | null      |                          |
+| review_count         | PositiveIntegerField | 0     |                          |
+| correct_count        | PositiveIntegerField | 0     |                          |
+| incorrect_count      | PositiveIntegerField | 0     |                          |
+| last_reviewed_at     | DateTimeField     | null      |                          |
+| is_mastered          | BooleanField      | False     |                          |
+| easiness_factor      | FloatField        | 2.5       | SM-2                     |
+| repetition_number    | PositiveIntegerField | 0     | SM-2                     |
+| interval_days        | PositiveIntegerField | 0     | SM-2                     |
+
+Meta: db_table="words", unique_together=["user","original_word"]
+Indexes: [user+is_mastered], [user+confidence_score], [user+next_review_at], [user+category]
+Property: accuracy_rate → float
+
+---
+
+### 1.17 WordDistractor
+Fayl: apps/words/infrastructure/models/word_models.py
+Extends: AbstractBaseModel
+
+| Field        | Type          | Default | Notes                    |
+|--------------|---------------|---------|--------------------------|
+| word         | ForeignKey    | -       | → Word, related_name="distractors" |
+| distractors  | JSONField     | []      |                          |
+| language     | CharField(10) | "uz"    |                          |
+| generated_by | CharField(10) | "ai"    | choices: ai, fallback    |
+
+Meta: db_table="word_distractors", unique_together=["word","language"]
+
+---
+
+### 1.18 ReviewSession
+Fayl: apps/words/infrastructure/models/review_models.py (139 qator)
+Extends: AbstractBaseModel
+
+| Field            | Type              | Default  | Notes                    |
+|------------------|-------------------|----------|--------------------------|
+| user             | ForeignKey        | -        | → User, related_name="review_sessions" |
+| started_at       | DateTimeField     | auto_now_add |                     |
+| completed_at     | DateTimeField     | null     |                          |
+| total_words      | PositiveIntegerField | 0     |                          |
+| correct_count    | PositiveIntegerField | 0     |                          |
+| incorrect_count  | PositiveIntegerField | 0     |                          |
+| average_quality  | FloatField        | 0.0      |                          |
+| duration_seconds | PositiveIntegerField | 0     |                          |
+| session_type     | CharField(10)     | "review" | choices: review, quick, focus, learn, mixed |
+| is_completed     | BooleanField      | False    |                          |
+| current_combo    | PositiveIntegerField | 0     |                          |
+| max_combo        | PositiveIntegerField | 0     |                          |
+| combo_xp_bonus   | PositiveIntegerField | 0     |                          |
+
+Meta: db_table="review_sessions"
+
+---
+
+### 1.19 ReviewLog
+Fayl: apps/words/infrastructure/models/review_models.py
+Extends: AbstractBaseModel
+
+| Field               | Type              | Default | Notes                    |
+|---------------------|-------------------|---------|--------------------------|
+| session             | ForeignKey        | null    | → ReviewSession, SET_NULL |
+| user                | ForeignKey        | -       | → User, related_name="review_logs" |
+| word                | ForeignKey        | -       | → Word, related_name="review_logs" |
+| quality             | IntegerField      | -       | 0-5 validator            |
+| response_time_ms    | PositiveIntegerField | null |                          |
+| is_correct          | BooleanField      | -       |                          |
+| reviewed_at         | DateTimeField     | auto_now_add |                     |
+| previous_confidence | FloatField        | 0.0     |                          |
+| new_confidence      | FloatField        | 0.0     |                          |
+| previous_interval   | PositiveIntegerField | 0   |                          |
+| new_interval        | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="review_logs"
+
+---
+
+### 1.20 DailyStreak
+Fayl: apps/words/infrastructure/models/review_models.py
+Extends: AbstractBaseModel
+
+| Field               | Type              | Default | Notes                    |
+|---------------------|-------------------|---------|--------------------------|
+| user                | OneToOneField     | -       | → User, related_name="streak" |
+| current_streak      | PositiveIntegerField | 0   |                          |
+| longest_streak      | PositiveIntegerField | 0   |                          |
+| last_activity_date  | DateField         | null    |                          |
+| streak_frozen_until | DateField         | null    |                          |
+| total_review_days   | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="daily_streaks"
+
+---
+
+### 1.21 DailyActivity
+Fayl: apps/words/infrastructure/models/review_models.py
+Extends: AbstractBaseModel
+
+| Field             | Type              | Default | Notes                    |
+|-------------------|-------------------|---------|--------------------------|
+| user              | ForeignKey        | -       | → User, related_name="daily_activities" |
+| date              | DateField         | -       |                          |
+| words_reviewed    | PositiveIntegerField | 0   |                          |
+| words_added       | PositiveIntegerField | 0   |                          |
+| words_mastered    | PositiveIntegerField | 0   |                          |
+| correct_answers   | PositiveIntegerField | 0   |                          |
+| incorrect_answers | PositiveIntegerField | 0   |                          |
+| total_time_seconds | PositiveIntegerField | 0  |                          |
+| goal_completed    | BooleanField      | False   |                          |
+| xp_earned         | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="daily_activities", unique_together=["user","date"]
+
+---
+
+### 1.22 TestSession
+Fayl: apps/words/infrastructure/models/test_models.py (103 qator)
+Extends: AbstractBaseModel
+
+| Field            | Type              | Default    | Notes                    |
+|------------------|-------------------|------------|--------------------------|
+| user             | ForeignKey        | -          | → User, related_name="test_sessions" |
+| test_type        | CharField(20)     | -          | choices: multiple_choice, fill_blank, context_guess, mixed |
+| difficulty       | CharField(10)     | "adaptive" | choices: easy, medium, hard, adaptive |
+| total_questions  | PositiveIntegerField | 0       |                          |
+| correct_answers  | PositiveIntegerField | 0       |                          |
+| incorrect_answers | PositiveIntegerField | 0      |                          |
+| score_percentage | FloatField        | 0.0        |                          |
+| started_at       | DateTimeField     | auto_now_add |                       |
+| completed_at     | DateTimeField     | null       |                          |
+| duration_seconds | PositiveIntegerField | 0       |                          |
+| is_completed     | BooleanField      | False      |                          |
+| words_tested     | ManyToManyField   | -          | → Word, through=TestQuestion |
+| current_combo    | PositiveIntegerField | 0       |                          |
+| max_combo        | PositiveIntegerField | 0       |                          |
+| combo_xp_bonus   | PositiveIntegerField | 0       |                          |
+
+Meta: db_table="test_sessions"
+
+---
+
+### 1.23 TestQuestion
+Fayl: apps/words/infrastructure/models/test_models.py
+Extends: AbstractBaseModel
+
+| Field            | Type              | Default | Notes                    |
+|------------------|-------------------|---------|--------------------------|
+| session          | ForeignKey        | -       | → TestSession, related_name="questions" |
+| word             | ForeignKey        | -       | → Word, related_name="test_questions" |
+| question_type    | CharField(25)     | -       | 6 choices                |
+| question_text    | TextField         | -       |                          |
+| correct_answer   | CharField(500)    | -       |                          |
+| options          | JSONField         | []      |                          |
+| user_answer      | CharField(500)    | ""      |                          |
+| is_correct       | BooleanField      | null    |                          |
+| response_time_ms | PositiveIntegerField | null |                          |
+| explanation      | TextField         | ""      |                          |
+| order            | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="test_questions"
+
+---
+
+### 1.24 GameSession
+Fayl: apps/words/infrastructure/models/game_models.py (113 qator)
+Extends: AbstractBaseModel
+
+| Field             | Type              | Default | Notes                    |
+|-------------------|-------------------|---------|--------------------------|
+| user              | ForeignKey        | -       | → User, related_name="game_sessions" |
+| game_type         | CharField(20)     | -       | choices: speed_round, word_match, word_context, story_builder, listening_challenge |
+| score             | PositiveIntegerField | 0   |                          |
+| max_score         | PositiveIntegerField | 0   |                          |
+| correct_answers   | PositiveIntegerField | 0   |                          |
+| incorrect_answers | PositiveIntegerField | 0   |                          |
+| duration_seconds  | PositiveIntegerField | 0   |                          |
+| started_at        | DateTimeField     | auto_now_add |                     |
+| completed_at      | DateTimeField     | null    |                          |
+| is_completed      | BooleanField      | False   |                          |
+| level             | PositiveIntegerField | 1   |                          |
+| xp_earned         | PositiveIntegerField | 0   |                          |
+| current_combo     | PositiveIntegerField | 0   |                          |
+| max_combo         | PositiveIntegerField | 0   |                          |
+| combo_xp_bonus    | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="game_sessions"
+
+---
+
+### 1.25 StoryRound
+Fayl: apps/words/infrastructure/models/game_models.py
+Extends: AbstractBaseModel
+
+| Field                | Type              | Default | Notes                    |
+|----------------------|-------------------|---------|--------------------------|
+| session              | ForeignKey        | -       | → GameSession, related_name="story_rounds" |
+| round_number         | PositiveIntegerField | -   |                          |
+| ai_text              | TextField         | -       |                          |
+| user_text            | TextField         | ""      |                          |
+| target_words         | JSONField         | []      |                          |
+| words_used           | JSONField         | []      |                          |
+| grammar_corrections  | JSONField         | []      |                          |
+| is_correct_usage     | BooleanField      | False   |                          |
+| score                | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="story_rounds", unique_together=["session","round_number"]
+
+---
+
+### 1.26 ListeningRound
+Fayl: apps/words/infrastructure/models/game_models.py
+Extends: AbstractBaseModel
+
+| Field          | Type              | Default | Notes                    |
+|----------------|-------------------|---------|--------------------------|
+| session        | ForeignKey        | -       | → GameSession            |
+| word           | ForeignKey        | -       | → Word                   |
+| round_number   | PositiveIntegerField | -   |                          |
+| correct_answer | CharField(100)    | -       |                          |
+| user_answers   | JSONField         | []      |                          |
+| attempts_used  | PositiveIntegerField | 0   |                          |
+| max_attempts   | PositiveIntegerField | 3   |                          |
+| is_correct     | BooleanField      | False   |                          |
+| hints_shown    | JSONField         | []      |                          |
+| score          | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="listening_rounds", unique_together=["session","round_number"]
+
+---
+
+### 1.27 ChatSession + ChatMessage
+Fayl: apps/words/infrastructure/models/chat_models.py (66 qator)
+
+ChatSession:
+| Field           | Type              | Default | Notes                    |
+|-----------------|-------------------|---------|--------------------------|
+| user            | ForeignKey        | -       | → User, related_name="chat_sessions" |
+| topic           | CharField(200)    | ""      |                          |
+| started_at      | DateTimeField     | auto_now_add |                     |
+| ended_at        | DateTimeField     | null    |                          |
+| message_count   | PositiveIntegerField | 0   |                          |
+| words_practiced | ManyToManyField   | -       | → Word                   |
+| target_words    | JSONField         | []      |                          |
+| is_active       | BooleanField      | True    |                          |
+
+ChatMessage:
+| Field       | Type          | Default | Notes                    |
+|-------------|---------------|---------|--------------------------|
+| session     | ForeignKey    | -       | → ChatSession, related_name="messages" |
+| role        | CharField(10) | -       | choices: user, assistant |
+| content     | TextField     | -       |                          |
+| corrections | JSONField     | []      |                          |
+| words_used  | JSONField     | []      |                          |
+| order       | PositiveIntegerField | 0|                          |
+
+---
+
+### 1.28 ConfusingPair
+Fayl: apps/words/infrastructure/models/confusing_models.py (41 qator)
+Extends: AbstractBaseModel
+
+| Field            | Type              | Default | Notes                    |
+|------------------|-------------------|---------|--------------------------|
+| user             | ForeignKey        | -       | → User, related_name="confusing_pairs" |
+| word_1           | ForeignKey        | -       | → Word, related_name="confused_as_first" |
+| word_2           | ForeignKey        | -       | → Word, related_name="confused_as_second" |
+| confusion_count  | PositiveIntegerField | 1   |                          |
+| last_confused_at | DateTimeField     | auto_now|                          |
+| is_resolved      | BooleanField      | False   |                          |
+| drill_data       | JSONField         | {}      |                          |
+
+Meta: db_table="confusing_pairs", unique_together=["user","word_1","word_2"]
+
+---
+
+### 1.29 DailyChallenge
+Fayl: apps/words/infrastructure/models/challenge_models.py (34 qator)
+Extends: AbstractBaseModel
+
+| Field          | Type              | Default | Notes                    |
+|----------------|-------------------|---------|--------------------------|
+| user           | ForeignKey        | -       | → User, related_name="daily_challenges" |
+| date           | DateField         | -       |                          |
+| challenges     | JSONField         | []      |                          |
+| all_completed  | BooleanField      | False   |                          |
+| bonus_claimed  | BooleanField      | False   |                          |
+
+Meta: db_table="daily_challenges", unique_together=["user","date"]
+
+================================================================
+2. BARCHA API ENDPOINTS (~90 ta view, ~75 ta URL)
+================================================================
+
+### 2.1 AUTH ENDPOINTS (apps/users/presentation/urls.py)
+Prefix: /api/v1/
+
+| # | Method | URL                          | View                   | Permission | Description              |
+|---|--------|------------------------------|------------------------|------------|--------------------------|
+| 1 | GET    | health/                      | HealthCheckView        | AllowAny   | Docker health check      |
+| 2 | POST   | auth/register/               | RegisterView           | AllowAny   | Register new user        |
+| 3 | POST   | auth/login/                  | LoginView              | AllowAny   | Login with email/pass    |
+| 4 | POST   | auth/logout/                 | LogoutView             | Auth       | Blacklist refresh token  |
+| 5 | POST   | auth/token/refresh/          | TokenRefreshView       | AllowAny   | Refresh access token     |
+| 6 | GET/PATCH | auth/profile/             | ProfileView            | Auth       | Get/Update profile       |
+| 7 | POST   | auth/change-password/        | ChangePasswordView     | Auth       | Change password          |
+| 8 | POST   | auth/google/                 | GoogleLoginView        | AllowAny   | Google OAuth login       |
+| 9 | GET    | auth/providers/              | GoogleAuthStatusView   | AllowAny   | Google OAuth status      |
+
+### 2.2 PROGRESS ENDPOINTS (apps/users/presentation/urls.py)
+Prefix: /api/v1/
+
+| # | Method | URL                          | View                   | Permission | Description              |
+|---|--------|------------------------------|------------------------|------------|--------------------------|
+| 10| GET    | users/progress/              | UserProgressView       | Auth       | Level, XP, stats         |
+| 11| GET    | users/xp-history/            | XPHistoryView          | Auth       | XP history (last N days) |
+| 12| GET    | users/badges/                | UserBadgesView         | Auth       | User earned badges       |
+| 13| GET    | badges/                      | AllBadgesView          | Auth       | All available badges     |
+
+### 2.3 ONBOARDING ENDPOINTS
+Prefix: /api/v1/auth/onboarding/
+
+| # | Method | URL                          | View                      | Permission | Description              |
+|---|--------|------------------------------|---------------------------|------------|--------------------------|
+| 14| GET    | questions/                   | OnboardingQuestionsView   | AllowAny   | Get assessment questions |
+| 15| POST   | submit/                      | OnboardingSubmitView      | Auth       | Submit onboarding answers|
+| 16| POST   | skip/                        | OnboardingSkipView        | Auth       | Skip onboarding          |
+| 17| GET    | status/                      | OnboardingStatusView      | Auth       | Check onboarding status  |
+
+### 2.4 NOTIFICATION ENDPOINTS
+Prefix: /api/v1/notifications/
+
+| # | Method | URL                          | View                        | Permission |
+|---|--------|------------------------------|-----------------------------|------------|
+| 18| GET    | (root)                       | NotificationListView        | Auth       |
+| 19| POST   | read/                        | NotificationMarkReadView    | Auth       |
+| 20| GET    | unread-count/                | NotificationUnreadCountView | Auth       |
+
+### 2.5 LEARNING PROFILE ENDPOINTS
+Prefix: /api/v1/learning-profile/
+
+| # | Method | URL                          | View                          | Permission |
+|---|--------|------------------------------|-------------------------------|------------|
+| 21| GET    | (root)                       | LearningProfileView           | Auth       |
+| 22| POST   | analyze/                     | AnalyzeLearningProfileView    | Auth       |
+| 23| GET    | mistake-patterns/            | MistakePatternsView           | Auth       |
+| 24| GET/POST| recommendations/            | WordRecommendationsView       | Auth       |
+| 25| GET    | domain-coverage/             | DomainCoverageView            | Auth       |
+| 26| GET    | difficulty/                  | AdaptiveDifficultyView        | Auth       |
+
+### 2.6 WORDS ENDPOINTS
+Prefix: /api/v1/words/
+
+| # | Method     | URL                              | View                     | Permission |
+|---|------------|----------------------------------|--------------------------|------------|
+| 27| GET/POST   | (root)                           | WordListCreateView       | Auth       |
+| 28| POST       | bulk/                            | WordBulkCreateView       | Auth       |
+| 29| GET        | stats/                           | WordStatsView            | Auth       |
+| 30| GET        | review/                          | WordReviewView           | Auth       |
+| 31| POST       | enrich-all/                      | EnrichAllView            | Auth       |
+| 32| POST       | import/analyze/                  | AnalyzeTextView          | Auth       |
+| 33| POST       | import/add/                      | ImportAddWordsView       | Auth       |
+| 34| POST       | import/csv/validate/             | CSVValidateView          | Auth       |
+| 35| POST       | import/csv/                      | CSVImportView            | Auth       |
+| 36| GET/PATCH/DELETE | <uuid:word_id>/             | WordDetailView           | Auth       |
+| 37| POST       | <uuid:word_id>/enrich/           | EnrichWordView           | Auth       |
+| 38| GET        | <uuid:word_id>/enrichment-status/| EnrichmentStatusView     | Auth       |
+| 39| POST       | <uuid:word_id>/enrichment-retry/ | EnrichmentRetryView      | Auth       |
+| 40| GET/POST   | categories/                      | WordCategoryListCreateView| Auth      |
+| 41| DELETE     | categories/<uuid:category_id>/   | WordCategoryDeleteView   | Auth       |
+
+### 2.7 CONFUSING PAIRS ENDPOINTS
+Prefix: /api/v1/words/confusing-pairs/
+
+| # | Method | URL                          | View                       | Permission |
+|---|--------|------------------------------|----------------------------|------------|
+| 42| GET    | (root)                       | ConfusingPairsListView     | Auth       |
+| 43| GET    | count/                       | ConfusingPairCountView     | Auth       |
+| 44| GET    | <uuid:pair_id>/              | ConfusingPairDetailView    | Auth       |
+| 45| POST   | <uuid:pair_id>/drill/        | ConfusingPairDrillView     | Auth       |
+| 46| POST   | <uuid:pair_id>/resolve/      | ConfusingPairResolveView   | Auth       |
+
+### 2.8 REVIEW ENDPOINTS
+Prefix: /api/v1/review/
+
+| # | Method | URL                                  | View                   | Permission |
+|---|--------|--------------------------------------|------------------------|------------|
+| 47| GET    | words/                               | ReviewWordsView        | Auth       |
+| 48| POST   | sessions/                            | ReviewSessionCreateView| Auth       |
+| 49| GET    | sessions/<uuid:session_id>/          | ReviewSessionDetailView| Auth       |
+| 50| POST   | sessions/<uuid:session_id>/answer/   | SubmitAnswerView       | Auth       |
+| 51| POST   | sessions/<uuid:session_id>/complete/ | CompleteSessionView    | Auth       |
+| 52| GET    | summary/                             | ReviewSummaryView      | Auth       |
+| 53| GET    | history/                             | ReviewHistoryView      | Auth       |
+| 54| GET    | streak/                              | StreakView             | Auth       |
+| 55| GET    | daily-progress/                      | DailyProgressView      | Auth       |
+| 56| GET    | words/<uuid:word_id>/predict/        | PredictedIntervalsView | Auth       |
+
+### 2.9 TEST ENDPOINTS
+Prefix: /api/v1/tests/
+
+| # | Method | URL                              | View                   | Permission |
+|---|--------|----------------------------------|------------------------|------------|
+| 57| POST   | generate/                        | TestGenerateView       | Auth       |
+| 58| GET    | history/                         | TestHistoryView        | Auth       |
+| 59| GET    | <uuid:session_id>/              | TestSessionDetailView  | Auth       |
+| 60| POST   | <uuid:session_id>/answer/       | TestSubmitAnswerView   | Auth       |
+| 61| POST   | <uuid:session_id>/complete/     | TestCompleteView       | Auth       |
+
+### 2.10 GAME ENDPOINTS
+Prefix: /api/v1/games/
+
+| # | Method | URL                              | View                       | Permission |
+|---|--------|----------------------------------|----------------------------|------------|
+| 62| POST   | speed-round/start/               | SpeedRoundStartView        | Auth       |
+| 63| POST   | speed-round/submit/              | SpeedRoundSubmitView       | Auth       |
+| 64| POST   | word-match/start/                | WordMatchStartView         | Auth       |
+| 65| POST   | word-match/submit/               | WordMatchSubmitView        | Auth       |
+| 66| POST   | word-context/start/              | WordContextStartView       | Auth       |
+| 67| POST   | word-context/submit/             | WordContextSubmitView      | Auth       |
+| 68| POST   | story-builder/start/             | StoryBuilderStartView      | Auth       |
+| 69| POST   | story-builder/submit/            | StoryBuilderSubmitView     | Auth       |
+| 70| POST   | story-builder/complete/          | StoryBuilderCompleteView   | Auth       |
+| 71| POST   | listening/start/                 | ListeningStartView         | Auth       |
+| 72| POST   | listening/answer/                | ListeningAnswerView        | Auth       |
+| 73| POST   | listening/complete/              | ListeningCompleteView      | Auth       |
+| 74| GET    | history/                         | GameHistoryView            | Auth       |
+| 75| GET    | stats/                           | GameStatsView              | Auth       |
+
+### 2.11 CHAT ENDPOINTS
+Prefix: /api/v1/chat/
+
+| # | Method | URL                                  | View                   | Permission |
+|---|--------|--------------------------------------|------------------------|------------|
+| 76| POST   | start/                               | ChatStartView          | Auth       |
+| 77| GET    | history/                             | ChatHistoryView        | Auth       |
+| 78| GET    | sessions/<uuid:session_id>/          | ChatSessionDetailView  | Auth       |
+| 79| POST   | sessions/<uuid:session_id>/message/  | ChatSendMessageView    | Auth       |
+| 80| POST   | sessions/<uuid:session_id>/end/      | ChatEndView            | Auth       |
+
+### 2.12 ANALYTICS ENDPOINTS
+Prefix: /api/v1/analytics/
+
+| # | Method | URL                          | View                         | Permission |
+|---|--------|------------------------------|------------------------------|------------|
+| 81| GET    | overview/                    | AnalyticsOverviewView        | Auth       |
+| 82| GET    | weekly/                      | AnalyticsWeeklyView          | Auth       |
+| 83| GET    | monthly/                     | AnalyticsMonthlyView         | Auth       |
+| 84| GET    | difficult-words/             | AnalyticsDifficultWordsView  | Auth       |
+| 85| GET    | word-progress/               | AnalyticsWordProgressView    | Auth       |
+| 86| GET    | calendar/                    | AnalyticsCalendarView        | Auth       |
+
+### 2.13 CHALLENGE ENDPOINTS
+Prefix: /api/v1/challenges/
+
+| # | Method | URL                          | View                    | Permission |
+|---|--------|------------------------------|-------------------------|------------|
+| 87| GET    | today/                       | DailyChallengesView     | Auth       |
+| 88| POST   | claim/                       | ClaimDailyBonusView     | Auth       |
+
+### 2.14 SYSTEM ENDPOINTS
+Prefix: /api/v1/system/
+
+| # | Method | URL                          | View                      | Permission |
+|---|--------|------------------------------|---------------------------|------------|
+| 89| GET    | health/detailed/             | DetailedHealthCheckView   | AllowAny   |
+| 90| GET    | config/status/               | ConfigStatusView          | AllowAny   |
+
+================================================================
+3. BARCHA USE CASES (summary)
+================================================================
+
+### Users Use Cases:
+| Class                          | Fayl                                    | Qator | Nima qiladi                              |
+|--------------------------------|-----------------------------------------|-------|-------------------------------------------|
+| RegisterUserUseCase            | application/use_cases/auth_use_cases.py | 131   | Yangi user yaratish + token generation    |
+| LoginUserUseCase               | application/use_cases/auth_use_cases.py |       | Email/pass bilan login + token            |
+| GoogleLoginUseCase             | application/use_cases/auth_use_cases.py |       | Google OAuth login/register               |
+| GetUserProfileUseCase          | application/use_cases/profile_use_cases.py | 165 | User profil olish                         |
+| UpdateUserProfileUseCase       | application/use_cases/profile_use_cases.py |    | Profil yangilash (allowed fields only)    |
+| ChangePasswordUseCase          | application/use_cases/profile_use_cases.py |    | Parol o'zgartirish                        |
+| GetOnboardingQuestionsUseCase  | application/use_cases/profile_use_cases.py |    | Onboarding savollarni olish               |
+| SubmitOnboardingResultUseCase  | application/use_cases/profile_use_cases.py |    | Savollar javobini tekshirish, level aniqlash |
+| SkipOnboardingUseCase          | application/use_cases/profile_use_cases.py |    | Onboarding skip → A1                     |
+| GetLearningProfileUseCase      | learning_use_cases/learning_profile.py | 192   | Learning profil olish (get_or_create)     |
+| AnalyzeLearningProfileUseCase  | learning_use_cases/learning_profile.py |       | Tahlil: style, schedule, skills, difficulty |
+| GetAdaptiveDifficultyUseCase   | learning_use_cases/learning_profile.py |       | Qiyinlik darajasi tavsiyasi               |
+| GetMistakePatternsUseCase      | learning_use_cases/mistake_patterns.py | 75    | Xato patternlar ro'yxati                  |
+| RecordMistakeUseCase           | learning_use_cases/mistake_patterns.py |       | Yangi xato yozish                         |
+| GetWordRecommendationsUseCase  | learning_use_cases/recommendations.py | 186    | AI tavsiyalar olish/generate              |
+| AcceptRecommendationUseCase    | learning_use_cases/recommendations.py |       | Tavsiyani qabul qilish → so'z qo'shish   |
+| UpdateDomainCoverageUseCase    | learning_use_cases/domain_coverage.py | 82     | Domain qoplanish hisobi                   |
+| RecordSessionPerformanceUseCase| learning_use_cases/performance.py | 60         | Sessiya natijasini yozish                 |
+
+### Words Use Cases:
+| Class                          | Fayl                                    | Qator | Nima qiladi                              |
+|--------------------------------|-----------------------------------------|-------|-------------------------------------------|
+| AddWordUseCase                 | use_cases/word_crud.py                  | 108   | So'z qo'shish + XP + enrichment trigger  |
+| GetWordsUseCase                | use_cases/word_crud.py                  |       | So'zlar ro'yxati (filtered, paginated)    |
+| GetWordDetailUseCase           | use_cases/word_crud.py                  |       | Bitta so'z detail                         |
+| UpdateWordUseCase              | use_cases/word_crud.py                  |       | So'z yangilash                            |
+| DeleteWordUseCase              | use_cases/word_crud.py                  |       | So'z o'chirish                            |
+| BulkAddWordsUseCase            | use_cases/word_crud.py                  |       | Bulk so'z qo'shish                        |
+| EnrichWordUseCase              | use_cases/enrichment.py                 | 146   | AI bilan so'z boyitish (async)            |
+| GetReviewWordsUseCase          | use_cases/review.py                     | 267   | Review uchun so'zlar (due words)          |
+| StartReviewSessionUseCase      | use_cases/review.py                     |       | Yangi review sessiya boshlash             |
+| SubmitReviewAnswerUseCase      | use_cases/review.py                     |       | Javob berish + SM-2 + combo + XP          |
+| CompleteReviewSessionUseCase   | use_cases/review.py                     |       | Sessiya tugatish + XP + badge check       |
+| UpdateStreakUseCase            | use_cases/streak.py                     | 40    | Streak yangilash                          |
+| GenerateTestUseCase            | use_cases/testing/test_generation.py    | 223   | AI test generatsiya (MC, fill-blank, etc.)|
+| SubmitTestAnswerUseCase        | use_cases/testing/test_session.py       | 188   | Test javob berish                         |
+| CompleteTestSessionUseCase     | use_cases/testing/test_session.py       |       | Test tugatish + XP + badge                |
+| StartSpeedRoundUseCase         | use_cases/games/speed_round.py          | 152   | Speed round boshlash                      |
+| SubmitSpeedRoundUseCase        | use_cases/games/speed_round.py          |       | Speed round natija                        |
+| StartWordMatchUseCase          | use_cases/games/word_match.py           | 148   | Word match boshlash                       |
+| SubmitWordMatchUseCase         | use_cases/games/word_match.py           |       | Word match natija                         |
+| StartWordContextUseCase        | use_cases/games/word_context.py         | 192   | Word context boshlash                     |
+| SubmitWordContextUseCase       | use_cases/games/word_context.py         |       | Word context natija                       |
+| StoryBuilderStartUseCase       | use_cases/games/story_builder.py        | 387   | Story builder boshlash (AI)               |
+| StoryBuilderSubmitUseCase      | use_cases/games/story_builder.py        |       | Story round submit (AI evaluation)        |
+| StoryBuilderCompleteUseCase    | use_cases/games/story_builder.py        |       | Story tugatish + XP                       |
+| ListeningStartUseCase          | use_cases/games/listening.py            | 320   | Listening challenge boshlash (TTS)        |
+| ListeningAnswerUseCase         | use_cases/games/listening.py            |       | Listening javob berish                    |
+| ListeningCompleteUseCase       | use_cases/games/listening.py            |       | Listening tugatish + XP                   |
+| StartChatUseCase               | use_cases/chat.py                       | 240   | AI chat sessiya boshlash                  |
+| SendChatMessageUseCase         | use_cases/chat.py                       |       | Chat xabar yuborish (AI javob)            |
+| EndChatUseCase                 | use_cases/chat.py                       |       | Chat tugatish                             |
+| AnalyzeTextUseCase             | use_cases/smart_import.py               | 318   | Matn tahlil (AI: so'zlarni ajratish)      |
+| ImportWordsUseCase             | use_cases/smart_import.py               |       | Import qilingan so'zlarni qo'shish       |
+| CSVValidateUseCase             | use_cases/smart_import.py               |       | CSV faylni tekshirish                     |
+| CSVImportUseCase               | use_cases/smart_import.py               |       | CSV dan import                            |
+| GetAnalyticsUseCase            | use_cases/analytics.py                  | 246   | 6 ta analytics endpoint                   |
+| ConfusingPairsUseCases         | use_cases/confusing_pairs.py            | 257   | List/Detail/Drill/Resolve/Count           |
+| DailyChallengesUseCases        | use_cases/daily_challenges.py           | 130   | Get today/Claim bonus                     |
+
+================================================================
+4. BARCHA DOMAIN SERVICES
+================================================================
+
+### XPService (apps/users/domain/services/xp_service.py — 172 qator)
+- award_xp(user_id, amount, reason, description) — XP berish + level up check
+- XP_TABLE: word_added=5, review_correct=3, review_incorrect=1, review_complete=10, review_perfect=25, test_complete=15, test_good=25, test_perfect=50, game_complete=10, game_good=20, word_mastered=15, streak_7=30, streak_30=100, daily_goal=20, badge_reward=10, level_up=50
+- Level formula: level = 1 + floor(sqrt(total_xp / 100))
+
+### BadgeService (apps/users/domain/services/badge_service.py — 185 qator)
+- check_and_award(user_id) — Barcha badge shartlarini tekshirish
+- BADGE_CHECKERS dictionary: first_word, 10_words, 50_words, 100_words, first_review, 10_reviews, 50_reviews, 100_reviews, first_test, 10_tests, first_game, 10_games, streak_7, streak_30, perfect_review, perfect_test, level_5, level_10
+
+### NotificationService (apps/users/domain/services/notification_service.py — 31 qator)
+- create_notification(user_id, type, title, message, data)
+
+### OnboardingService (apps/users/domain/services/onboarding_service.py — 57 qator)
+- calculate_level(answers) — Savollar natijasi → CEFR level
+- Algoritm: eng yuqori level da 50%+ to'g'ri javob bergan bo'lsa, o'sha level
+
+### SpacedRepetitionService (apps/words/domain/services/review_service.py — 186 qator)
+- SM-2 Algorithm:
+  - quality < 3: repetition=0, interval=1
+  - quality >= 3: interval formula (1, 6, round(interval * EF))
+  - EF = max(1.3, EF + (0.1 - (5-q)*(0.08+(5-q)*0.02)))
+  - confidence = min(100, quality * 20)
+  - is_mastered = repetition >= 5 AND confidence >= 80
+
+### ComboService (apps/words/domain/services/combo_service.py — 147 qator)
+- update_combo(session, is_correct) — session.current_combo yangilash
+- calculate_combo_xp(combo) — Combo XP bonus (5→5, 10→12, 15→20, 20→30, 25+→50)
+
+### DailyChallengeService (apps/words/domain/services/combo_service.py)
+- generate_challenges(user) — 3 ta kundalik challenge yaratish
+- Challenge types: review_words, add_words, take_test, play_game
+
+================================================================
+5. AI INTEGRATION
+================================================================
+
+### AbstractAIProvider Interface (core/interfaces/ai_provider.py — 72 qator)
+Metodlar:
+- generate_text(prompt, max_tokens, temperature) → str
+- generate_json(prompt, response_schema, max_tokens, temperature) → dict
+- generate_chat(messages, max_tokens, temperature) → str
+- get_provider_name() → str
+- is_available() → bool
+
+### GroqProvider (core/services/ai/groq_provider.py — 168 qator)
+- API: groq Python SDK
+- Model: llama-3.3-70b-versatile
+- Circuit breaker integratsiyasi
+- JSON parsing: try json.loads, fallback to regex extraction
+
+### OpenAIProvider (core/services/ai/openai_provider.py)
+- API: openai Python SDK
+- Model: gpt-4o-mini
+- Same interface as GroqProvider
+
+### AIProviderFactory (core/services/ai/ai_factory.py — 143 qator)
+- get_provider(name=None) — Provider olish logikasi:
+  1. settings.AI_PROVIDER dagi asosiy provider (default: groq)
+  2. Agar circuit breaker open → alternative provider (groq↔openai)
+  3. Agar ikkalasi ham unavailable → FallbackAIProvider
+- FallbackAIProvider: "AI service temporarily unavailable" javob beradi
+- Singleton caching: _instances dict
+- reset() — test uchun cache tozalash
+
+### Circuit Breaker (apps/common/circuit_breaker.py)
+- CircuitBreaker class: failure_threshold, recovery_timeout
+- States: CLOSED (normal), OPEN (blocking), HALF_OPEN (testing)
+- is_available() → bool
+
+### AI Promptlar (core/services/ai/prompts/ directory)
+- Enrichment prompts: so'z boyitish uchun (definition, examples, synonyms, etc.)
+- Test generation prompts: savol generatsiya
+- Chat prompts: AI suhbatdosh uchun system messages
+- Story builder prompts: hikoya yaratish
+- Context guess prompts: kontekst topish
+- Confusing pair drill prompts
+
+================================================================
+6. CELERY TASKS
+================================================================
+
+### config/celery.py
+- Celery app: config
+- Autodiscover: apps/*.tasks
+
+### apps/words/infrastructure/tasks.py
+- enrich_word_task(word_id) — Bitta so'zni AI bilan boyitish
+- batch_enrich_words_task(word_ids) — Ko'p so'zlarni boyitish
+
+### apps/users/infrastructure/tasks.py
+- (Celery tasks for notifications/reminders if configured)
+
+### Celery Beat Schedule:
+- django_celery_beat.schedulers:DatabaseScheduler
+- Periodic tasks admin panel orqali boshqariladi
+
+================================================================
+7. MANAGEMENT COMMANDS
+================================================================
+
+### create_badges (apps/users/management/commands/create_badges.py)
+18+ badge yaratadi:
+- first_word, word_collector_10, word_master_50, word_expert_100
+- first_review, review_streak_10, review_master_50, review_legend_100
+- first_test, test_taker_10
+- first_game, game_player_10
+- streak_week, streak_month
+- perfect_review, perfect_test
+- level_5, level_10
+
+### seed_onboarding_questions (apps/users/management/commands/seed_onboarding_questions.py)
+- A1-C2 gacha har bir level uchun assessment savollar
+- Har bir savol: question_text, options (4 ta), correct_answer
+
+### seed_test_data (apps/words/management/commands/seed_test_data.py — 373 qator)
+- Test user yaratish
+- Namuna so'zlar qo'shish
+- Review sessions, game sessions va boshqa test data
+
+================================================================
+8. TESTLAR — Natijalar
+================================================================
+
+### Test natijasi:
+- Jami: 1053 ta test collected
+- ✅ PASSED: 1053
+- ❌ FAILED: 0
+- ⚠️ Warnings: 0
+- Vaqt: ~160 soniya (2:40)
+- Coverage: 96%
+
+### FAIL bo'lgan testlar:
+1. ❌ test_learning_profile_use_cases.py::TestGetWordRecommendations::test_get_recommendations_cached
+2. ❌ test_learning_profile_use_cases.py::TestGetWordRecommendations::test_get_recommendations_generates
+3. ❌ test_learning_profile_use_cases.py::TestGetWordRecommendations::test_recommendations_fallback
+
+SABAB: GetWordRecommendationsUseCase da recommendation yaratish logikasi
+testlardagi mock/expectation bilan mos kelmayapti.
+
+### Test fayllar statistikasi (eng katta):
+| Fayl                                  | Testlar | Qatorlar |
+|---------------------------------------|---------|----------|
+| words/tests/test_repositories.py      | 48      | 328      |
+| words/tests/test_models.py            | 45      | 292      |
+| words/tests/test_views.py             | 39      | 232      |
+| users/tests/test_models.py            | 34      | 166      |
+| users/tests/test_views.py             | 29      | 218      |
+| users/tests/test_learning_repo.py     | 27      | 243      |
+| words/tests/test_review_views.py      | 25      | 282      |
+| words/tests/test_domain_services.py   | 24      | 194      |
+| users/tests/test_xp_service.py        | 24      | 146      |
+| users/tests/test_use_cases.py         | 23      | 172      |
+| users/tests/test_badges.py            | 21      | 233      |
+| words/tests/test_review_use_cases.py  | 20      | 314      |
+| words/tests/test_use_cases.py         | 20      | 151      |
+
+================================================================
+9. MIGRATION HOLATI
+================================================================
+
+Barcha migratsiyalar ✅ APPLIED:
+
+| App              | Migratsiyalar soni | Status   |
+|------------------|--------------------|----------|
+| account          | 9                  | ✅ All applied |
+| admin            | 3                  | ✅ All applied |
+| auth             | 12                 | ✅ All applied |
+| contenttypes     | 2                  | ✅ All applied |
+| django_celery_beat | 19               | ✅ All applied |
+| sessions         | 1                  | ✅ All applied |
+| sites            | 2                  | ✅ All applied |
+| socialaccount    | 6                  | ✅ All applied |
+| token_blacklist  | 13                 | ✅ All applied |
+| users            | 5                  | ✅ All applied |
+| words            | 7                  | ✅ All applied |
+
+================================================================
+10. 300+ QATOR FAYLLAR (refactoring candidates)
+================================================================
+
+| Qator | Fayl                                                  |
+|-------|-------------------------------------------------------|
+| 404   | test_all_apis.py                                      |
+| 387   | apps/words/application/use_cases/games/story_builder.py |
+| 373   | apps/words/management/commands/seed_test_data.py       |
+| 346   | config/settings/base.py                                |
+| 340   | apps/words/tests/test_test_generator.py                |
+| 328   | apps/words/tests/test_repositories.py                  |
+| 323   | apps/words/tests/test_listening_challenge.py           |
+| 320   | apps/words/application/use_cases/games/listening.py    |
+| 318   | apps/words/application/use_cases/smart_import.py       |
+| 314   | apps/words/tests/test_review_use_cases.py              |
+| 304   | apps/words/tests/test_testing_use_cases.py             |
+
+================================================================
+11. SPRINT 10.4 BACKEND O'ZGARISHLAR
+================================================================
+
+### O'zgartirilgan use case fayllar:
+
+1. **word_match.py** (StartWordMatchUseCase):
+   - word_items ga `translation` field qo'shildi
+   - Frontend endi to'g'ri juftlikni backend dan oladi
+
+2. **story_builder.py** (_fallback_analyze):
+   - Creativity default 5 ball olib tashlandi
+   - word_count < 3 bo'lsa 0 ball
+   - Target word ishlatilmasa word score yo'q
+   - Mazmunli feedback xabarlari qo'shildi
+
+3. **learning_profile.py** (GetLearningProfileUseCase, AnalyzeLearningProfileUseCase):
+   - Flat fields → nested structure: best_time{start_hour, end_hour, best_days}
+   - skills{strongest, weakest, scores}
+   - session_stats{total, completed, avg_duration}
+   - last_analyzed (last_analyzed_at emas)
+
+4. **recommendations.py** (GetWordRecommendationsUseCase):
+   - FALLBACK_WORDS: 10 → 60 so'z
+   - _get_excluded_words: accepted recommendations ham exclude qiladi
+   - get_accepted_words() repository method qo'shildi
+
+5. **smart_import.py** (AnalyzeTextUseCase):
+   - max_words default: 20 → 50
+   - Stop words: ~60 → 200+
+   - Sorting: frequency → length (harder first)
+   - Difficulty classification qo'shildi
+
+6. **review_views.py** (SubmitAnswerView):
+   - response_data ga combo, multiplier, xp_earned qo'shildi
+
+7. **import_prompts.py** (SMART_IMPORT_PROMPT):
+   - Difficulty priority qo'shildi: rare/advanced words first
+
+8. **import_serializers.py** (AnalyzeTextSerializer):
+   - max_words default=50, max_value=100

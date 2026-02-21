@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Plus, Loader2 } from 'lucide-react';
 import { staggerItem } from '@/lib/motion';
 import { cn } from '@/lib/utils';
-import { useAcceptRecommendation } from '@/features/learning/hooks/useLearning';
+import { useAcceptRecommendation } from '@/features/learning-profile/hooks/useLearning';
 import type { WordRecommendation } from '@/types';
 
 const REASON_STYLES: Record<string, { label: string; className: string }> = {

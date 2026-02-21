@@ -1,51 +1,29 @@
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { bounceIn } from '@/lib/motion';
 
 interface TextImportResultProps {
-  created: number;
-  skipped: number;
-  onReset: () => void;
-  onViewWords: () => void;
+  importedCount: number;
+  onImportMore: () => void;
 }
 
-export function TextImportResult({ created, skipped, onReset, onViewWords }: TextImportResultProps) {
+export default function TextImportResult({ importedCount, onImportMore }: TextImportResultProps) {
   return (
-    <motion.div
-      key="result"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-    >
-      <Card className="text-center">
-        <CardContent className="space-y-6 py-12">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-            className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30"
-          >
-            <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
-          </motion.div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Import Complete!</h2>
-            <p className="mt-2 text-muted-foreground">
-              Successfully added <strong>{created}</strong> new words to your vocabulary
-            </p>
-            {skipped > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {skipped} words were skipped (already in your vocabulary)
-              </p>
-            )}
-          </div>
-          <div className="flex justify-center gap-3">
-            <Button variant="outline" onClick={onReset}>
-              Import More
-            </Button>
-            <Button onClick={onViewWords}>View My Words</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+    <div className="py-8 text-center">
+      <motion.div variants={bounceIn} initial="initial" animate="animate" className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
+        <Check className="h-7 w-7 text-success" />
+      </motion.div>
+      <h3 className="mt-4 font-heading text-lg font-bold">Successfully Imported!</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{importedCount} words added to your Word Bank</p>
+      <div className="mt-6 flex justify-center gap-3">
+        <Link to="/words" className="flex h-10 items-center rounded-xl border border-border px-6 text-sm font-medium transition-colors hover:bg-muted">
+          View Words
+        </Link>
+        <button onClick={onImportMore} className="flex h-10 items-center rounded-xl bg-primary px-6 text-sm font-medium text-white">
+          Import More
+        </button>
+      </div>
+    </div>
   );
 }
