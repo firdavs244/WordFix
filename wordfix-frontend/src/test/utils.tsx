@@ -58,7 +58,8 @@ function createMockWord(overrides?: Partial<Word>): Word {
     created_at: '2025-01-01', updated_at: '2025-01-01', accuracy_rate: 80,
     mnemonic: 'Think of waving hello', usage_notes: '', enrichment_status: 'enriched',
     enrichment_error: '', enriched_at: '2025-01-01', easiness_factor: 2.5,
-    repetition_number: 3, interval_days: 7, ...overrides,
+    repetition_number: 3, interval_days: 7,
+    is_archived: false, archived_at: null, ...overrides,
   };
 }
 

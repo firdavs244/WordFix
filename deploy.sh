@@ -34,26 +34,33 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 detect_server_ip() {
     local ip=""
     
-    # Method 1: Get public IP from external service
-    ip=$(curl -sf --max-time 5 https://ifconfig.me 2>/dev/null || true)
+    # Method 1: Get public IPv4 from external service (force IPv4 with -4)
+    ip=$(curl -4 -sf --max-time 5 https://ifconfig.me 2>/dev/null || true)
     
-    # Method 2: Get public IP from another service
-    if [ -z "$ip" ]; then
-        ip=$(curl -sf --max-time 5 https://api.ipify.org 2>/dev/null || true)
+    # Method 2: Get public IPv4 from another service
+    if [ -z "$ip" ] || echo "$ip" | grep -q ':'; then
+        ip=$(curl -4 -sf --max-time 5 https://api.ipify.org 2>/dev/null || true)
     fi
     
-    # Method 3: Get IP from hostname
-    if [ -z "$ip" ]; then
-        ip=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+    # Method 3: Get public IPv4 from icanhazip
+    if [ -z "$ip" ] || echo "$ip" | grep -q ':'; then
+        ip=$(curl -4 -sf --max-time 5 https://icanhazip.com 2>/dev/null || true)
     fi
     
-    # Method 4: Get IP from ip route
-    if [ -z "$ip" ]; then
-        ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}' || true)
+    # Method 4: Get IPv4 from hostname (filter out IPv6)
+    if [ -z "$ip" ] || echo "$ip" | grep -q ':'; then
+        ip=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -v ':' | head -1 || true)
     fi
     
-    if [ -z "$ip" ]; then
-        log_error "Could not detect server IP. Please set SERVER_IP manually in $ENV_FILE"
+    # Method 5: Get IPv4 from ip route
+    if [ -z "$ip" ] || echo "$ip" | grep -q ':'; then
+        ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}' || true)
+    fi
+    
+    # Validate: must be IPv4 (no colons)
+    if [ -z "$ip" ] || echo "$ip" | grep -q ':'; then
+        log_error "Could not detect IPv4 server IP. Please set SERVER_IP manually in $ENV_FILE"
+        log_error "Example: Edit .env.production and set SERVER_IP=YOUR.SERVER.IP.HERE"
         exit 1
     fi
     
