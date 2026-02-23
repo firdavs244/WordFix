@@ -1,6 +1,6 @@
 import apiClient from '@/api/client';
 import API_ENDPOINTS from '@/api/endpoints';
-import type { ApiResponse, SystemHealth, ConfigStatus } from '@/types';
+import type { ApiResponse, SystemHealth, ConfigStatus, AIStatusResponse } from '@/types';
 
 // ─── System API ────────────────────────────────────────────────────────────────
 
@@ -15,6 +15,13 @@ export const systemApi = {
   getConfigStatus: async () => {
     const res = await apiClient.get<ApiResponse<ConfigStatus>>(
       API_ENDPOINTS.SYSTEM.CONFIG,
+    );
+    return res.data;
+  },
+
+  getAIStatus: async () => {
+    const res = await apiClient.get<ApiResponse<AIStatusResponse>>(
+      API_ENDPOINTS.SYSTEM.AI_STATUS,
     );
     return res.data;
   },

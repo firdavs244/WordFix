@@ -26,6 +26,19 @@ class WordSuggestionSerializer(serializers.Serializer):
     context_sentence = serializers.CharField(allow_blank=True, default="")
     difficulty = serializers.CharField(default="medium")
     reason = serializers.CharField(allow_blank=True, default="")
+    definition = serializers.CharField(allow_blank=True, default="")
+    pronunciation = serializers.CharField(allow_blank=True, default="")
+    in_user_library = serializers.BooleanField(default=False)
+
+
+class AnalyzeTextResponseSerializer(serializers.Serializer):
+    """Serializer for analyze text response."""
+
+    suggestions = WordSuggestionSerializer(many=True)
+    parse_mode = serializers.CharField(default="fallback")
+    total_found = serializers.IntegerField(default=0)
+    already_in_library = serializers.IntegerField(default=0)
+    text_difficulty = serializers.CharField(default="A1")
 
 
 class ImportWordsSerializer(serializers.Serializer):

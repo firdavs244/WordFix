@@ -132,6 +132,9 @@ class Word(AbstractBaseModel):
     easiness_factor = models.FloatField(default=2.5)
     repetition_number = models.PositiveIntegerField(default=0)
     interval_days = models.PositiveIntegerField(default=0)
+    # Archive fields
+    is_archived = models.BooleanField(default=False, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "words"
@@ -142,6 +145,7 @@ class Word(AbstractBaseModel):
             models.Index(fields=["user", "confidence_score"]),
             models.Index(fields=["user", "next_review_at"]),
             models.Index(fields=["user", "category"]),
+            models.Index(fields=["user", "is_archived"]),
         ]
         verbose_name = "Word"
         verbose_name_plural = "Words"

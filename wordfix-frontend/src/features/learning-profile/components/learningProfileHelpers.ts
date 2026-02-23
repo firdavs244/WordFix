@@ -19,8 +19,8 @@ export const styleBarColors: Record<string, string> = {
 export const dayLabels = ['Du', 'Se', 'Cho', 'Pa', 'Ju', 'Sha', 'Ya'];
 
 export const skillLabels: Record<string, string> = {
-  reading: 'Reading',
   vocabulary: 'Vocabulary',
+  grammar: 'Grammar',
   listening: 'Listening',
   context: 'Context',
   speed: 'Speed',

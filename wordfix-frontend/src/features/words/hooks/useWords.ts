@@ -14,6 +14,7 @@ export const wordKeys = {
   stats: () => [...wordKeys.all, 'stats'] as const,
   review: () => [...wordKeys.all, 'review'] as const,
   categories: () => [...wordKeys.all, 'categories'] as const,
+  archived: () => [...wordKeys.all, 'archived'] as const,
 };
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
@@ -144,6 +145,92 @@ export function useDeleteCategory() {
     },
     onError: () => {
       toast.error('Failed to delete category.');
+    },
+  });
+}
+
+// ─── Archive Hooks ─────────────────────────────────────────────────────────────
+
+export function useArchivedWords(params?: { page?: number; page_size?: number }) {
+  return useQuery({
+    queryKey: [...wordKeys.archived(), params],
+    queryFn: () => wordsApi.getArchivedWords(params),
+  });
+}
+
+export function useArchiveWord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => wordsApi.archiveWord(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: wordKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.archived() });
+      toast.success('Word archived.');
+    },
+    onError: () => {
+      toast.error('Failed to archive word.');
+    },
+  });
+}
+
+export function useUnarchiveWord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => wordsApi.unarchiveWord(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: wordKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.archived() });
+      toast.success('Word unarchived.');
+    },
+    onError: () => {
+      toast.error('Failed to unarchive word.');
+    },
+  });
+}
+
+export function useBulkArchive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (wordIds: string[]) => wordsApi.bulkArchiveWords(wordIds),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: wordKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: wordKeys.archived() });
+      const result = data.data;
+      toast.success(`Archived ${result.archived_count} words.`);
+    },
+    onError: () => {
+      toast.error('Bulk archive failed.');
+    },
+  });
+}
+
+export function useEnrichWord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => wordsApi.enrichWord(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: wordKeys.all });
+      toast.success('Enrichment started.');
+    },
+    onError: () => {
+      toast.error('Failed to start enrichment.');
+    },
+  });
+}
+
+export function useEnrichAll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => wordsApi.enrichAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: wordKeys.all });
+      toast.success('Enrichment started for all words.');
+    },
+    onError: () => {
+      toast.error('Failed to start enrichment.');
     },
   });
 }

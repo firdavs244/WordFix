@@ -141,6 +141,36 @@ export function ReviewSessionPage() {
     }
   };
 
+  // Keyboard shortcuts: Space=flip, 1-5=rate, Escape=quit
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        if (!showRating) handleFlip();
+      } else if (e.key === 'Escape') {
+        handleQuit();
+      } else if (showRating && isFlipped) {
+        const qualityMap: Record<string, ReviewQuality> = {
+          '1': 1,
+          '2': 2,
+          '3': 3,
+          '4': 4,
+          '5': 5,
+        };
+        const quality = qualityMap[e.key];
+        if (quality) {
+          e.preventDefault();
+          handleRate(quality);
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showRating, isFlipped, handleFlip, handleRate, handleQuit]);
+
   if (!currentWord || totalWords === 0) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -238,7 +268,20 @@ export function ReviewSessionPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
           >
-            Tap the card to see the answer
+            Tap the card or press <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-mono">Space</kbd> to flip
+          </motion.p>
+        )}
+
+        {/* Keyboard hint when rating */}
+        {showRating && isFlipped && (
+          <motion.p
+            className="text-xs text-muted-foreground text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            Press <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-mono">1</kbd>–
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-mono">5</kbd> to rate
           </motion.p>
         )}
       </div>

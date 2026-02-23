@@ -160,6 +160,7 @@ class CircuitBreaker:
 CIRCUITS: dict[str, CircuitBreaker] = {
     "groq": CircuitBreaker("groq", failure_threshold=5, recovery_timeout=60),
     "openai": CircuitBreaker("openai", failure_threshold=5, recovery_timeout=60),
+    "gemini": CircuitBreaker("gemini", failure_threshold=5, recovery_timeout=60),
     "tts": CircuitBreaker("tts", failure_threshold=3, recovery_timeout=30),
 }
 

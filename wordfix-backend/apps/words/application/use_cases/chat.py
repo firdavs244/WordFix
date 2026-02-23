@@ -5,10 +5,26 @@ AI Chat use cases.
 import json
 import logging
 import random
+import re
 from datetime import datetime, timezone
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_ai_json(raw: str) -> dict | None:
+    """Parse AI response that may contain JSON wrapped in markdown code fences."""
+    if not raw or not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    # Strip markdown code fences: ```json ... ``` or ``` ... ```
+    fence_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?\s*```', text, re.DOTALL)
+    if fence_match:
+        text = fence_match.group(1).strip()
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return None
 
 
 class StartChatUseCase:
@@ -73,11 +89,11 @@ class StartChatUseCase:
                     {"role": "user", "content": f"Start the conversation about {topic}. Use one of these words naturally: {', '.join(target_word_list)}"},
                 ]
                 ai_response = self.ai_provider.generate_chat(messages, max_tokens=500, temperature=0.7)
-                try:
-                    parsed = json.loads(ai_response)
-                    first_message_content = parsed.get("message", first_message_content)
-                except (json.JSONDecodeError, AttributeError):
-                    first_message_content = ai_response if isinstance(ai_response, str) else first_message_content
+                parsed = _parse_ai_json(ai_response)
+                if parsed and "message" in parsed:
+                    first_message_content = parsed["message"]
+                elif isinstance(ai_response, str) and len(ai_response.strip()) > 5:
+                    first_message_content = ai_response.strip()
             except Exception as e:
                 logger.warning(f"AI failed for first chat message: {e}")
 
@@ -115,6 +131,47 @@ class SendChatMessageUseCase:
         self.sr_service = sr_service
         self.prompt_template = prompt_template
         self.language_map = language_map
+
+    @staticmethod
+    def _smart_fallback(message_text: str, target_words: list, topic: str) -> str:
+        """Generate a context-aware fallback response when AI is unavailable."""
+        words = message_text.split()
+        word_count = len(words)
+
+        # Check for simple corrections
+        corrections_hint = ""
+        lower_msg = message_text.lower()
+        if " i " in f" {lower_msg} " and "I" not in message_text:
+            corrections_hint = " (By the way, remember to capitalize 'I' when referring to yourself!)"
+
+        # Check if user used target words
+        used_targets = [tw for tw in target_words if tw.lower() in lower_msg]
+        praise = ""
+        if used_targets:
+            praise = f" Great use of '{used_targets[0]}'! Well done!"
+
+        # Generate varied responses based on message length and topic
+        import random
+        if word_count <= 3:
+            responses = [
+                f"Could you tell me more about that? Try writing a complete sentence about {topic}.",
+                f"I'd love to hear more! Can you describe what you mean using more words?",
+                f"That's a start! Try expanding your answer — what do you think about {topic}?",
+            ]
+        elif word_count <= 10:
+            responses = [
+                f"Good thought! What else can you tell me about {topic}?{praise}",
+                f"Nice! Can you give me an example to explain what you mean?{praise}",
+                f"I understand what you're saying. Why do you feel that way about {topic}?{praise}",
+            ]
+        else:
+            responses = [
+                f"You're expressing yourself well! That's a thoughtful answer.{praise} What inspired you to think about this?",
+                f"Great explanation! Your English is improving.{praise} Can you also tell me about your personal experience with {topic}?",
+                f"Wonderful response! I like how you explained that.{praise} Let's explore another aspect of {topic} — what would you change about it?",
+            ]
+
+        return random.choice(responses) + corrections_hint
 
     def execute(self, session_id, user_id, message_text: str) -> dict:
         session_id = UUID(str(session_id))
@@ -157,24 +214,26 @@ class SendChatMessageUseCase:
         chat_history.append({"role": "user", "content": message_text})
 
         # 5. Get AI response
-        ai_message = "That's interesting! Tell me more."
         corrections = []
         words_used = []
         encouragement = ""
+        ai_message = self._smart_fallback(message_text, target_words, session.topic or "general")
 
         if self.ai_provider:
             try:
                 ai_raw = self.ai_provider.generate_chat(chat_history, max_tokens=800, temperature=0.7)
-                try:
-                    parsed = json.loads(ai_raw)
-                    ai_message = parsed.get("message", ai_raw)
+                logger.info(f"AI raw response (first 200 chars): {str(ai_raw)[:200]}")
+                parsed = _parse_ai_json(ai_raw)
+                if parsed:
+                    ai_message = parsed.get("message", ai_raw if isinstance(ai_raw, str) else ai_message)
                     corrections = parsed.get("corrections", [])
                     words_used = parsed.get("words_used_by_student", [])
                     encouragement = parsed.get("encouragement", "")
-                except (json.JSONDecodeError, AttributeError):
-                    ai_message = ai_raw if isinstance(ai_raw, str) else ai_message
+                elif isinstance(ai_raw, str) and len(ai_raw.strip()) > 5:
+                    # AI returned plain text, not JSON — use it as the message
+                    ai_message = ai_raw.strip()
             except Exception as e:
-                logger.warning(f"AI chat response failed: {e}")
+                logger.warning(f"AI chat response failed: {e}", exc_info=True)
 
         # 6. Save AI message
         ai_msg_order = user_msg_order + 1

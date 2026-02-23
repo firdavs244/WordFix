@@ -36,7 +36,22 @@ export default function TextImportFlow() {
           )}
           {step === 1 && (
             <motion.div key="review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <TextImportReview words={ti.suggestions} selectedIds={ti.selectedIds} onToggle={ti.toggle} onSelectAll={ti.selectAll} onDeselectAll={ti.deselectAll} onImport={handleImport} isImporting={ti.isImporting} />
+              <TextImportReview
+                words={ti.suggestions}
+                filteredWords={ti.filteredSuggestions}
+                selectedIds={ti.selectedIds}
+                onToggle={ti.toggle}
+                onSelectAll={ti.selectAll}
+                onDeselectAll={ti.deselectAll}
+                onImport={handleImport}
+                isImporting={ti.isImporting}
+                parseMode={ti.parseMode}
+                textDifficulty={ti.textDifficulty}
+                alreadyInLibrary={ti.alreadyInLibrary}
+                skippedNonEnglish={ti.skippedNonEnglish}
+                levelFilter={ti.levelFilter}
+                onLevelFilterChange={ti.setLevelFilter}
+              />
             </motion.div>
           )}
           {step === 2 && (

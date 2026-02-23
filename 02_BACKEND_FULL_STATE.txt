@@ -2,7 +2,7 @@
 02_BACKEND_FULL_STATE.txt
 WordFix Backend — To'liq holat hujjati
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+Hujjat yangilangan sana: 2026-02-23 (Sprint 12 — Gemini AI, Word Archive, Import Fix, UX)
 ================================================================
 
 ================================================================
@@ -344,9 +344,11 @@ Extends: AbstractBaseModel
 | easiness_factor      | FloatField        | 2.5       | SM-2                     |
 | repetition_number    | PositiveIntegerField | 0     | SM-2                     |
 | interval_days        | PositiveIntegerField | 0     | SM-2                     |
+| is_archived          | BooleanField      | False     | Sprint 12: archive flag  |
+| archived_at          | DateTimeField     | null      | Sprint 12: archive timestamp |
 
 Meta: db_table="words", unique_together=["user","original_word"]
-Indexes: [user+is_mastered], [user+confidence_score], [user+next_review_at], [user+category]
+Indexes: [user+is_mastered], [user+confidence_score], [user+next_review_at], [user+category], [user+is_archived]
 Property: accuracy_rate → float
 
 ---
@@ -499,13 +501,13 @@ Meta: db_table="test_questions"
 ---
 
 ### 1.24 GameSession
-Fayl: apps/words/infrastructure/models/game_models.py (113 qator)
+Fayl: apps/words/infrastructure/models/game_models.py (180+ qator)
 Extends: AbstractBaseModel
 
 | Field             | Type              | Default | Notes                    |
 |-------------------|-------------------|---------|--------------------------|
 | user              | ForeignKey        | -       | → User, related_name="game_sessions" |
-| game_type         | CharField(20)     | -       | choices: speed_round, word_match, word_context, story_builder, listening_challenge |
+| game_type         | CharField(20)     | -       | choices: speed_round, word_match, word_context, story_builder, listening_challenge, synonym_antonym, irregular_verbs |
 | score             | PositiveIntegerField | 0   |                          |
 | max_score         | PositiveIntegerField | 0   |                          |
 | correct_answers   | PositiveIntegerField | 0   |                          |
@@ -565,7 +567,51 @@ Meta: db_table="listening_rounds", unique_together=["session","round_number"]
 
 ---
 
-### 1.27 ChatSession + ChatMessage
+### 1.27 SynonymAntonymRound (NEW — Sprint 11)
+Fayl: apps/words/infrastructure/models/game_models.py
+Extends: AbstractBaseModel
+
+| Field          | Type              | Default | Notes                    |
+|----------------|-------------------|---------|--------------------------|
+| session        | ForeignKey        | -       | → GameSession            |
+| round_number   | PositiveIntegerField | -   |                          |
+| question_type  | CharField(10)     | -       | choices: synonym, antonym|
+| word_text      | CharField(100)    | -       |                          |
+| correct_answer | CharField(100)    | -       |                          |
+| options        | JSONField         | []      | list of 4 options        |
+| user_answer    | CharField(100)    | ""      |                          |
+| is_correct     | BooleanField      | null    |                          |
+| score          | PositiveIntegerField | 0   |                          |
+
+Meta: db_table="synonym_antonym_rounds", unique_together=["session","round_number"]
+
+---
+
+### 1.28 IrregularVerbRound (NEW — Sprint 11)
+Fayl: apps/words/infrastructure/models/game_models.py
+Extends: AbstractBaseModel
+
+| Field                  | Type              | Default | Notes                |
+|------------------------|-------------------|---------|----------------------|
+| session                | ForeignKey        | -       | → GameSession        |
+| round_number           | PositiveIntegerField | -   |                      |
+| infinitive             | CharField(100)    | -       |                      |
+| translation            | CharField(200)    | ""      |                      |
+| correct_past_simple    | CharField(100)    | -       |                      |
+| correct_past_participle| CharField(100)    | -       |                      |
+| user_past_simple       | CharField(100)    | ""      |                      |
+| user_past_participle   | CharField(100)    | ""      |                      |
+| past_simple_correct    | BooleanField      | null    |                      |
+| past_participle_correct| BooleanField      | null    |                      |
+| attempts_used          | PositiveIntegerField | 0   |                      |
+| hints_shown            | JSONField         | {}      | dict                 |
+| score                  | PositiveIntegerField | 0   |                      |
+
+Meta: db_table="irregular_verb_rounds", unique_together=["session","round_number"]
+
+---
+
+### 1.29 ChatSession + ChatMessage
 Fayl: apps/words/infrastructure/models/chat_models.py (66 qator)
 
 ChatSession:
@@ -801,6 +847,17 @@ Prefix: /api/v1/system/
 |---|--------|------------------------------|---------------------------|------------|
 | 89| GET    | health/detailed/             | DetailedHealthCheckView   | AllowAny   |
 | 90| GET    | config/status/               | ConfigStatusView          | AllowAny   |
+| 91| GET    | ai-status/                   | AIStatusView              | Auth       |
+
+### 2.15 ARCHIVE ENDPOINTS (Sprint 12)
+Prefix: /api/v1/words/
+
+| # | Method | URL                              | View                     | Permission |
+|---|--------|----------------------------------|--------------------------|------------|
+| 92| POST   | <uuid:word_id>/archive/          | ArchiveWordView          | Auth       |
+| 93| POST   | <uuid:word_id>/unarchive/        | UnarchiveWordView        | Auth       |
+| 94| GET    | archived/                        | ArchivedWordsListView    | Auth       |
+| 95| POST   | archive/bulk/                    | BulkArchiveView          | Auth       |
 
 ================================================================
 3. BARCHA USE CASES (summary)
@@ -868,6 +925,10 @@ Prefix: /api/v1/system/
 | GetAnalyticsUseCase            | use_cases/analytics.py                  | 246   | 6 ta analytics endpoint                   |
 | ConfusingPairsUseCases         | use_cases/confusing_pairs.py            | 257   | List/Detail/Drill/Resolve/Count           |
 | DailyChallengesUseCases        | use_cases/daily_challenges.py           | 130   | Get today/Claim bonus                     |
+| ArchiveWordUseCase             | use_cases/word_archive.py               | 80    | So'zni arxivlash (is_archived=True)       |
+| UnarchiveWordUseCase           | use_cases/word_archive.py               |       | Arxivdan qaytarish                        |
+| GetArchivedWordsUseCase        | use_cases/word_archive.py               |       | Arxivlangan so'zlar ro'yxati              |
+| BulkArchiveUseCase             | use_cases/word_archive.py               |       | Bulk arxivlash (word_ids list)            |
 
 ================================================================
 4. BARCHA DOMAIN SERVICES
@@ -928,18 +989,29 @@ Metodlar:
 - Model: gpt-4o-mini
 - Same interface as GroqProvider
 
-### AIProviderFactory (core/services/ai/ai_factory.py — 143 qator)
+### AIProviderFactory (core/services/ai/ai_factory.py — 200+ qator)
 - get_provider(name=None) — Provider olish logikasi:
-  1. settings.AI_PROVIDER dagi asosiy provider (default: groq)
-  2. Agar circuit breaker open → alternative provider (groq↔openai)
-  3. Agar ikkalasi ham unavailable → FallbackAIProvider
+  1. settings.AI_PROVIDER dagi asosiy provider (default: gemini, Sprint 12)
+  2. Agar circuit breaker open → fallback chain bo'yicha keyingi provider
+  3. Agar barcha providerlar unavailable → FallbackAIProvider
+- _FALLBACK_CHAINS: gemini→groq→openai, groq→gemini→openai, openai→gemini→groq
+- get_all_provider_status() → dict: barcha providerlar holati (status, model, is_default)
 - FallbackAIProvider: "AI service temporarily unavailable" javob beradi
 - Singleton caching: _instances dict
 - reset() — test uchun cache tozalash
 
+### GeminiProvider (core/services/ai/gemini_provider.py — 180+ qator, Sprint 12)
+- API: google.generativeai Python SDK
+- Model: gemini-2.0-flash
+- Circuit breaker integratsiyasi
+- generate_text, generate_json, generate_chat
+- _convert_messages(): OpenAI-style messages → Gemini format (user/model roles)
+- JSON parsing: try json.loads, fallback regex extraction
+
 ### Circuit Breaker (apps/common/circuit_breaker.py)
 - CircuitBreaker class: failure_threshold, recovery_timeout
 - States: CLOSED (normal), OPEN (blocking), HALF_OPEN (testing)
+- CIRCUITS dict: groq, openai, gemini (Sprint 12)
 - is_available() → bool
 
 ### AI Promptlar (core/services/ai/prompts/ directory)
@@ -1108,3 +1180,282 @@ Barcha migratsiyalar ✅ APPLIED:
 
 8. **import_serializers.py** (AnalyzeTextSerializer):
    - max_words default=50, max_value=100
+
+================================================================
+12. SPRINT 10.5 BACKEND O'ZGARISHLAR
+================================================================
+
+### O'zgartirilgan fayllar:
+
+1. **common_deps.py** (_get_ai_provider):
+   - Exception da None emas FallbackAIProvider qaytaradi
+   - Logger qo'shildi: provider nomi yoki xato loglaydi
+
+2. **chat_prompts.py** (CHAT_SYSTEM_PROMPT):
+   - To'liq qayta yozildi: 10 ta qoida, STRICT JSON format
+   - JSON schema: {message, corrections[], words_used_by_student[], encouragement}
+   - Surrogate emoji (\ud83d\udc4f) olib tashlandi (UTF-8 error sabab)
+
+3. **ai_factory.py** (FallbackAIProvider.generate_chat):
+   - Plain text emas JSON qaytaradi
+   - Xabar uzunligiga qarab turli javoblar (qisqa/o'rta/uzun)
+
+4. **chat.py** (SendChatMessageUseCase):
+   - _smart_fallback() static method qo'shildi: context-aware javoblar
+   - Hardcoded "That's interesting! Tell me more." olib tashlandi
+   - Target word ishlatilsa praise beradi
+   - Surrogate emoji olib tashlandi, "Well done!" bilan almashtirildi
+
+5. **import_prompts.py** (SMART_IMPORT_PROMPT):
+   - CEFR levels (A1-C2) so'raydi
+   - Translation to native language
+   - Definition English da
+   - Sorting: C2 → A1 (hardest first)
+
+6. **smart_import.py** (AnalyzeTextUseCase._fallback_extract):
+   - COMMON_TRANSLATIONS dict: 100+ Uzbek tarjimalar
+   - estimate_cefr() function: so'z uzunligi bo'yicha CEFR taxmin qiladi
+   - CEFR_ORDER sorting: C2 → A1
+
+7. **learning_profile.py** (GetLearningProfileUseCase):
+   - session_stats endi model fields dan olinadi (avg_session_duration, optimal_words_per_session, avg_retention_rate)
+   - style_breakdown API response ga qo'shildi
+   - AnalyzeLearningProfileUseCase: session_stats computed from performance data
+   - avg_duration, retention_rate, optimal_words model ga saqlanadi
+
+================================================================
+13. SPRINT 11 BACKEND O'ZGARISHLAR
+================================================================
+
+### Yangi fayllar:
+
+1. **core/services/ai/irregular_verbs_data.py** (130+ irregular verbs):
+   - IRREGULAR_VERBS list: (infinitive, past_simple, past_participle, translation_uz)
+   - 4 tier: A1 (20), A2 (35), B1 (42), B2-C1 (37)
+   - get_verbs_by_tier() function
+
+2. **apps/words/application/use_cases/games/synonym_antonym.py** (3 use cases):
+   - StartSynonymAntonymUseCase: AI generation + FALLBACK_DATA (20 words)
+   - SubmitSynonymAntonymUseCase: answer validation, combo handling
+   - CompleteSynonymAntonymUseCase: score tally, XP/badge awards
+
+3. **apps/words/application/use_cases/games/irregular_verbs.py** (3 use cases):
+   - StartIrregularVerbsUseCase: tier selection from proficiency, random verb selection
+   - SubmitIrregularVerbUseCase: "/" alternatives, 2 max attempts, hints, 5pts per form
+   - CompleteIrregularVerbsUseCase: score tally, XP/badge awards
+
+### O'zgartirilgan fayllar:
+
+4. **smart_import.py** (to'liq qayta yozildi):
+   - 3 import rejimi: structured, plain_english, mixed
+   - detect_structured_format(): regex-based format detection
+   - parse_structured_text(): word – translation parser
+   - is_likely_english_text(): English text detection
+   - COMMON_TRANSLATIONS: 500+ so'z
+   - STOP_WORDS: 100+ common words
+   - estimate_cefr(): so'z uzunligi + frequency bo'yicha
+   - Response: {suggestions, parse_mode, total_found, already_in_library, text_difficulty}
+   - Har bir suggestion: word, translation, in_user_library, pronunciation, definition
+
+5. **game_models.py** (2 yangi model):
+   - SynonymAntonymRound: question_type (synonym/antonym), options JSONField
+   - IrregularVerbRound: infinitive, past_simple, past_participle, hints, attempts
+   - GAME_TYPE_CHOICES: 5 → 7 (synonym_antonym, irregular_verbs qo'shildi)
+
+6. **game_prompts.py** + **prompts/__init__.py**:
+   - SYNONYM_ANTONYM_PROMPT qo'shildi
+
+7. **session_entities.py** + **entities/__init__.py**:
+   - SynonymAntonymRoundEntity, IrregularVerbRoundEntity dataclasses
+
+8. **game_repo.py** (8 yangi method):
+   - SA: create/get/get_list/update synonym_antonym_round
+   - IV: create/get/get_list/update irregular_verb_round
+   - get_stats() loop: 2 yangi game type
+
+9. **game_serializers.py** (8 yangi serializer):
+   - SA: StartResponse, Answer, AnswerResult, Complete
+   - IV: Start, StartResponse, Answer, AnswerResult, Complete
+
+10. **game_views.py** (6 yangi view):
+    - SynonymAntonymStartView, AnswerView, CompleteView
+    - IrregularVerbsStartView, AnswerView, CompleteView
+
+11. **game_urls.py** (6 yangi URL):
+    - synonym-antonym/: start/, answer/, complete/
+    - irregular-verbs/: start/, answer/, complete/
+
+12. **game_deps.py** (6 yangi factory function):
+    - get_synonym_antonym_start/answer/complete_use_case
+    - get_irregular_verbs_start/answer/complete_use_case
+
+13. **games/__init__.py**: 6 yangi use case export
+
+14. **import_views.py**: result dict to'g'ridan-to'g'ri qaytaradi
+
+15. **import_serializers.py**: WordSuggestionSerializer yangilandi (pronunciation, in_user_library, definition)
+
+16. **test_smart_import.py**: 3 test yangilandi — yangi response format uchun
+
+================================================================
+## SPRINT 12 O'ZGARISHLAR (2025-06-20)
+================================================================
+
+### Asosiy yangiliklar:
+- **Gemini AI Provider** — yangi default AI provider (gemini-2.0-flash)
+- **Word Archive System** — so'zlarni arxivlash/qaytarish
+- **Import Fix** — multi-unit text parsing yaxshilandi
+- **Arxivlangan so'zlar review/games dan exclude** — barcha query'lar is_archived=False filter
+
+### Yangi fayllar:
+
+1. **core/services/ai/gemini_provider.py** (~120 qator):
+   - GeminiProvider(AIProviderInterface): generate_text, generate_json, generate_chat
+   - google.generativeai SDK ishlatadi
+   - _convert_messages(): OpenAI format → Gemini contents format
+   - Circuit breaker integration (gemini key)
+   - Model: gemini-2.0-flash (settings.GEMINI_MODEL)
+
+2. **apps/words/application/use_cases/word_archive.py** (~80 qator):
+   - ArchiveWordUseCase: so'zni arxivlash, is_archived=True, archived_at=now()
+   - UnarchiveWordUseCase: arxivdan qaytarish, is_archived=False, archived_at=None
+   - GetArchivedWordsUseCase: arxivlangan so'zlar ro'yxati (paginated)
+   - BulkArchiveUseCase: bir nechta so'zni birdan arxivlash (word_ids[])
+
+3. **apps/words/presentation/views/archive_views.py** (~80 qator):
+   - ArchiveWordView (POST): /api/v1/words/{id}/archive/
+   - UnarchiveWordView (POST): /api/v1/words/{id}/unarchive/
+   - ArchivedWordsListView (GET): /api/v1/words/archived/
+   - BulkArchiveView (POST): /api/v1/words/bulk-archive/
+
+4. **apps/words/presentation/serializers/archive_serializers.py** (~40 qator):
+   - BulkArchiveSerializer: word_ids ListField validation
+   - ArchivedWordSerializer: WordSerializer + archived_at
+
+5. **apps/words/presentation/dependencies/archive_deps.py** (~25 qator):
+   - get_archive/unarchive/get_archived/bulk_archive_use_case factory functions
+
+6. **core/tests/test_gemini_provider.py** (7 test):
+   - test_generate_text_success/failure
+   - test_generate_json_success/failure
+   - test_generate_chat_success
+   - test_convert_messages, test_circuit_breaker_integration
+
+7. **apps/words/tests/test_archive.py** (7 test):
+   - test_archive/unarchive/get_archived/bulk_archive
+   - test_archived_excluded_from_review/get_all/search
+
+### O'zgartirilgan fayllar:
+
+8. **core/services/ai/ai_factory.py**:
+   - _FALLBACK_CHAINS dict qo'shildi: gemini→[groq,openai], groq→[gemini,openai], openai→[gemini,groq]
+   - _create_provider(): "gemini" case qo'shildi
+   - get_all_provider_status(): barcha provider'lar status/model/is_default qaytaradi
+   - ~200 qator (143 dan oshdi)
+
+9. **config/settings/base.py**:
+   - GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+   - GEMINI_MODEL = "gemini-2.0-flash"
+   - AI_PROVIDER default: "groq" → "gemini"
+
+10. **apps/common/circuit_breaker.py**:
+    - CIRCUITS dict: "gemini" entry qo'shildi (5 failures, 120s timeout)
+
+11. **apps/common/views.py**:
+    - AIStatusView (GET): /api/v1/system/ai-status/ — barcha AI provider status
+
+12. **apps/common/urls.py**:
+    - path("ai-status/", AIStatusView.as_view()) qo'shildi
+
+13. **apps/words/infrastructure/models/word_models.py**:
+    - is_archived = BooleanField(default=False, db_index=True) qo'shildi
+    - archived_at = DateTimeField(null=True, blank=True) qo'shildi
+    - Meta.indexes: [user, is_archived] composite index
+
+14. **apps/words/domain/entities/word_entities.py**:
+    - is_archived: bool = False, archived_at: datetime | None = None
+
+15. **apps/words/domain/repositories/word_repositories.py**:
+    - 4 abstract method: archive_word, unarchive_word, get_archived_words, bulk_archive
+
+16. **apps/words/infrastructure/repositories/word_repo.py**:
+    - get_all_by_user(): is_archived=False filter
+    - get_count_by_user(): is_archived=False filter
+    - search(): is_archived=False filter
+    - get_by_category(): is_archived=False filter
+    - 4 yangi method: archive_word, unarchive_word, get_archived_words, bulk_archive
+
+17. **apps/words/infrastructure/repositories/word_stats_repo.py**:
+    - get_words_for_review(): is_archived=False filter
+    - get_review_words (focus/due/new): is_archived=False filter
+    - get_review_summary_stats(): is_archived=False filter
+    - get_stats(): is_archived=False filter
+
+18. **apps/words/presentation/urls.py**:
+    - 4 yangi URL: archive/, unarchive/, archived/, bulk-archive/
+
+19. **apps/words/application/use_cases/smart_import.py**:
+    - parse_structured_text() qayta yozildi: multi-unit (Unit 6, Unit 7...) support
+    - Parenthetical forms: "Choose (chose)" qo'llab-quvvatlanadi
+    - Em-dash `—` separator regex ga qo'shildi
+
+20. **docker-compose.yml**:
+    - GEMINI_API_KEY env var: web, celery_worker, celery_beat
+    - AI_PROVIDER=gemini env var
+
+21. **pyproject.toml**:
+    - google-generativeai >= 0.8.0 dependency
+    - gemini_provider.py coverage omit
+
+### Migration holati:
+    - YANGI MIGRATION KERAK: is_archived, archived_at fields uchun
+    - `python manage.py makemigrations words` kerak
+    - `python manage.py migrate` kerak
+
+### Test holati:
+    - 14 yangi test (7 gemini + 7 archive)
+    - Jami testlar: ~1067
+
+================================================================
+SPRINT 12.1 BACKEND O'ZGARISHLARI (2025-02-23)
+================================================================
+
+### TASK 1: AI Provider Fix
+1. **root .env**: AI_PROVIDER=groq, GROQ_API_KEY sinxronlashtirildi
+2. **wordfix-backend/.env**: AI_PROVIDER=groq (allaqachon to'g'ri edi)
+3. **docker-compose.yml**: AI_PROVIDER default gemini → groq; GEMINI_MODEL env qo'shildi
+4. **config/settings/base.py**: AI_PROVIDER default gemini → groq
+5. **apps/common/views.py**: AIPingView (POST, IsAuthenticated) qo'shildi; AIStatusView yaxshilandi (AllowAny, configured_providers batafsil)
+6. **apps/common/urls.py**: ai-ping/ URL qo'shildi
+
+### TASK 2: Smart Import Rewrite
+7. **apps/words/application/use_cases/smart_import.py**:
+   - COMMON_TRANSLATIONS: 150+ yangi yozuvlar (phrasal verbs, body parts, animals, travel)
+   - UZBEK_SUFFIXES tuple: 40+ o'zbek qo'shimchalar (lar, lik, chi, ning, etc.)
+   - UZBEK_COMMON_WORDS set: ~100 keng tarqalgan o'zbek so'zlar
+   - IGNORE_WORDS set: branding/noise (notebooklm, google, etc.)
+   - is_uzbek_word() funksiya: suffix match + lug'at tekshiruv
+   - is_english_word() yaxshilandi: unli tekshiruv + o'zbek filtr + ignore filtr
+   - detect_structured_format(): multi-pattern (numbered, dash-separated)
+   - _fallback_extract(): is_english_word() filtri, skipped_non_english stat
+   - _handle_mixed(): qayta yozildi, skipped_non_english stat
+
+### TASK 3: Chat System Fix
+8. **apps/words/application/use_cases/chat.py**:
+   - _parse_ai_json() helper: markdown code fence stripping (```json...```)
+   - StartChatUseCase: json.loads → _parse_ai_json()
+   - SendChatMessageUseCase: json.loads → _parse_ai_json()
+9. **core/services/ai/prompts/chat_prompts.py**:
+   - CHAT_SYSTEM_PROMPT: Groq/Llama optimized, "ONLY valid JSON" ta'kidlandi
+
+### TASK 4: Test Fixes
+10. **core/tests/test_ai_factory.py**: test_unsupported_provider → gemini qo'shildi
+11. **core/tests/test_ai_circuit_integration.py**: gemini circuit ham ochiladi; gemini fallback qo'shildi
+12. **core/tests/test_ai_factory_extended.py**: ping test mock path tuzatildi
+13. **apps/words/tests/test_word_archive.py**: 11 yangi test (YANGI FAYL)
+14. **core/tests/test_ai_factory_extended.py**: 10 yangi test (YANGI FAYL)
+
+### Test holati (Sprint 12.1):
+    - 1091 test collected
+    - 1087 passed, 4 failed (tuzatildi → hozir 1091 passed)
+    - 0 errors

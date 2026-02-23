@@ -30,6 +30,7 @@ class WordStatsMixin:
         qs = Word.objects.filter(
             user_id=user_id,
             is_mastered=False,
+            is_archived=False,
         ).filter(
             Q(next_review_at__isnull=True) | Q(next_review_at__lte=now)
         ).select_related("category").order_by("confidence_score")[:20]
@@ -50,6 +51,7 @@ class WordStatsMixin:
             qs = Word.objects.filter(
                 user_id=user_id,
                 is_mastered=False,
+                is_archived=False,
                 confidence_score__lt=30,
             ).select_related("category").order_by("confidence_score")[:limit]
             return [self._to_entity(w) for w in qs]
@@ -58,12 +60,14 @@ class WordStatsMixin:
         due_qs = Word.objects.filter(
             user_id=user_id,
             is_mastered=False,
+            is_archived=False,
             next_review_at__lte=now,
         ).select_related("category").order_by("next_review_at")
 
         new_qs = Word.objects.filter(
             user_id=user_id,
             is_mastered=False,
+            is_archived=False,
             next_review_at__isnull=True,
         ).select_related("category").order_by("created_at")[:5]
 
@@ -84,31 +88,32 @@ class WordStatsMixin:
 
         now = timezone.now()
 
-        total = Word.objects.filter(user_id=user_id).count()
-        mastered = Word.objects.filter(user_id=user_id, is_mastered=True).count()
+        total = Word.objects.filter(user_id=user_id, is_archived=False).count()
+        mastered = Word.objects.filter(user_id=user_id, is_mastered=True, is_archived=False).count()
         due_today = Word.objects.filter(
-            user_id=user_id, is_mastered=False, next_review_at__lte=now
+            user_id=user_id, is_mastered=False, is_archived=False, next_review_at__lte=now
         ).count()
         overdue = Word.objects.filter(
-            user_id=user_id, is_mastered=False,
+            user_id=user_id, is_mastered=False, is_archived=False,
             next_review_at__lt=now - timedelta(days=1)
         ).count()
         new_words = Word.objects.filter(
-            user_id=user_id, next_review_at__isnull=True
+            user_id=user_id, is_archived=False, next_review_at__isnull=True
         ).count()
         learning = total - mastered - new_words
 
         next_word = Word.objects.filter(
-            user_id=user_id, is_mastered=False, next_review_at__gt=now
+            user_id=user_id, is_mastered=False, is_archived=False, next_review_at__gt=now
         ).order_by("next_review_at").first()
         next_review_time = next_word.next_review_at.isoformat() if next_word else None
 
-        review_agg = Word.objects.filter(user_id=user_id).aggregate(
+        review_agg = Word.objects.filter(user_id=user_id, is_archived=False).aggregate(
             total_reviews=Sum("review_count"),
             total_correct=Sum("correct_count"),
         )
         total_reviews_agg = review_agg["total_reviews"] or 0
         total_correct_agg = review_agg["total_correct"] or 0
+        archived_count = Word.objects.filter(user_id=user_id, is_archived=True).count()
 
         return {
             "total_words": total,
@@ -120,6 +125,8 @@ class WordStatsMixin:
             "next_review_time": next_review_time,
             "total_reviews": total_reviews_agg,
             "total_correct": total_correct_agg,
+            "archived_words": archived_count,
+            "total_with_archived": total + archived_count,
         }
 
     def get_stats(self, user_id: UUID) -> dict:
@@ -130,7 +137,7 @@ class WordStatsMixin:
         if cached is not None:
             return cached
 
-        qs = Word.objects.filter(user_id=user_id)
+        qs = Word.objects.filter(user_id=user_id, is_archived=False)
         total = qs.count()
         if total == 0:
             return {

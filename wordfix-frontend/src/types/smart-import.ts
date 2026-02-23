@@ -7,8 +7,12 @@ export interface WordSuggestion {
   translation: string;
   part_of_speech: string;
   context_sentence: string;
-  difficulty: DifficultyLevel;
+  difficulty: DifficultyLevel | string;
   reason: string;
+  definition?: string;
+  pronunciation?: string;
+  example_sentence?: string;
+  in_user_library?: boolean;
   selected?: boolean;
 }
 
@@ -19,9 +23,13 @@ export interface AnalyzeTextRequest {
 
 export interface AnalyzeTextResponse {
   suggestions: WordSuggestion[];
+  parse_mode: 'structured' | 'ai_extracted' | 'ai' | 'mixed' | 'fallback';
   total_found: number;
-  already_known: number;
-  text_length: number;
+  already_in_library: number;
+  new_words?: number;
+  skipped_non_english?: number;
+  text_difficulty: string;
+  ai_used?: boolean;
 }
 
 export interface ImportWordsRequest {

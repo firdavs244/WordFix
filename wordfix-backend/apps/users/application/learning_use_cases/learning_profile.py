@@ -23,11 +23,19 @@ class GetLearningProfileUseCase:
         skills_data = analysis.get("skills", {})
         skills_scores = skills_data.get("all", {}) if isinstance(skills_data, dict) else {}
 
+        # Build style breakdown from analysis data (fallback to even distribution)
+        style_analysis = analysis.get("style", {})
+        style_breakdown = style_analysis.get("breakdown", {
+            "visual": 0.25, "auditory": 0.25,
+            "reading": 0.25, "kinesthetic": 0.25,
+        })
+
         return {
             "id": str(profile.id),
             "user_id": str(profile.user_id),
             "preferred_style": profile.preferred_style,
             "style_confidence": profile.style_confidence,
+            "style_breakdown": style_breakdown,
             "difficulty_level": profile.current_difficulty_level,
             "best_time": {
                 "start_hour": profile.best_hour_start or 9,
@@ -35,9 +43,9 @@ class GetLearningProfileUseCase:
                 "best_days": profile.best_days or [],
             },
             "session_stats": {
-                "avg_duration": 15,
-                "optimal_words": 20,
-                "retention_rate": 0.0,
+                "avg_duration": profile.avg_session_duration or 15,
+                "optimal_words": profile.optimal_words_per_session or 20,
+                "retention_rate": profile.avg_retention_rate or 0.0,
             },
             "skills": {
                 "strongest": profile.strongest_skills or [],
@@ -125,7 +133,22 @@ class AnalyzeLearningProfileUseCase:
                 "weakest": ["vocabulary", "grammar"],
             }
 
-        # 5. Update profile
+        # 5. Compute session stats from performance data
+        session_stats = {"avg_duration": 15, "optimal_words": 20, "retention_rate": 0.0}
+        try:
+            performances = self.performance_repo.get_recent(user_id, days=30)
+            if performances:
+                durations = [p.duration_minutes for p in performances if hasattr(p, "duration_minutes") and p.duration_minutes]
+                accuracies = [p.accuracy for p in performances if hasattr(p, "accuracy") and p.accuracy is not None]
+                if durations:
+                    session_stats["avg_duration"] = round(sum(durations) / len(durations))
+                if accuracies:
+                    session_stats["retention_rate"] = round(sum(accuracies) / len(accuracies), 2)
+                session_stats["optimal_words"] = min(max(len(performances) // 3, 5), 50)
+        except Exception:
+            logger.warning("Session stats computation failed, using defaults")
+
+        # 6. Update profile
         try:
             profile.preferred_style = style_result["style"]
             profile.style_confidence = style_result["confidence"]
@@ -136,6 +159,9 @@ class AnalyzeLearningProfileUseCase:
             profile.best_days = time_result.get("best_days", [])
             profile.strongest_skills = skills.get("strongest", [])
             profile.weakest_skills = skills.get("weakest", [])
+            profile.avg_session_duration = session_stats["avg_duration"]
+            profile.optimal_words_per_session = session_stats["optimal_words"]
+            profile.avg_retention_rate = session_stats["retention_rate"]
             profile.last_analyzed_at = datetime.now(timezone.utc)
             profile.analysis_data = {
                 "style": style_result,

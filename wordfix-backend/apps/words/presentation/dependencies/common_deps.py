@@ -69,12 +69,22 @@ def get_chat_repository() -> DjangoChatRepository:
 
 
 def _get_ai_provider():
-    """Get AI provider (returns None if not configured)."""
+    """Get AI provider (returns FallbackAIProvider if real providers unavailable)."""
+    import logging
+    _logger = logging.getLogger(__name__)
     try:
         from core.services.ai.ai_factory import AIProviderFactory
-        return AIProviderFactory.get_provider()
-    except Exception:
-        return None
+        provider = AIProviderFactory.get_provider()
+        _logger.info(f"AI provider loaded: {provider.get_provider_name()}")
+        return provider
+    except Exception as e:
+        _logger.error(f"Failed to load AI provider: {e}", exc_info=True)
+        # Return fallback instead of None so chat still works
+        try:
+            from core.services.ai.ai_factory import FallbackAIProvider
+            return FallbackAIProvider()
+        except Exception:
+            return None
 
 
 def _get_tts_provider():

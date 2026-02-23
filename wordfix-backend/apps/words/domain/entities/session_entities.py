@@ -275,3 +275,45 @@ class ListeningRoundEntity:
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+@dataclass
+class SynonymAntonymRoundEntity:
+    """Synonym/Antonym round entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    session_id: UUID = field(default_factory=uuid4)
+    round_number: int = 1
+    question_type: str = "synonym"
+    word_text: str = ""
+    correct_answer: str = ""
+    options: list = field(default_factory=list)
+    user_answer: str = ""
+    is_correct: bool | None = None
+    score: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class IrregularVerbRoundEntity:
+    """Irregular verb round entity."""
+
+    id: UUID = field(default_factory=uuid4)
+    session_id: UUID = field(default_factory=uuid4)
+    round_number: int = 1
+    infinitive: str = ""
+    translation: str = ""
+    correct_past_simple: str = ""
+    correct_past_participle: str = ""
+    user_past_simple: str = ""
+    user_past_participle: str = ""
+    past_simple_correct: bool | None = None
+    past_participle_correct: bool | None = None
+    attempts_used: int = 0
+    hints_shown: dict = field(default_factory=dict)
+    score: int = 0
+    is_active: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

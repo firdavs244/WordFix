@@ -96,3 +96,37 @@ STORY_FALLBACK_TEMPLATES = {
         "Every night at midnight, the painting on the wall changed. Tonight it showed something about {target_word}.",
     ],
 }
+
+
+# =============================================================================
+# Synonym & Antonym Game prompt
+# =============================================================================
+
+SYNONYM_ANTONYM_PROMPT = """You are an English vocabulary expert helping a {proficiency_level} level learner.
+
+For each word below, provide ONE synonym AND ONE antonym with 3 distractor options each.
+Words: {words}
+
+Respond ONLY with valid JSON (no markdown):
+{{
+  "questions": [
+    {{
+      "word": "happy",
+      "synonym": {{
+        "correct": "joyful",
+        "options": ["joyful", "angry", "tired", "slow"]
+      }},
+      "antonym": {{
+        "correct": "sad",
+        "options": ["sad", "quick", "bright", "loud"]
+      }}
+    }}
+  ]
+}}
+
+Rules:
+- Options must include the correct answer + 3 plausible distractors
+- Distractors should be real English words at {proficiency_level} level
+- Shuffle option order randomly
+- Keep answers appropriate for {proficiency_level} level
+"""

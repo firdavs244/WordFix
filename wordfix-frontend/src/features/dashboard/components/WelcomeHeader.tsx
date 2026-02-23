@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/motion';
 import { GradientText } from '@/components/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useWords } from '@/features/words/hooks/useWords';
 
 const QUOTES = [
   'Every word brings you closer to fluency',
@@ -11,6 +12,31 @@ const QUOTES = [
   'Your brain is a word machine',
   'Today is a great day to learn',
 ];
+
+// Default words when user has no words yet (rotates daily)
+const DEFAULT_WORDS = [
+  { word: 'Serendipity', translation: 'Lucky discovery' },
+  { word: 'Eloquent', translation: 'Fluent, persuasive' },
+  { word: 'Resilience', translation: 'Ability to recover' },
+  { word: 'Perseverance', translation: 'Persistence' },
+  { word: 'Ephemeral', translation: 'Short-lived' },
+  { word: 'Ubiquitous', translation: 'Found everywhere' },
+  { word: 'Pragmatic', translation: 'Practical' },
+  { word: 'Meticulous', translation: 'Very careful' },
+  { word: 'Profound', translation: 'Very deep' },
+  { word: 'Versatile', translation: 'Multi-talented' },
+  { word: 'Ambiguous', translation: 'Unclear' },
+  { word: 'Innovative', translation: 'Creative, new' },
+  { word: 'Diligent', translation: 'Hardworking' },
+  { word: 'Benevolent', translation: 'Kind, generous' },
+];
+
+function getDayOfYearSeed(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = now.getTime() - start.getTime();
+  return Math.floor(diff / 86400000);
+}
 
 function getGreeting(hour: number): { text: string; emoji: string } {
   if (hour >= 5 && hour < 12) return { text: 'Good morning', emoji: '☀️' };
@@ -22,18 +48,33 @@ function getGreeting(hour: number): { text: string; emoji: string } {
 export default function WelcomeHeader() {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.full_name?.split(' ')[0] || user?.username || 'Learner';
+  const wordsQuery = useWords({ page: 1, page_size: 100 });
+  const userWords = wordsQuery.data?.data ?? [];
 
-  const { greeting, quote, dateStr } = useMemo(() => {
+  const { greeting, quote, dateStr, wordOfDay } = useMemo(() => {
     const now = new Date();
     const g = getGreeting(now.getHours());
+    const seed = getDayOfYearSeed();
+
+    // Pick Word of the Day from user's words or defaults
+    let wod: { word: string; translation: string };
+    if (userWords.length > 0) {
+      const idx = seed % userWords.length;
+      const w = userWords[idx];
+      wod = { word: w.original_word || 'Learn', translation: w.translation || '' };
+    } else {
+      wod = DEFAULT_WORDS[seed % DEFAULT_WORDS.length];
+    }
+
     return {
       greeting: g,
-      quote: QUOTES[Math.floor(Math.random() * QUOTES.length)],
+      quote: QUOTES[seed % QUOTES.length],
       dateStr: now.toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
       }),
+      wordOfDay: wod,
     };
-  }, []);
+  }, [userWords]);
 
   return (
     <motion.div
@@ -67,7 +108,10 @@ export default function WelcomeHeader() {
         <div className="hidden lg:block">
           <div className="rotate-3 animate-float rounded-xl border border-border/30 bg-card/80 px-5 py-3 shadow-lg backdrop-blur-sm opacity-60">
             <p className="text-xs text-muted-foreground">Word of the day</p>
-            <p className="font-heading font-semibold text-sm mt-0.5">Serendipity</p>
+            <p className="font-heading font-semibold text-sm mt-0.5">{wordOfDay.word}</p>
+            {wordOfDay.translation && (
+              <p className="text-xs text-muted-foreground/70 mt-0.5">{wordOfDay.translation}</p>
+            )}
           </div>
         </div>
       </div>

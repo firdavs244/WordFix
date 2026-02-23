@@ -1,5 +1,5 @@
 """
-GameSession, StoryRound, ListeningRound Django ORM models.
+GameSession, StoryRound, ListeningRound, SynonymAntonymRound, IrregularVerbRound Django ORM models.
 """
 
 from django.conf import settings
@@ -17,6 +17,8 @@ class GameSession(AbstractBaseModel):
         ("word_context", "Word Context"),
         ("story_builder", "Story Builder"),
         ("listening_challenge", "Listening Challenge"),
+        ("synonym_antonym", "Synonym & Antonym"),
+        ("irregular_verbs", "Irregular Verbs"),
     ]
 
     user = models.ForeignKey(
@@ -104,6 +106,77 @@ class ListeningRound(AbstractBaseModel):
         unique_together = ["session", "round_number"]
         verbose_name = "Listening Round"
         verbose_name_plural = "Listening Rounds"
+
+
+class SynonymAntonymRound(AbstractBaseModel):
+    """A single round in a Synonym & Antonym game."""
+
+    QUESTION_TYPE_CHOICES = [
+        ("synonym", "Synonym"),
+        ("antonym", "Antonym"),
+    ]
+
+    session = models.ForeignKey(
+        GameSession,
+        on_delete=models.CASCADE,
+        related_name="synonym_antonym_rounds",
+    )
+    word = models.ForeignKey(
+        "words.Word",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    round_number = models.PositiveIntegerField()
+    question_type = models.CharField(max_length=10, choices=QUESTION_TYPE_CHOICES)
+    word_text = models.CharField(max_length=100, default="")
+    correct_answer = models.CharField(max_length=100)
+    options = models.JSONField(default=list)
+    user_answer = models.CharField(max_length=100, blank=True, default="")
+    is_correct = models.BooleanField(null=True, blank=True)
+    score = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "synonym_antonym_rounds"
+        ordering = ["round_number"]
+        unique_together = ["session", "round_number"]
+        verbose_name = "Synonym Antonym Round"
+        verbose_name_plural = "Synonym Antonym Rounds"
+
+    def __str__(self) -> str:
+        return f"SynonymAntonymRound {self.round_number} for session {self.session_id}"
+
+
+class IrregularVerbRound(AbstractBaseModel):
+    """A single round in an Irregular Verbs game."""
+
+    session = models.ForeignKey(
+        GameSession,
+        on_delete=models.CASCADE,
+        related_name="irregular_verb_rounds",
+    )
+    round_number = models.PositiveIntegerField()
+    infinitive = models.CharField(max_length=50)
+    translation = models.CharField(max_length=100, default="")
+    correct_past_simple = models.CharField(max_length=50)
+    correct_past_participle = models.CharField(max_length=50)
+    user_past_simple = models.CharField(max_length=50, blank=True, default="")
+    user_past_participle = models.CharField(max_length=50, blank=True, default="")
+    past_simple_correct = models.BooleanField(null=True, blank=True)
+    past_participle_correct = models.BooleanField(null=True, blank=True)
+    attempts_used = models.PositiveIntegerField(default=0)
+    hints_shown = models.JSONField(default=dict)
+    score = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "irregular_verb_rounds"
+        ordering = ["round_number"]
+        unique_together = ["session", "round_number"]
+        verbose_name = "Irregular Verb Round"
+        verbose_name_plural = "Irregular Verb Rounds"
+
+    def __str__(self) -> str:
+        return f"IrregularVerbRound {self.round_number} ({self.infinitive}) for session {self.session_id}"
 
     def __str__(self) -> str:
         return f"ListeningRound {self.round_number} for session {self.session_id}"

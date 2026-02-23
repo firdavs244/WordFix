@@ -2,7 +2,7 @@
 01_PROJECT_ARCHITECTURE.txt
 WordFix — AI-Powered English Vocabulary Learning Platform
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+Hujjat yangilangan sana: 2026-02-23 (Sprint 12 — Gemini AI, Word Archive, Import Fix, UX Innovations)
 ================================================================
 
 ================================================================
@@ -36,6 +36,7 @@ Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes
 | drf-spectacular               | >=0.27.0    | OpenAPI/Swagger documentation     |
 | groq                          | >=0.12.0    | Groq AI API client                |
 | openai                        | >=1.50.0    | OpenAI API client                 |
+| google-generativeai           | >=0.8.0     | Google Gemini AI client           |
 | gTTS                          | >=2.5.0     | Google Text-to-Speech             |
 | Pillow                        | >=10.0.0    | Image processing                  |
 | django-allauth                | >=65.0      | Social authentication             |
@@ -373,7 +374,7 @@ wordfix-backend/
 │       │   │   ├── word_models.py      (187 qator) # Word, WordCategory, WordDistractor
 │       │   │   ├── review_models.py    (139 qator) # ReviewSession, Log, Streak, Activity
 │       │   │   ├── test_models.py      (103 qator) # TestSession, TestQuestion
-│       │   │   ├── game_models.py      (113 qator) # GameSession, StoryRound, ListeningRound
+│       │   │   ├── game_models.py      (180+ qator) # GameSession, StoryRound, ListeningRound, SynonymAntonymRound, IrregularVerbRound
 │       │   │   ├── chat_models.py      (66 qator)  # ChatSession, ChatMessage
 │       │   │   ├── confusing_models.py (41 qator)  # ConfusingPair
 │       │   │   └── challenge_models.py (34 qator)  # DailyChallenge
@@ -403,7 +404,7 @@ wordfix-backend/
 │       │       ├── word_views.py               # CRUD, bulk, stats views
 │       │       ├── review_views.py             # Review session views
 │       │       ├── test_views.py               # Test session views
-│       │       ├── game_views.py               # 5 game type views
+│       │       ├── game_views.py               # 7 game type views
 │       │       ├── chat_views.py               # Chat session views
 │       │       ├── analytics_views.py          # Analytics views
 │       │       ├── confusing_views.py          # Confusing pair views
@@ -419,9 +420,10 @@ wordfix-backend/
 │   │   └── tts_provider.py             (32 qator)  # AbstractTTSProvider
 │   ├── services/
 │   │   ├── ai/
-│   │   │   ├── ai_factory.py           (143 qator) # AIProviderFactory + Fallback
+│   │   │   ├── ai_factory.py           (200+ qator) # AIProviderFactory + Fallback + 3-provider chains
 │   │   │   ├── groq_provider.py        (168 qator) # Groq API implementation
 │   │   │   ├── openai_provider.py                  # OpenAI API implementation
+│   │   │   ├── gemini_provider.py      (180+ qator) # Google Gemini API implementation (Sprint 12)
 │   │   │   └── prompts/                            # AI prompt templates
 │   │   └── tts/
 │   │       └── gtts_provider.py                    # Google TTS implementation
@@ -495,9 +497,9 @@ wordfix-frontend/
 │       ├── profile/                             # 9 komponentlar
 │       ├── progress/                            # 6 komponentlar
 │       ├── review/                              # 24 komponentlar
-│       ├── system/                              # 1 komponent
+│       ├── system/                              # 4 komponentlar (AIStatusCard, HealthBanner, SystemStatusPage)
 │       ├── tests/                               # 19 komponentlar
-│       └── words/                               # 15 komponentlar
+│       └── words/                               # 20+ komponentlar (WordDetailModal, ArchiveButton, EnrichmentStatusBadge, ArchivedWordsSection)
 ├── public/assets/images/                        # Static images
 ├── tailwind.config.ts                           # Tailwind configuration
 ├── tsconfig.json                                # TypeScript config
@@ -590,9 +592,11 @@ Local Apps:
   - BEAT_SCHEDULER: DatabaseScheduler
 
 #### AI PROVIDER:
-  - AI_PROVIDER: groq (default)
+  - AI_PROVIDER: gemini (default, Sprint 12)
+  - GEMINI_MODEL: gemini-2.0-flash
   - GROQ_MODEL: llama-3.3-70b-versatile
   - OPENAI_MODEL: gpt-4o-mini
+  - Fallback chains: gemini→groq→openai, groq→gemini→openai, openai→gemini→groq
   - AI_MAX_RETRIES: 3
   - AI_TIMEOUT: 30s
   - WORD_ENRICHMENT_ENABLED: True (test da False)
@@ -637,13 +641,41 @@ UMUMIY STATISTIKA
 
 | Ko'rsatkich              | Backend    | Frontend   | Jami       |
 |--------------------------|------------|------------|------------|
-| Fayllar soni             | 315        | 523        | 838        |
-| Umumiy qator soni        | ~28,575    | ~22,757    | ~51,332    |
-| Model soni               | 28         | -          | 28         |
-| API endpoint soni        | ~75        | -          | ~75        |
-| Use case soni            | ~30        | -          | ~30        |
+| Fayllar soni             | 330+       | 545+       | 875+       |
+| Umumiy qator soni        | ~30,500    | ~24,500    | ~55,000    |
+| Model soni               | 30         | -          | 30         |
+| API endpoint soni        | ~96        | -          | ~96        |
+| Use case soni            | ~40        | -          | ~40        |
 | Repository soni          | ~15        | -          | ~15        |
-| Frontend sahifalar       | -          | ~30        | ~30        |
-| Frontend komponentlar    | -          | ~250+      | ~250+      |
-| Test soni (backend)      | 1053       | -          | 1053       |
+| Frontend sahifalar       | -          | ~33        | ~33        |
+| Frontend komponentlar    | -          | ~270+      | ~270+      |
+| Test soni (backend)      | 1091+      | -          | 1091+      |
 | Feature modullari        | -          | 19         | 19         |
+
+================================================================
+SPRINT 12.1 ARXITEKTURA O'ZGARISHLARI (2025-02-23)
+================================================================
+
+### AI Provider Tizimi
+- PRIMARY provider: Groq (llama-3.3-70b-versatile)
+- FALLBACK provider: Gemini (gemini-2.0-flash, free tier - rate limited)
+- AI_PROVIDER=groq (root .env, backend .env, docker-compose defaults, base.py)
+- Circuit Breaker: provider-specific, 5 failure threshold
+- Fallback chain: groq → gemini → openai → FallbackAIProvider
+
+### Yangi Endpointlar
+- POST /api/v1/system/ai-ping/ — Real AI call test (IsAuthenticated)
+- GET /api/v1/system/ai-status/ — Provider config details (AllowAny)
+
+### Smart Import O'zgarishlari
+- 150+ yangi COMMON_TRANSLATIONS entries
+- is_uzbek_word() — O'zbek so'z filtrlash (suffixlar + lug'at)
+- is_english_word() — Yaxshilangan: unli tekshiruv, O'zbek filtr, branding filtr
+- detect_structured_format() — Multi-pattern: numbered, dash-separated
+- _fallback_extract() — is_english_word() filtratsiya qo'shildi
+- skipped_non_english stat har modal uchun
+
+### Chat Tizimi
+- _parse_ai_json() — Markdown code fence stripping support
+- CHAT_SYSTEM_PROMPT — Groq/Llama optimized (stricter JSON)
+- generate_chat() → _parse_ai_json() (was json.loads)

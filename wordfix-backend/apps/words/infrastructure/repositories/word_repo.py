@@ -86,6 +86,8 @@ class DjangoWordRepository(WordStatsMixin, AbstractWordRepository):
             easiness_factor=word.easiness_factor,
             repetition_number=word.repetition_number,
             interval_days=word.interval_days,
+            is_archived=word.is_archived,
+            archived_at=word.archived_at,
             is_active=word.is_active,
             created_at=word.created_at,
             updated_at=word.updated_at,
@@ -102,7 +104,7 @@ class DjangoWordRepository(WordStatsMixin, AbstractWordRepository):
         self, user_id: UUID, filters: dict | None = None,
         ordering: str = "-created_at", page: int = 1, page_size: int = 20,
     ) -> tuple[list[WordEntity], int]:
-        qs = Word.objects.filter(user_id=user_id).select_related("category")
+        qs = Word.objects.filter(user_id=user_id, is_archived=False).select_related("category")
 
         if filters:
             if filters.get("category_id"):
@@ -183,7 +185,7 @@ class DjangoWordRepository(WordStatsMixin, AbstractWordRepository):
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
-        count = Word.objects.filter(user_id=user_id).count()
+        count = Word.objects.filter(user_id=user_id, is_archived=False).count()
         cache.set(cache_key, count, timeout=120)  # 2 min
         return count
 
@@ -192,6 +194,7 @@ class DjangoWordRepository(WordStatsMixin, AbstractWordRepository):
     ) -> tuple[list[WordEntity], int]:
         qs = Word.objects.filter(
             user_id=user_id,
+            is_archived=False,
         ).filter(
             Q(original_word__icontains=query) | Q(translation__icontains=query)
         ).select_related("category")
@@ -204,7 +207,7 @@ class DjangoWordRepository(WordStatsMixin, AbstractWordRepository):
 
     def get_by_category(self, user_id: UUID, category_id: UUID) -> list[WordEntity]:
         qs = Word.objects.filter(
-            user_id=user_id, category_id=category_id
+            user_id=user_id, category_id=category_id, is_archived=False
         ).select_related("category")
         return [self._to_entity(w) for w in qs]
 
@@ -238,6 +241,49 @@ class DjangoWordRepository(WordStatsMixin, AbstractWordRepository):
 
         return {"created": created, "skipped": skipped, "errors": errors}
 
+    # ─── Archive methods ──────────────────────────────────────────────────────
+
+    def archive_word(self, user_id: UUID, word_id: UUID) -> WordEntity:
+        try:
+            word = Word.objects.get(id=word_id, user_id=user_id)
+        except Word.DoesNotExist:
+            raise EntityNotFoundError("Word not found.")
+        word.is_archived = True
+        word.archived_at = timezone.now()
+        word.save(update_fields=["is_archived", "archived_at", "updated_at"])
+        self._invalidate_user_cache(user_id)
+        return self._to_entity(Word.objects.select_related("category").get(id=word.id))
+
+    def unarchive_word(self, user_id: UUID, word_id: UUID) -> WordEntity:
+        try:
+            word = Word.objects.get(id=word_id, user_id=user_id)
+        except Word.DoesNotExist:
+            raise EntityNotFoundError("Word not found.")
+        word.is_archived = False
+        word.archived_at = None
+        word.save(update_fields=["is_archived", "archived_at", "updated_at"])
+        self._invalidate_user_cache(user_id)
+        return self._to_entity(Word.objects.select_related("category").get(id=word.id))
+
+    def get_archived_words(
+        self, user_id: UUID, page: int = 1, page_size: int = 20,
+    ) -> tuple[list[WordEntity], int]:
+        qs = Word.objects.filter(
+            user_id=user_id, is_archived=True
+        ).select_related("category").order_by("-archived_at")
+        total = qs.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        words = [self._to_entity(w) for w in qs[start:end]]
+        return words, total
+
+    def bulk_archive(self, user_id: UUID, word_ids: list[UUID]) -> int:
+        now = timezone.now()
+        count = Word.objects.filter(
+            id__in=word_ids, user_id=user_id, is_archived=False,
+        ).update(is_archived=True, archived_at=now)
+        self._invalidate_user_cache(user_id)
+        return count
 
 
 class DjangoWordCategoryRepository(AbstractWordCategoryRepository):

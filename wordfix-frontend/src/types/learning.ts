@@ -3,6 +3,7 @@
 export interface LearningProfile {
   preferred_style: 'visual' | 'auditory' | 'reading' | 'kinesthetic';
   style_confidence: number;
+  style_breakdown?: Record<string, number>;
   best_time: {
     start_hour: number;
     end_hour: number;

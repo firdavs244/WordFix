@@ -170,3 +170,98 @@ export interface ListeningCompleteResponse {
   accuracy_pct: number;
   xp_earned: number;
 }
+
+// ─── Synonym & Antonym Types ───────────────────────────────────────────────────
+
+export interface SynonymAntonymRound {
+  round_number: number;
+  word: string;
+  question_type: 'synonym' | 'antonym';
+  options: string[];
+}
+
+export interface SynonymAntonymStartResponse {
+  session_id: string;
+  total_rounds: number;
+  current_round: number;
+  rounds: SynonymAntonymRound[];
+}
+
+export interface SynonymAntonymAnswerResponse {
+  is_correct: boolean;
+  correct_answer: string;
+  score: number;
+  next_round: SynonymAntonymRound | null;
+  combo: number;
+  multiplier: number;
+  xp_earned: number;
+}
+
+export interface SynonymAntonymCompleteResponse {
+  total_score: number;
+  max_score: number;
+  rounds: Array<{
+    round_number: number;
+    word: string;
+    question_type: string;
+    correct_answer: string;
+    user_answer: string;
+    is_correct: boolean;
+    score: number;
+  }>;
+  accuracy_pct: number;
+  xp_earned: number;
+  badges_earned: Array<{ code: string; name: string; icon: string }>;
+}
+
+// ─── Irregular Verbs Types ──────────────────────────────────────────────────────
+
+export interface IrregularVerbRound {
+  round_number: number;
+  infinitive: string;
+  translation: string;
+  max_attempts: number;
+}
+
+export interface IrregularVerbsStartResponse {
+  session_id: string;
+  total_rounds: number;
+  current_round: number;
+  tier: string;
+  rounds: IrregularVerbRound[];
+}
+
+export interface IrregularVerbAnswerResponse {
+  past_simple_correct: boolean;
+  past_participle_correct: boolean;
+  correct_past_simple: string;
+  correct_past_participle: string;
+  score: number;
+  attempts_used: number;
+  attempts_remaining: number;
+  hints: Record<string, string>;
+  next_round: IrregularVerbRound | null;
+  combo: number;
+  multiplier: number;
+  xp_earned: number;
+}
+
+export interface IrregularVerbsCompleteResponse {
+  total_score: number;
+  max_score: number;
+  rounds: Array<{
+    round_number: number;
+    infinitive: string;
+    translation: string;
+    correct_past_simple: string;
+    correct_past_participle: string;
+    user_past_simple: string;
+    user_past_participle: string;
+    past_simple_correct: boolean;
+    past_participle_correct: boolean;
+    score: number;
+  }>;
+  accuracy_pct: number;
+  xp_earned: number;
+  badges_earned: Array<{ code: string; name: string; icon: string }>;
+}

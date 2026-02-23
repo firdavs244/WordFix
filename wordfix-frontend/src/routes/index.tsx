@@ -53,6 +53,8 @@ const WordContextPage = lazy(() => import('@/features/games/word-context/WordCon
 const GameResultPage = lazy(() => import('@/features/games/GameResultPage'));
 const StoryBuilderPage = lazy(() => import('@/features/games/story-builder/StoryBuilderPage'));
 const ListeningPage = lazy(() => import('@/features/games/listening/ListeningPage'));
+const SynonymAntonymPage = lazy(() => import('@/features/games/synonym-antonym/SynonymAntonymPage'));
+const IrregularVerbsPage = lazy(() => import('@/features/games/irregular-verbs/IrregularVerbsPage'));
 const BadgesPage = lazy(() =>
   import('@/features/progress/pages/BadgesPage').then((m) => ({
     default: m.BadgesPage,
@@ -91,6 +93,11 @@ const OnboardingPage = lazy(() =>
 const LearningProfilePage = lazy(() =>
   import('@/features/learning-profile/LearningProfilePage').then((m) => ({
     default: m.LearningProfilePage,
+  })),
+);
+const SystemStatusPage = lazy(() =>
+  import('@/features/system/pages/SystemStatusPage').then((m) => ({
+    default: m.SystemStatusPage,
   })),
 );
 
@@ -178,6 +185,8 @@ export function AppRoutes() {
           <Route path="/games/word-context" element={<WordContextPage />} />
           <Route path="/games/story-builder" element={<StoryBuilderPage />} />
           <Route path="/games/listening" element={<ListeningPage />} />
+          <Route path="/games/synonym-antonym" element={<SynonymAntonymPage />} />
+          <Route path="/games/irregular-verbs" element={<IrregularVerbsPage />} />
           <Route path="/games/result/:sessionId" element={<GameResultPage />} />
           <Route path="/badges" element={<BadgesPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
@@ -188,6 +197,7 @@ export function AppRoutes() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/confusing-pairs" element={<ConfusingPairsPage />} />
           <Route path="/learning-profile" element={<LearningProfilePage />} />
+          <Route path="/system" element={<SystemStatusPage />} />
         </Route>
 
         {/* 404 */}

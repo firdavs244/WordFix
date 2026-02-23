@@ -8,13 +8,22 @@ import StreakFlame from './StreakFlame';
 import StreakWeekDots from './StreakWeekDots';
 
 export default function StreakCard() {
-  const { data, isLoading } = useStreak();
+  const { data, isLoading, isError, refetch } = useStreak();
   const streak = data?.data;
 
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-border/50 bg-card p-5 lg:p-6 shadow-card">
         <Skeleton className="h-20 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-card p-5 lg:p-6 shadow-card flex flex-col items-center justify-center gap-2 text-center">
+        <p className="text-xs text-muted-foreground">Could not load streak</p>
+        <button onClick={() => refetch()} className="text-xs text-primary hover:underline">Retry</button>
       </div>
     );
   }

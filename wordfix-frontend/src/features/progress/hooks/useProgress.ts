@@ -24,6 +24,8 @@ export function useUserProgress() {
   return useQuery({
     queryKey: progressKeys.progress(),
     queryFn: () => progressApi.getUserProgress(),
+    staleTime: 60_000,
+    retry: 2,
   });
 }
 

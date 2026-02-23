@@ -11,12 +11,18 @@ const words: WordSuggestion[] = [
 describe('TextImportReview', () => {
   const props = {
     words,
+    filteredWords: words,
     selectedIds: new Set([0]),
     onToggle: vi.fn(),
     onSelectAll: vi.fn(),
     onDeselectAll: vi.fn(),
     onImport: vi.fn(),
     isImporting: false,
+    parseMode: 'structured',
+    textDifficulty: 'A2',
+    alreadyInLibrary: 0,
+    levelFilter: 'all',
+    onLevelFilterChange: vi.fn(),
   };
 
   it('shows word count', () => {

@@ -5,10 +5,21 @@ Game session repository implementation using Django ORM.
 from uuid import UUID
 
 from apps.common.exceptions import EntityNotFoundError
-from apps.words.domain.entities import GameSessionEntity, StoryRoundEntity, ListeningRoundEntity
+from apps.words.domain.entities import (
+    GameSessionEntity,
+    IrregularVerbRoundEntity,
+    ListeningRoundEntity,
+    StoryRoundEntity,
+    SynonymAntonymRoundEntity,
+)
 from apps.words.domain.repositories import AbstractGameSessionRepository
 from apps.words.infrastructure.models import GameSession
-from apps.words.infrastructure.models.game_models import StoryRound, ListeningRound
+from apps.words.infrastructure.models.game_models import (
+    IrregularVerbRound,
+    ListeningRound,
+    StoryRound,
+    SynonymAntonymRound,
+)
 
 
 class DjangoGameSessionRepository(AbstractGameSessionRepository):
@@ -78,7 +89,8 @@ class DjangoGameSessionRepository(AbstractGameSessionRepository):
         # Per-game stats
         stats_by_type = {}
         for game_type in ["speed_round", "word_match", "word_context",
-                          "story_builder", "listening_challenge"]:
+                          "story_builder", "listening_challenge",
+                          "synonym_antonym", "irregular_verbs"]:
             type_qs = qs.filter(game_type=game_type)
             count = type_qs.count()
             best_score = type_qs.aggregate(best=Max("score"))["best"] or 0
@@ -206,3 +218,125 @@ class DjangoGameSessionRepository(AbstractGameSessionRepository):
             setattr(lr, field, value)
         lr.save()
         return self._listening_round_to_entity(lr)
+
+    # ── Synonym Antonym Round helpers ────────────────────────────────
+
+    @staticmethod
+    def _sa_round_to_entity(sa: SynonymAntonymRound) -> SynonymAntonymRoundEntity:
+        return SynonymAntonymRoundEntity(
+            id=sa.id,
+            session_id=sa.session_id,
+            round_number=sa.round_number,
+            question_type=sa.question_type,
+            word_text=sa.word_text,
+            correct_answer=sa.correct_answer,
+            options=sa.options,
+            user_answer=sa.user_answer,
+            is_correct=sa.is_correct,
+            score=sa.score,
+            is_active=sa.is_active,
+            created_at=sa.created_at,
+            updated_at=sa.updated_at,
+        )
+
+    def create_synonym_antonym_round(
+        self, session_id: UUID, **kwargs
+    ) -> SynonymAntonymRoundEntity:
+        sa = SynonymAntonymRound.objects.create(session_id=session_id, **kwargs)
+        return self._sa_round_to_entity(sa)
+
+    def get_synonym_antonym_rounds(
+        self, session_id: UUID
+    ) -> list[SynonymAntonymRoundEntity]:
+        rounds = SynonymAntonymRound.objects.filter(
+            session_id=session_id,
+        ).order_by("round_number")
+        return [self._sa_round_to_entity(r) for r in rounds]
+
+    def get_synonym_antonym_round(
+        self, session_id: UUID, round_number: int
+    ) -> SynonymAntonymRoundEntity:
+        try:
+            sa = SynonymAntonymRound.objects.get(
+                session_id=session_id, round_number=round_number,
+            )
+            return self._sa_round_to_entity(sa)
+        except SynonymAntonymRound.DoesNotExist:
+            raise EntityNotFoundError(
+                f"Synonym/Antonym round {round_number} not found."
+            )
+
+    def update_synonym_antonym_round(
+        self, round_id: UUID, **kwargs
+    ) -> SynonymAntonymRoundEntity:
+        try:
+            sa = SynonymAntonymRound.objects.get(id=round_id)
+        except SynonymAntonymRound.DoesNotExist:
+            raise EntityNotFoundError("Synonym/Antonym round not found.")
+        for field, value in kwargs.items():
+            setattr(sa, field, value)
+        sa.save()
+        return self._sa_round_to_entity(sa)
+
+    # ── Irregular Verb Round helpers ─────────────────────────────────
+
+    @staticmethod
+    def _iv_round_to_entity(iv: IrregularVerbRound) -> IrregularVerbRoundEntity:
+        return IrregularVerbRoundEntity(
+            id=iv.id,
+            session_id=iv.session_id,
+            round_number=iv.round_number,
+            infinitive=iv.infinitive,
+            translation=iv.translation,
+            correct_past_simple=iv.correct_past_simple,
+            correct_past_participle=iv.correct_past_participle,
+            user_past_simple=iv.user_past_simple,
+            user_past_participle=iv.user_past_participle,
+            past_simple_correct=iv.past_simple_correct,
+            past_participle_correct=iv.past_participle_correct,
+            attempts_used=iv.attempts_used,
+            hints_shown=iv.hints_shown,
+            score=iv.score,
+            is_active=iv.is_active,
+            created_at=iv.created_at,
+            updated_at=iv.updated_at,
+        )
+
+    def create_irregular_verb_round(
+        self, session_id: UUID, **kwargs
+    ) -> IrregularVerbRoundEntity:
+        iv = IrregularVerbRound.objects.create(session_id=session_id, **kwargs)
+        return self._iv_round_to_entity(iv)
+
+    def get_irregular_verb_rounds(
+        self, session_id: UUID
+    ) -> list[IrregularVerbRoundEntity]:
+        rounds = IrregularVerbRound.objects.filter(
+            session_id=session_id,
+        ).order_by("round_number")
+        return [self._iv_round_to_entity(r) for r in rounds]
+
+    def get_irregular_verb_round(
+        self, session_id: UUID, round_number: int
+    ) -> IrregularVerbRoundEntity:
+        try:
+            iv = IrregularVerbRound.objects.get(
+                session_id=session_id, round_number=round_number,
+            )
+            return self._iv_round_to_entity(iv)
+        except IrregularVerbRound.DoesNotExist:
+            raise EntityNotFoundError(
+                f"Irregular verb round {round_number} not found."
+            )
+
+    def update_irregular_verb_round(
+        self, round_id: UUID, **kwargs
+    ) -> IrregularVerbRoundEntity:
+        try:
+            iv = IrregularVerbRound.objects.get(id=round_id)
+        except IrregularVerbRound.DoesNotExist:
+            raise EntityNotFoundError("Irregular verb round not found.")
+        for field, value in kwargs.items():
+            setattr(iv, field, value)
+        iv.save()
+        return self._iv_round_to_entity(iv)

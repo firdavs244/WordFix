@@ -33,16 +33,16 @@ class AnalyzeTextView(APIView):
         serializer.is_valid(raise_exception=True)
 
         use_case = get_analyze_text_use_case()
-        suggestions = use_case.execute(
+        result = use_case.execute(
             user_id=request.user.id,
             text=serializer.validated_data["text"],
-            max_words=serializer.validated_data.get("max_words", 20),
+            max_words=serializer.validated_data.get("max_words", 50),
         )
 
         return Response(
             build_success_response(
-                data={"suggestions": suggestions},
-                message=f"Found {len(suggestions)} words for you.",
+                data=result,
+                message=f"Found {result.get('total_found', 0)} words for you.",
             )
         )
 

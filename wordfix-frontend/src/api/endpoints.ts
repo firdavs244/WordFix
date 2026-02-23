@@ -29,6 +29,10 @@ const API_ENDPOINTS = {
     ENRICHMENT_STATUS: (id: string) => `/words/${id}/enrichment-status/`,
     ENRICHMENT_RETRY: (id: string) => `/words/${id}/enrichment-retry/`,
     ENRICH_ALL: '/words/enrich-all/',
+    ARCHIVE: (id: string) => `/words/${id}/archive/`,
+    UNARCHIVE: (id: string) => `/words/${id}/unarchive/`,
+    ARCHIVED_LIST: '/words/archived/',
+    BULK_ARCHIVE: '/words/archive/bulk/',
   },
   REVIEW: {
     WORDS: '/review/words/',
@@ -60,6 +64,12 @@ const API_ENDPOINTS = {
     LISTENING_START: '/games/listening/start/',
     LISTENING_ANSWER: '/games/listening/answer/',
     LISTENING_COMPLETE: '/games/listening/complete/',
+    SYNONYM_ANTONYM_START: '/games/synonym-antonym/start/',
+    SYNONYM_ANTONYM_ANSWER: '/games/synonym-antonym/answer/',
+    SYNONYM_ANTONYM_COMPLETE: '/games/synonym-antonym/complete/',
+    IRREGULAR_VERBS_START: '/games/irregular-verbs/start/',
+    IRREGULAR_VERBS_ANSWER: '/games/irregular-verbs/answer/',
+    IRREGULAR_VERBS_COMPLETE: '/games/irregular-verbs/complete/',
     HISTORY: '/games/history/',
     STATS: '/games/stats/',
   },
@@ -109,6 +119,7 @@ const API_ENDPOINTS = {
   SYSTEM: {
     HEALTH: '/system/health/detailed/',
     CONFIG: '/system/config/status/',
+    AI_STATUS: '/system/ai-status/',
   },
   LEARNING: {
     PROFILE: '/learning-profile/',

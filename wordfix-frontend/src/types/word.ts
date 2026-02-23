@@ -56,6 +56,9 @@ export interface Word {
   easiness_factor: number;
   repetition_number: number;
   interval_days: number;
+  // Archive fields
+  is_archived: boolean;
+  archived_at: string | null;
 }
 
 export interface WordCreateData {

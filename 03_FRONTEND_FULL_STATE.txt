@@ -2,7 +2,7 @@
 03_FRONTEND_FULL_STATE.txt
 WordFix Frontend — To'liq holat hujjati
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+Hujjat yangilangan sana: 2025-06-20 (Sprint 12 — Gemini AI, Word Archive, UX Innovations)
 ================================================================
 
 ================================================================
@@ -106,7 +106,7 @@ API_ENDPOINTS = {
   WORDS:          13 ta endpoint (3 ta dynamic id bilan)
   REVIEW:          8 ta endpoint (3 ta dynamic id bilan)
   TESTS:           5 ta endpoint (3 ta dynamic id bilan)
-  GAMES:          14 ta endpoint
+  GAMES:          20 ta endpoint (6 yangi: synonym-antonym, irregular-verbs)
   PROGRESS:        4 ta endpoint
   NOTIFICATIONS:   3 ta endpoint
   IMPORT:          4 ta endpoint
@@ -114,11 +114,18 @@ API_ENDPOINTS = {
   ANALYTICS:       6 ta endpoint
   CONFUSING_PAIRS: 5 ta endpoint (3 ta dynamic id bilan)
   CHALLENGES:      2 ta endpoint
-  SYSTEM:          2 ta endpoint
+  SYSTEM:          3 ta endpoint (ai-status qo'shildi)
   LEARNING:        6 ta endpoint
 } as const
 ```
-Jami: ~90 ta frontend endpoint mapping
+Jami: ~96 ta frontend endpoint mapping
+
+Sprint 12 da qo'shilgan endpointlar:
+- WORDS.ARCHIVE(id): POST /words/{id}/archive/
+- WORDS.UNARCHIVE(id): POST /words/{id}/unarchive/
+- WORDS.ARCHIVED_LIST: GET /words/archived/
+- WORDS.BULK_ARCHIVE: POST /words/bulk-archive/
+- SYSTEM.AI_STATUS: GET /system/ai-status/
 
 ================================================================
 4. ROUTING — Barcha sahifalar
@@ -162,6 +169,8 @@ Jami: ~90 ta frontend endpoint mapping
 | /games/word-context             | WordContextPage     | games/word-context |
 | /games/story-builder            | StoryBuilderPage    | games/story-builder|
 | /games/listening                | ListeningPage       | games/listening    |
+| /games/synonym-antonym          | SynonymAntonymPage  | games/synonym-antonym |
+| /games/irregular-verbs          | IrregularVerbsPage  | games/irregular-verbs |
 | /games/result/:sessionId        | GameResultPage      | games              |
 | /badges                         | BadgesPage          | progress           |
 | /notifications                  | NotificationsPage   | progress           |
@@ -169,12 +178,13 @@ Jami: ~90 ta frontend endpoint mapping
 | /chat                           | ChatPage            | chat               |
 | /chat/session/:sessionId        | ChatSessionPage     | chat               |
 | /chat/history                   | ChatHistoryPage     | chat               |
+| /system                         | SystemStatusPage    | system             |
 | /analytics                      | AnalyticsPage       | analytics          |
 | /confusing-pairs                | ConfusingPairsPage  | confusing-pairs    |
 | /learning-profile               | LearningProfilePage | learning-profile   |
 | *                               | NotFoundPage        | (shared)           |
 
-Jami: 30 ta route (3 public + 1 onboarding + 26 protected + 1 404)
+Jami: 31 ta route (3 public + 1 onboarding + 27 protected + 1 404)
 Barcha sahifalar lazy-loaded (React.lazy + dynamic import)
 
 Layout:
@@ -264,7 +274,7 @@ Server state management:
 | smart-import.ts    | WordSuggestion, AnalyzeTextRequest/Response, ImportWordsRequest/Response, CSVValidateResult, CSVImportResult |
 | chat.ts            | ChatSession, ChatMessage, ChatCorrection, StartChatRequest/Response, SendMessageRequest/Response, ChatSessionListResponse, ChatSessionDetailResponse |
 | analytics.ts       | AnalyticsOverview, DailyStatsEntry, DifficultWord, WordProgressData, CalendarDay |
-| system.ts          | ServiceHealth, SystemHealth, ConfigStatus                 |
+| system.ts          | ServiceHealth, SystemHealth, ConfigStatus, AIProviderStatus, AIStatusResponse |
 | learning.ts        | LearningProfile, AnalyzeResult, MistakePattern, WordRecommendation, DomainCoverage, DifficultyInfo |
 
 ApiResponse<T> interfeysi:
@@ -434,9 +444,10 @@ Jami games: 40+ komponent, 6 hook, 6 sahifa, 13 test
 
 ### 7.17 system/
 - API: systemApi.ts
-- Hooks: useSystemHealth.ts
-- Komponentlar: HealthBanner
-- Tizim salomatligi monitoringi
+- Hooks: useSystemHealth.ts (useSystemHealth, useAIStatus hooks)
+- Pages: SystemStatusPage.tsx (yangi — Sprint 12)
+- Komponentlar: HealthBanner, AIStatusCard (yangi — Sprint 12)
+- Tizim salomatligi + AI provider status monitoringi
 
 ### 7.18 tests/
 - Pages: TestPage, TestSessionPage, TestResultPage
@@ -444,12 +455,12 @@ Jami games: 40+ komponent, 6 hook, 6 sahifa, 13 test
 - Komponentlar: AnswerFeedbackPanel, DifficultySelector, FillBlankQuestion, MultipleChoiceOption, MultipleChoiceQuestion, QuestionCountSlider, QuestionTypeCard, QuestionTypeSelector, RecentTestItem, RecentTestsList, TestConfigPanel, TestGenerateButton, TestGradeBadge, TestQuestionCard, TestQuestionReview, TestQuestionReviewItem, TestResultHeader, TestResultStats, TestSessionTopBar
 - Testlar: 12 ta test fayl
 
-### 7.19 words/ (tozalangan — Sprint 10.3)
-- API: wordApi.ts
-- Hooks: useWords.ts
-- Pages: WordsPage.tsx (pages/ papkada, root dagi duplicate olib tashlandi)
-- Komponentlar: AddWordDifficultySelector, AddWordForm, AddWordModal, WordCard, WordCardBadges, WordListItem, WordsHeader, WordsPagination, WordsSegmentedControl, WordsStatPill, WordsStatsBar, WordsViewToggle
-- O'chirilgan (orphan): WordsFilterBar, WordsGrid, WordsList — faqat eski WordsPage ishlatgan
+### 7.19 words/ (yangilangan — Sprint 12)
+- API: wordApi.ts (archiveWord, unarchiveWord, getArchivedWords, bulkArchiveWords, enrichWord, enrichAll qo'shildi)
+- Hooks: useWords.ts (useArchivedWords, useArchiveWord, useUnarchiveWord, useBulkArchive, useEnrichWord, useEnrichAll hooks qo'shildi)
+- Pages: WordsPage.tsx (Active/Archived tabs, WordDetailModal, archive buttons, enrichment badges)
+- Komponentlar: AddWordDifficultySelector, AddWordForm, AddWordModal, WordCard, WordCardBadges, WordListItem, WordsHeader, WordsPagination, WordsSegmentedControl, WordsStatPill, WordsStatsBar, WordsViewToggle, ArchiveButton (yangi), EnrichmentStatusBadge (yangi), WordDetailModal (yangi), ArchivedWordsSection (yangi)
+- O'chirilgan (orphan): WordsFilterBar, WordsGrid, WordsList
 - Testlar: 5 ta test fayl (2 ta orphan test olib tashlandi)
 
 ================================================================
@@ -528,9 +539,9 @@ Har bir feature module api/ papkasida API funksiyalar:
 | onboarding      | onboardingApi.ts  | getQuestions, submit, skip, getStatus  |
 | progress        | progressApi.ts    | getProgress, getXPHistory, getUserBadges, getAllBadges |
 | review          | reviewApi.ts      | getWords, createSession, getDetail, submitAnswer, complete, getSummary, getStreak, getDailyProgress |
-| system          | systemApi.ts      | getHealth, getConfig                   |
+| system          | systemApi.ts      | getHealth, getConfig, getAIStatus      |
 | tests           | (in hooks)        | generate, getHistory, getDetail, submitAnswer, complete |
-| words           | wordApi.ts        | getWords, getWord, createWord, updateWord, deleteWord, bulkCreate, getStats, getCategories, createCategory, deleteCategory, enrich, getEnrichmentStatus |
+| words           | wordApi.ts        | getWords, getWord, createWord, updateWord, deleteWord, bulkCreate, getStats, getCategories, createCategory, deleteCategory, enrich, getEnrichmentStatus, archiveWord, unarchiveWord, getArchivedWords, bulkArchiveWords, enrichWord, enrichAll |
 
 ================================================================
 11. STYLING va TEMA
@@ -558,18 +569,18 @@ Har bir feature module api/ papkasida API funksiyalar:
 
 | Metrika                      | Qiymat   |
 |------------------------------|----------|
-| Jami TS/TSX fayllar          | ~523     |
-| Jami qatorlar                | ~22,757  |
+| Jami TS/TSX fayllar          | ~535     |
+| Jami qatorlar                | ~23,800  |
 | Feature modulelar            | 19       |
-| Sahifalar (pages)            | ~35      |
-| UI Komponentlar              | ~250+    |
-| Custom hooks                 | ~28      |
+| Sahifalar (pages)            | ~36      |
+| UI Komponentlar              | ~260+    |
+| Custom hooks                 | ~34      |
 | Type/Interface fayllar       | 16       |
 | Zustand stores               | 3        |
-| API endpoint mappings        | ~90      |
+| API endpoint mappings        | ~96      |
 | Test fayllar                 | ~80+     |
-| Routes                       | 30       |
-| Lazy-loaded sahifalar        | 28       |
+| Routes                       | 31       |
+| Lazy-loaded sahifalar        | 29       |
 
 ================================================================
 13. BUILD HOLATI
@@ -579,6 +590,8 @@ Har bir feature module api/ papkasida API funksiyalar:
 
 Barcha 12 ta xato Sprint 10.3 da bartaraf etildi.
 Sprint 10.4 da 10 ta fayl o'zgartirildi — 0 yangi xato.
+Sprint 10.5 da 15 ta fayl o'zgartirildi — 0 yangi xato.
+Sprint 12 da 10 ta fayl yaratildi/o'zgartirildi — tekshirish kerak.
 
 ================================================================
 14. SPRINT 10.4 FRONTEND O'ZGARISHLAR
@@ -608,3 +621,259 @@ Sprint 10.4 da 10 ta fayl o'zgartirildi — 0 yangi xato.
 8. **reviewApi.ts**: API_ENDPOINTS.WORDS.ENRICH_ALL centralizatsiya
 
 9. **endpoints.ts**: ENRICHMENT_RETRY, ENRICH_ALL qo'shildi
+
+================================================================
+15. SPRINT 10.5 FRONTEND O'ZGARISHLAR
+================================================================
+
+### O'zgartirilgan fayllar:
+
+1. **useBadges.ts**: earnedMap faqat is_earned === true badges ni olinadi
+   - Oldin: ALL badges (31/31) earned ko'rinardi
+   - Keyin: faqat haqiqiy earned badges
+
+2. **useWordMatch.ts**: submit body tuzatildi
+   - matches → pairs (backend kutgan field nomi)
+   - startTime state qo'shildi, time_seconds hisoblanadi
+   - Word Match 400 error bartaraf etildi
+
+3. **TextImportWordRow.tsx**: CEFR color badges
+   - A1=sky, A2=blue, B1=green, B2=amber, C1=orange, C2=red
+   - definition field ko'rsatiladi (translation bo'lmasa)
+   - "No translation available" fallback text
+
+4. **smart-import.ts** (types): definition?: string, difficulty: DifficultyLevel | string
+
+5. **useTextImport.ts**: DifficultyLevel import va cast qo'shildi
+
+6. **WelcomeHeader.tsx**: Dynamic Word of the Day
+   - useWords hook dan foydalanuvchi so'zlari olinadi
+   - getDayOfYearSeed() date-based rotation
+   - DEFAULT_WORDS (14 ta) agar foydalanuvchida so'z yo'q bo'lsa
+   - translation ham ko'rsatiladi
+
+7. **LevelCard.tsx**: isError + refetch error state va Retry button
+
+8. **StreakCard.tsx**: isError + refetch error state va Retry button
+
+9. **DailyProgressCard.tsx**: isError + refetch error state va Retry button
+
+10. **useProgress.ts**: useUserProgress staleTime: 60_000, retry: 2
+
+11. **useReview.ts**: useStreak, useDailyProgress staleTime: 60_000, retry: 2
+
+12. **LearningStyleCard.tsx**: style_breakdown API dan olinadi
+    - Oldin: non-preferred styles 20 hardcoded
+    - Keyin: real breakdown percentages ko'rsatiladi
+
+13. **learningProfileHelpers.ts**: skillLabels reading → grammar alignment
+
+14. **useLearning.ts**: useLearningProfile staleTime: 60_000, retry: 2
+
+================================================================
+14. SPRINT 11 FRONTEND O'ZGARISHLAR
+================================================================
+
+### Yangi fayllar:
+
+1. **features/games/synonym-antonym/SynonymAntonymPage.tsx**:
+   - Phase state machine: loading → playing → result → complete
+   - 2x2 option grid, question_type badge (synonym=green, antonym=rose)
+   - apiClient.post direct calls, Framer Motion animations
+
+2. **features/games/irregular-verbs/IrregularVerbsPage.tsx**:
+   - Phase state machine: loading → playing → result → complete
+   - 2 text inputs: past_simple, past_participle
+   - Hint display, retry logic, attempt tracking
+   - Complete phase: per-round results table
+
+### O'zgartirilgan fayllar:
+
+3. **types/smart-import.ts**:
+   - WordSuggestion: pronunciation?, in_user_library? qo'shildi
+   - AnalyzeTextResponse: parse_mode, already_in_library, text_difficulty
+
+4. **types/game.ts** (8 yangi type):
+   - SynonymAntonymRound, StartResponse, AnswerResponse, CompleteResponse
+   - IrregularVerbRound, StartResponse, AnswerResponse, CompleteResponse
+
+5. **api/endpoints.ts**: 6 yangi GAMES endpoint
+
+6. **features/import/hooks/useTextImport.ts** (qayta yozildi):
+   - Yangi response format: data.suggestions, data.parse_mode
+   - filteredSuggestions + levelFilter (all/A/B/C)
+   - Auto-deselect in_user_library words
+
+7. **features/import/components/TextImportReview.tsx** (qayta yozildi):
+   - Parse mode label, text difficulty badge
+   - LEVEL_FILTERS pill buttons (All, A1-A2, B1-B2, C1-C2)
+   - Already-in-library count with Library icon
+
+8. **features/import/components/TextImportWordRow.tsx**:
+   - Pronunciation display: /{pronunciation}/
+   - "In library" badge, opacity:50 when in_user_library
+
+9. **features/import/components/TextImportFlow.tsx**:
+   - Yangi props: filteredWords, parseMode, textDifficulty, alreadyInLibrary, levelFilter
+
+10. **features/games/GamesPage.tsx**:
+    - 5 → 7 game cards (Synonym & Antonym, Irregular Verbs qo'shildi)
+    - ArrowLeftRight, BookType icons
+
+11. **routes/index.tsx**:
+    - 2 yangi lazy import: SynonymAntonymPage, IrregularVerbsPage
+    - 2 yangi Route: /games/synonym-antonym, /games/irregular-verbs
+
+12. **components/layout/MobileNav.tsx** (to'liq qayta yozildi):
+    - 4 main tabs: Home, Words, Games, Profile
+    - "More" button → bottom sheet (Framer Motion AnimatePresence)
+    - 9 ta moreItems: Tests, Review, Import, AI Chat, Analytics, Confusing Pairs, Badges, Notifications, Learning Profile
+    - Backdrop blur, spring animation, 3-column grid
+
+15. **learning.ts** (types): style_breakdown?: Record<string, number> qo'shildi
+
+================================================================
+16. SPRINT 12 FRONTEND O'ZGARISHLAR (2025-06-20)
+================================================================
+
+### Asosiy yangiliklar:
+- **Word Archive UI** — Active/Archived tabs, archive/unarchive buttons, archived words section
+- **AI Status monitoring** — AI provider status card, system status page
+- **UX Innovations** — Keyboard shortcuts (review), drag-drop .txt (import), word detail modal, enrichment badges, confidence bars
+- **Yangi route** — /system sahifasi
+
+### Yangi fayllar:
+
+1. **features/system/components/AIStatusCard.tsx** (~150 qator):
+   - useAIStatus hook bilan AI provider status ko'rsatish
+   - compact mode: single-line status indicator
+   - Full mode: active provider, fallback chain visualization, provider list
+   - ProviderRow subcomponent: status icon, badge, model info
+   - Status config: available (CheckCircle/success), unavailable (XCircle/destructive), degraded (AlertTriangle/warning), circuit_open (AlertTriangle/orange)
+   - Refresh button with isRefetching spinner
+
+2. **features/words/components/EnrichmentStatusBadge.tsx** (~38 qator):
+   - EnrichmentStatus prop bo'yicha badge ko'rsatish
+   - not_started (Sparkles/muted), pending/processing (Loader2/blue, spin), completed (CheckCircle/success), failed (AlertCircle/destructive)
+   - Inline-flex badge, optional label
+
+3. **features/words/components/ArchiveButton.tsx** (~60 qator):
+   - isArchived, onArchive, onUnarchive, isLoading props
+   - e.stopPropagation() bilan card click prevent
+   - Archive icon (active) / ArchiveRestore icon (archived)
+   - size: 'sm' | 'icon' variants
+
+4. **features/words/components/WordDetailModal.tsx** (~260 qator):
+   - Full word details: pronunciation, definition, example, mnemonic, usage notes
+   - Related words section: synonyms (green), antonyms (red), collocations (primary), word family (accent)
+   - Review stats: review count, accuracy%, confidence% with animated progress bar
+   - SR info: next_review_at, last_reviewed_at, interval_days
+   - Footer actions: ArchiveButton, Enrich button, Delete button
+   - Escape key + backdrop click closes modal
+   - Framer-motion spring animation (open/close)
+
+5. **features/words/components/ArchivedWordsSection.tsx** (~155 qator):
+   - Search input bilan arxivlangan so'zlarni ko'rsatish
+   - useArchivedWords, useUnarchiveWord hooks
+   - Grid view: difficulty badge, POS badge, enrichment status, archived_at date
+   - Unarchive button per card
+   - EmptyState (no results), Skeleton loading state
+
+6. **features/system/pages/SystemStatusPage.tsx** (~130 qator):
+   - Full-page system status dashboard
+   - HealthBanner component
+   - Overall status card (services count, response times)
+   - Services grid: ServiceCard subcomponent (status icon, badge, response_time_ms)
+   - AIStatusCard integration
+   - PageTransition wrapper
+
+### O'zgartirilgan fayllar:
+
+7. **features/words/pages/WordsPage.tsx** (keng o'zgarishlar):
+   - Active/Archived tab switcher (BookOpen/Archive iconlar bilan segmented control)
+   - activeTab state: 'active' | 'archived'
+   - Archived tab → ArchivedWordsSection render
+   - Word card onClick → setSelectedWord → WordDetailModal
+   - Confidence progress bar (grid viewda, agar confidence > 0)
+   - EnrichmentStatusBadge (showLabel=false) har bir kartada
+   - ArchiveButton (icon size) har bir kartada
+   - "Enrich All Words" button (Sparkles icon, loading state)
+   - WordDetailModal: AnimatePresence bilan render
+
+8. **features/review/pages/ReviewSessionPage.tsx**:
+   - useEffect keyboard shortcuts:
+     - Space = flip card
+     - 1-5 = rate quality
+     - Escape = quit/confirm
+   - Input/textarea targetlar ignore qilinadi
+   - Tap hint yangilandi: "Tap the card or press `Space` to flip" (kbd styling)
+   - Rating hint: "Press `1`–`5` to rate" shown when rating visible
+
+9. **features/import/components/TextInputStep.tsx** (30 → 140 qator):
+   - Drag-and-drop zone: Upload icon, "Drag & drop a .txt file"
+   - handleDragOver/handleDragLeave/handleDrop handlers
+   - isDragOver visual feedback (border-primary, scale animation)
+   - handleFile: .txt validation, max 50KB size limit
+   - FileReader.readAsText bilan fayl o'qish
+   - Hidden file input for click-to-browse
+   - File indicator bar: FileText icon, filename, X clear button
+   - Divider: "or paste text" between drop zone and textarea
+   - Toast notifications: file load success/errors
+
+10. **routes/index.tsx**:
+    - Yangi lazy import: SystemStatusPage
+    - Yangi route: /system (protected)
+
+11. **api/endpoints.ts**:
+    - WORDS: ARCHIVE(id), UNARCHIVE(id), ARCHIVED_LIST, BULK_ARCHIVE qo'shildi
+    - SYSTEM: AI_STATUS qo'shildi
+
+12. **types/word.ts**:
+    - Word interface: is_archived: boolean, archived_at: string | null qo'shildi
+
+13. **types/system.ts**:
+    - AIProviderStatus interface: status, model, is_default
+    - AIStatusResponse interface: active_provider, fallback_chain, providers
+
+14. **features/words/api/wordApi.ts**:
+    - archiveWord, unarchiveWord, getArchivedWords, bulkArchiveWords, enrichWord, enrichAll funksiyalar
+
+15. **features/words/hooks/useWords.ts**:
+    - useArchivedWords, useArchiveWord, useUnarchiveWord, useBulkArchive, useEnrichWord, useEnrichAll hooks
+    - Proper query invalidation: ['words'], ['archived-words']
+
+16. **features/system/api/systemApi.ts**:
+    - getAIStatus funksiya qo'shildi
+
+17. **features/system/hooks/useSystemHealth.ts**:
+    - useAIStatus hook (refetchInterval: 60000, staleTime: 30000)
+
+================================================================
+SPRINT 12.1 FRONTEND O'ZGARISHLARI (2025-02-23)
+================================================================
+
+### TASK 2: Smart Import UI
+1. **types/smart-import.ts**:
+   - AnalyzeTextResponse.parse_mode: 'ai_extracted' | 'fallback' qo'shildi
+   - skipped_non_english?: number field qo'shildi
+
+2. **features/import/hooks/useTextImport.ts**:
+   - skippedNonEnglish state qo'shildi
+   - onSuccess da data.skipped_non_english ni o'qiydi
+   - reset() da skippedNonEnglish ni tozalaydi
+   - Return object da skippedNonEnglish export
+
+3. **features/import/components/TextImportReview.tsx**:
+   - parseModeLabels: ai_extracted, fallback qo'shildi
+   - skippedNonEnglish prop qo'shildi
+   - AlertCircle icon import
+   - Purple badge: "{N} non-English words filtered"
+
+4. **features/import/components/TextImportFlow.tsx**:
+   - skippedNonEnglish={ti.skippedNonEnglish} prop passthrough
+
+### Mavjud holatda to'liq tayyor (Sprint 12 dan):
+- WordDetailModal.tsx: to'liq (header, badges, definition, example, mnemonic, related words, SR stats)
+- ArchiveButton.tsx: to'liq (toggle, 2 sizes)
+- ArchivedWordsSection.tsx: to'liq (grid, search, pagination, unarchive)
+- WordsPage.tsx: Active/Archived tabs, WordDetailModal, AddWordModal

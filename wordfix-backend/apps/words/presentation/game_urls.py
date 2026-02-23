@@ -17,6 +17,12 @@ from .views import (
     ListeningStartView,
     ListeningAnswerView,
     ListeningCompleteView,
+    SynonymAntonymStartView,
+    SynonymAntonymAnswerView,
+    SynonymAntonymCompleteView,
+    IrregularVerbsStartView,
+    IrregularVerbsAnswerView,
+    IrregularVerbsCompleteView,
 )
 
 app_name = "games"
@@ -34,6 +40,12 @@ urlpatterns = [
     path("listening/start/", ListeningStartView.as_view(), name="listening-start"),
     path("listening/answer/", ListeningAnswerView.as_view(), name="listening-answer"),
     path("listening/complete/", ListeningCompleteView.as_view(), name="listening-complete"),
+    path("synonym-antonym/start/", SynonymAntonymStartView.as_view(), name="synonym-antonym-start"),
+    path("synonym-antonym/answer/", SynonymAntonymAnswerView.as_view(), name="synonym-antonym-answer"),
+    path("synonym-antonym/complete/", SynonymAntonymCompleteView.as_view(), name="synonym-antonym-complete"),
+    path("irregular-verbs/start/", IrregularVerbsStartView.as_view(), name="irregular-verbs-start"),
+    path("irregular-verbs/answer/", IrregularVerbsAnswerView.as_view(), name="irregular-verbs-answer"),
+    path("irregular-verbs/complete/", IrregularVerbsCompleteView.as_view(), name="irregular-verbs-complete"),
     path("history/", GameHistoryView.as_view(), name="game-history"),
     path("stats/", GameStatsView.as_view(), name="game-stats"),
 ]

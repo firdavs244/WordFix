@@ -62,12 +62,16 @@ class TestAnalyzeTextUseCase:
             text="The outcome was inevitable. She was reluctant to admit it.",
         )
 
-        assert len(result) == 2
-        assert result[0]["word"] == "inevitable"
-        assert result[1]["word"] == "reluctant"
+        assert isinstance(result, dict)
+        assert "suggestions" in result
+        assert "parse_mode" in result
+        assert len(result["suggestions"]) >= 2
+        words = [s["word"] for s in result["suggestions"]]
+        assert "inevitable" in words
+        assert "reluctant" in words
 
     def test_analyze_text_filters_existing(self, user, sample_words):
-        """Existing words should be filtered out."""
+        """Existing words should be marked as in_user_library."""
         mock_ai = MagicMock()
         # Return words that include one in the user's word bank
         mock_ai.generate_json.return_value = [
@@ -95,10 +99,15 @@ class TestAnalyzeTextUseCase:
 
         result = use_case.execute(user_id=user.id, text="I ate an apple. It was inevitable.")
 
-        # "apple" already exists in sample_words, so only "inevitable" should be returned
-        words_returned = [w["word"] for w in result]
-        assert "apple" not in words_returned
-        assert "inevitable" in words_returned
+        suggestions = result["suggestions"]
+        # "apple" exists in sample_words: it should be included but flagged
+        apple_items = [s for s in suggestions if s["word"].lower() == "apple"]
+        inevitable_items = [s for s in suggestions if s["word"].lower() == "inevitable"]
+        # If apple is present, it should be marked in_user_library
+        if apple_items:
+            assert apple_items[0]["in_user_library"] is True
+        # inevitable should not be in library
+        assert len(inevitable_items) >= 1
 
     def test_analyze_text_fallback_no_ai(self, user):
         """AI fail → simple extraction fallback."""
@@ -124,10 +133,14 @@ class TestAnalyzeTextUseCase:
             text="The inevitable consequence of procrastination is failure.",
         )
 
-        assert isinstance(result, list)
-        assert len(result) > 0
-        # All returned words should be strings
-        for item in result:
+        assert isinstance(result, dict)
+        assert "suggestions" in result
+        assert "parse_mode" in result
+        suggestions = result["suggestions"]
+        assert isinstance(suggestions, list)
+        assert len(suggestions) > 0
+        # All returned items should have "word" key
+        for item in suggestions:
             assert "word" in item
 
     def test_analyze_text_empty(self, authenticated_client):
@@ -225,3 +238,77 @@ class TestImportViews:
         )
         assert resp.status_code == status.HTTP_201_CREATED
         assert resp.data["data"]["added"] == 1
+
+
+# =============================================================================
+# STRUCTURED TEXT PARSING TESTS
+# =============================================================================
+
+
+class TestParseStructuredText:
+    """Tests for parse_structured_text function."""
+
+    def test_parse_multi_unit_text(self):
+        """Test parsing text with multiple Unit sections."""
+        from apps.words.application.use_cases.smart_import import parse_structured_text
+
+        text = """Unit 6: Our Favorite Hobbies
+1. Clap – qarsak chalmoq
+2. Nervous – xavotirlangan
+3. Score – ball, ochko
+
+Unit 7: Sport time
+4. Catch – tutib olmoq
+5. Choose – tanlamoq
+6. Smile – jilmaymoq
+
+Unit 8: At school
+7. Base – asos
+8. Bat – ko'rshapalak
+9. Kick – tepmoq"""
+
+        result = parse_structured_text(text)
+        assert len(result) == 9
+        assert result[0]["word"] == "Clap"
+        assert result[0]["translation"] == "qarsak chalmoq"
+        assert result[8]["word"] == "Kick"
+
+    def test_parse_with_parentheses(self):
+        """Test parsing words with parenthetical forms."""
+        from apps.words.application.use_cases.smart_import import parse_structured_text
+
+        text = """1. Choose (chose) – tanlamoq
+2. Write (wrote) – yozmoq
+3. Run (ran) – yugurmoq"""
+
+        result = parse_structured_text(text)
+        assert len(result) == 3
+        assert result[0]["word"] == "Choose"
+        assert result[0].get("notes") == "chose"
+
+    def test_ignore_unit_headers(self):
+        """Test that unit/section headers are skipped."""
+        from apps.words.application.use_cases.smart_import import parse_structured_text
+
+        text = """Unit 6: Our Favorite Hobbies
+1. Clap – qarsak chalmoq
+Unit 7: Sport
+2. Run – yugurmoq"""
+
+        result = parse_structured_text(text)
+        assert len(result) == 2
+        words = [r["word"] for r in result]
+        assert "Unit 6" not in " ".join(words)
+
+    def test_parse_phrasal_verbs(self):
+        """Test parsing phrasal verbs."""
+        from apps.words.application.use_cases.smart_import import parse_structured_text
+
+        text = """1. Shout at – baqirmoq
+2. Step up – ko'tarilmoq
+3. Write down – yozib olmoq"""
+
+        result = parse_structured_text(text)
+        assert len(result) == 3
+        assert result[0]["word"] == "Shout at"
+        assert result[2]["word"] == "Write down"

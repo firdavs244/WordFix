@@ -1,5 +1,6 @@
 """
-Game views — speed round, word match, word context, story builder, listening challenge.
+Game views — speed round, word match, word context, story builder,
+listening challenge, synonym & antonym, irregular verbs.
 """
 
 from rest_framework import status
@@ -23,6 +24,12 @@ from ..dependencies import (
     get_listening_start_use_case,
     get_listening_answer_use_case,
     get_listening_complete_use_case,
+    get_synonym_antonym_start_use_case,
+    get_synonym_antonym_answer_use_case,
+    get_synonym_antonym_complete_use_case,
+    get_irregular_verbs_start_use_case,
+    get_irregular_verbs_answer_use_case,
+    get_irregular_verbs_complete_use_case,
 )
 from ..serializers import (
     GameSessionSerializer,
@@ -35,6 +42,11 @@ from ..serializers import (
     StoryBuilderCompleteSerializer,
     ListeningAnswerSerializer,
     ListeningCompleteSerializer,
+    SynonymAntonymAnswerSerializer,
+    SynonymAntonymCompleteSerializer,
+    IrregularVerbsStartSerializer,
+    IrregularVerbAnswerSerializer,
+    IrregularVerbsCompleteSerializer,
 )
 from .word_views import (
     _award_xp,
@@ -390,4 +402,154 @@ class ListeningCompleteView(APIView):
 
         return Response(
             build_success_response(data=result, message="Listening Challenge completed!"),
+        )
+
+
+# =============================================================================
+# Synonym & Antonym Views
+# =============================================================================
+
+
+class SynonymAntonymStartView(APIView):
+    """POST /api/v1/games/synonym-antonym/start/ — Start Synonym & Antonym game."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        use_case = get_synonym_antonym_start_use_case()
+        result = use_case.execute(user_id=request.user.id)
+
+        _increment_progress(request.user.id, games_played=1)
+
+        return Response(
+            build_success_response(data=result, message="Synonym & Antonym game started!"),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SynonymAntonymAnswerView(APIView):
+    """POST /api/v1/games/synonym-antonym/answer/ — Submit SA answer."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = SynonymAntonymAnswerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_synonym_antonym_answer_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+            round_number=serializer.validated_data["round_number"],
+            answer=serializer.validated_data["answer"],
+        )
+
+        return Response(
+            build_success_response(data=result, message="Answer submitted!"),
+        )
+
+
+class SynonymAntonymCompleteView(APIView):
+    """POST /api/v1/games/synonym-antonym/complete/ — Complete SA game."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = SynonymAntonymCompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_synonym_antonym_complete_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+        )
+
+        new_badges = _check_badges(request.user.id)
+        if new_badges:
+            result["new_badges"] = [
+                {"code": b.code, "name": b.name, "icon": b.icon}
+                for b in new_badges
+            ]
+
+        return Response(
+            build_success_response(data=result, message="Synonym & Antonym completed!"),
+        )
+
+
+# =============================================================================
+# Irregular Verbs Views
+# =============================================================================
+
+
+class IrregularVerbsStartView(APIView):
+    """POST /api/v1/games/irregular-verbs/start/ — Start Irregular Verbs game."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = IrregularVerbsStartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_irregular_verbs_start_use_case()
+        result = use_case.execute(
+            user_id=request.user.id,
+            word_count=serializer.validated_data.get("word_count", 10),
+            tier=serializer.validated_data.get("tier", ""),
+        )
+
+        _increment_progress(request.user.id, games_played=1)
+
+        return Response(
+            build_success_response(data=result, message="Irregular Verbs game started!"),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class IrregularVerbsAnswerView(APIView):
+    """POST /api/v1/games/irregular-verbs/answer/ — Submit IV answer."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = IrregularVerbAnswerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_irregular_verbs_answer_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+            round_number=serializer.validated_data["round_number"],
+            past_simple=serializer.validated_data["past_simple"],
+            past_participle=serializer.validated_data["past_participle"],
+        )
+
+        return Response(
+            build_success_response(data=result, message="Answer submitted!"),
+        )
+
+
+class IrregularVerbsCompleteView(APIView):
+    """POST /api/v1/games/irregular-verbs/complete/ — Complete IV game."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request) -> Response:
+        serializer = IrregularVerbsCompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = get_irregular_verbs_complete_use_case()
+        result = use_case.execute(
+            session_id=serializer.validated_data["session_id"],
+            user_id=request.user.id,
+        )
+
+        new_badges = _check_badges(request.user.id)
+        if new_badges:
+            result["new_badges"] = [
+                {"code": b.code, "name": b.name, "icon": b.icon}
+                for b in new_badges
+            ]
+
+        return Response(
+            build_success_response(data=result, message="Irregular Verbs completed!"),
         )

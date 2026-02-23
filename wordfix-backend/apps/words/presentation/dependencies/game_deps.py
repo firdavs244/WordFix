@@ -19,6 +19,12 @@ from apps.words.application.use_cases.games import (
     StartListeningChallengeUseCase,
     SubmitListeningAnswerUseCase,
     CompleteListeningChallengeUseCase,
+    StartSynonymAntonymUseCase,
+    SubmitSynonymAntonymUseCase,
+    CompleteSynonymAntonymUseCase,
+    StartIrregularVerbsUseCase,
+    SubmitIrregularVerbUseCase,
+    CompleteIrregularVerbsUseCase,
 )
 from .common_deps import (
     _get_ai_provider,
@@ -217,6 +223,112 @@ def get_listening_complete_use_case() -> CompleteListeningChallengeUseCase:
         badge_service = None
 
     return CompleteListeningChallengeUseCase(
+        game_repo=get_game_session_repository(),
+        xp_service=xp_service,
+        badge_service=badge_service,
+    )
+
+
+# =============================================================================
+# Synonym & Antonym
+# =============================================================================
+
+
+def get_synonym_antonym_start_use_case() -> StartSynonymAntonymUseCase:
+    return StartSynonymAntonymUseCase(
+        word_repo=get_word_repository(),
+        game_repo=get_game_session_repository(),
+        ai_provider=_get_ai_provider(),
+        user_repo=get_user_repository(),
+    )
+
+
+def get_synonym_antonym_answer_use_case() -> SubmitSynonymAntonymUseCase:
+    try:
+        from apps.users.presentation.progress_dependencies import get_xp_service
+        xp_service = get_xp_service()
+    except Exception:
+        xp_service = None
+
+    try:
+        from .challenge_deps import get_challenge_repository
+        challenge_repo = get_challenge_repository()
+    except Exception:
+        challenge_repo = None
+
+    return SubmitSynonymAntonymUseCase(
+        word_repo=get_word_repository(),
+        game_repo=get_game_session_repository(),
+        sr_service=get_sr_service(),
+        xp_service=xp_service,
+        challenge_repo=challenge_repo,
+    )
+
+
+def get_synonym_antonym_complete_use_case() -> CompleteSynonymAntonymUseCase:
+    try:
+        from apps.users.presentation.progress_dependencies import (
+            get_xp_service,
+            get_badge_service,
+        )
+        xp_service = get_xp_service()
+        badge_service = get_badge_service()
+    except Exception:
+        xp_service = None
+        badge_service = None
+
+    return CompleteSynonymAntonymUseCase(
+        game_repo=get_game_session_repository(),
+        xp_service=xp_service,
+        badge_service=badge_service,
+    )
+
+
+# =============================================================================
+# Irregular Verbs
+# =============================================================================
+
+
+def get_irregular_verbs_start_use_case() -> StartIrregularVerbsUseCase:
+    return StartIrregularVerbsUseCase(
+        game_repo=get_game_session_repository(),
+        user_repo=get_user_repository(),
+    )
+
+
+def get_irregular_verbs_answer_use_case() -> SubmitIrregularVerbUseCase:
+    try:
+        from apps.users.presentation.progress_dependencies import get_xp_service
+        xp_service = get_xp_service()
+    except Exception:
+        xp_service = None
+
+    try:
+        from .challenge_deps import get_challenge_repository
+        challenge_repo = get_challenge_repository()
+    except Exception:
+        challenge_repo = None
+
+    return SubmitIrregularVerbUseCase(
+        game_repo=get_game_session_repository(),
+        xp_service=xp_service,
+        challenge_repo=challenge_repo,
+    )
+
+
+def get_irregular_verbs_complete_use_case() -> CompleteIrregularVerbsUseCase:
+    try:
+        from apps.users.presentation.progress_dependencies import (
+            get_xp_service,
+            get_badge_service,
+        )
+        xp_service = get_xp_service()
+        badge_service = get_badge_service()
+    except Exception:
+        xp_service = None
+        badge_service = None
+
+    return CompleteIrregularVerbsUseCase(
         game_repo=get_game_session_repository(),
         xp_service=xp_service,
         badge_service=badge_service,

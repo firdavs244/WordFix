@@ -20,6 +20,7 @@ from .game_prompts import (  # noqa: F401
     STORY_FALLBACK_TEMPLATES,
     STORY_GENRES,
     STORY_START_PROMPT,
+    SYNONYM_ANTONYM_PROMPT,
 )
 from .chat_prompts import CHAT_SYSTEM_PROMPT  # noqa: F401
 from .import_prompts import (  # noqa: F401
@@ -43,4 +44,5 @@ __all__ = [
     "STORY_CONTINUE_PROMPT",
     "STORY_GENRES",
     "STORY_FALLBACK_TEMPLATES",
+    "SYNONYM_ANTONYM_PROMPT",
 ]

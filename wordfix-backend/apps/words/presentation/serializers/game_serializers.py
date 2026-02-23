@@ -173,3 +173,88 @@ class ListeningAnswerResultSerializer(serializers.Serializer):
 class ListeningCompleteSerializer(serializers.Serializer):
     """Request serializer for completing listening challenge."""
     session_id = serializers.UUIDField()
+
+
+# =============================================================================
+# Synonym & Antonym serializers
+# =============================================================================
+
+
+class SynonymAntonymStartResponseSerializer(serializers.Serializer):
+    """Response serializer for synonym/antonym game start."""
+    session_id = serializers.UUIDField()
+    total_rounds = serializers.IntegerField()
+    current_round = serializers.IntegerField()
+    rounds = serializers.ListField()
+
+
+class SynonymAntonymAnswerSerializer(serializers.Serializer):
+    """Request serializer for submitting a synonym/antonym answer."""
+    session_id = serializers.UUIDField()
+    round_number = serializers.IntegerField(min_value=1)
+    answer = serializers.CharField(max_length=100)
+
+
+class SynonymAntonymAnswerResultSerializer(serializers.Serializer):
+    """Response serializer for synonym/antonym answer result."""
+    is_correct = serializers.BooleanField()
+    correct_answer = serializers.CharField()
+    score = serializers.IntegerField()
+    next_round = serializers.DictField(allow_null=True)
+    combo = serializers.IntegerField()
+    multiplier = serializers.FloatField()
+    xp_earned = serializers.IntegerField()
+
+
+class SynonymAntonymCompleteSerializer(serializers.Serializer):
+    """Request serializer for completing synonym/antonym game."""
+    session_id = serializers.UUIDField()
+
+
+# =============================================================================
+# Irregular Verbs serializers
+# =============================================================================
+
+
+class IrregularVerbsStartSerializer(serializers.Serializer):
+    """Request serializer for starting irregular verbs game."""
+    word_count = serializers.IntegerField(required=False, default=10, min_value=5, max_value=30)
+    tier = serializers.CharField(required=False, default="", allow_blank=True)
+
+
+class IrregularVerbsStartResponseSerializer(serializers.Serializer):
+    """Response serializer for irregular verbs game start."""
+    session_id = serializers.UUIDField()
+    total_rounds = serializers.IntegerField()
+    current_round = serializers.IntegerField()
+    tier = serializers.CharField()
+    rounds = serializers.ListField()
+
+
+class IrregularVerbAnswerSerializer(serializers.Serializer):
+    """Request serializer for submitting an irregular verb answer."""
+    session_id = serializers.UUIDField()
+    round_number = serializers.IntegerField(min_value=1)
+    past_simple = serializers.CharField(max_length=50)
+    past_participle = serializers.CharField(max_length=50)
+
+
+class IrregularVerbAnswerResultSerializer(serializers.Serializer):
+    """Response serializer for irregular verb answer result."""
+    past_simple_correct = serializers.BooleanField()
+    past_participle_correct = serializers.BooleanField()
+    correct_past_simple = serializers.CharField(allow_blank=True)
+    correct_past_participle = serializers.CharField(allow_blank=True)
+    score = serializers.IntegerField()
+    attempts_used = serializers.IntegerField()
+    attempts_remaining = serializers.IntegerField()
+    hints = serializers.DictField()
+    next_round = serializers.DictField(allow_null=True)
+    combo = serializers.IntegerField()
+    multiplier = serializers.FloatField()
+    xp_earned = serializers.IntegerField()
+
+
+class IrregularVerbsCompleteSerializer(serializers.Serializer):
+    """Request serializer for completing irregular verbs game."""
+    session_id = serializers.UUIDField()

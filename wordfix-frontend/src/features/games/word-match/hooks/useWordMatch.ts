@@ -25,6 +25,7 @@ export function useWordMatch() {
   const [wrongPair, setWrongPair] = useState<{ word: string; translation: string } | null>(null);
   const [combo, setCombo] = useState(0);
   const [translations, setTranslations] = useState<MatchedTranslation[]>([]);
+  const [startTime, setStartTime] = useState<number>(0);
 
   const startMutation = useMutation({
     mutationFn: async () => {
@@ -45,15 +46,21 @@ export function useWordMatch() {
       // Shuffle translations for display
       const shuffled = [...data.translations].sort(() => Math.random() - 0.5);
       setTranslations(shuffled.map(t => ({ text: t, matched: false })));
+      setStartTime(Date.now());
       setPhase('playing');
     },
   });
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
       const { data } = await apiClient.post<{ data: GameSession }>(
         API_ENDPOINTS.GAMES.WORD_MATCH_SUBMIT,
-        { session_id: sessionId, matches: pairs.map((p) => ({ word_id: p.wordId, matched_translation: p.translation })) },
+        {
+          session_id: sessionId,
+          pairs: pairs.map((p) => ({ word_id: p.wordId, matched_translation: p.translation })),
+          time_seconds: elapsed,
+        },
       );
       return data.data;
     },

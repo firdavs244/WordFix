@@ -53,21 +53,29 @@ export function LearningStyleCard({ profile, isLoading, hasAnalyzed }: Props) {
 
             {/* Style breakdown bars */}
             <div className="space-y-2">
-              {Object.entries(styleConfig).map(([key, cfg], i) => (
-                <div key={key} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span>{cfg.label}</span>
-                    <span className="text-muted-foreground">
-                      {key === style ? `${Math.round((profile?.style_confidence ?? 0) * 100)}%` : '—'}
-                    </span>
+              {Object.entries(styleConfig).map(([key, cfg], i) => {
+                const breakdown = profile?.style_breakdown;
+                const value = breakdown?.[key]
+                  ? breakdown[key] * 100
+                  : key === style
+                    ? (profile?.style_confidence ?? 0) * 100
+                    : 10;
+                return (
+                  <div key={key} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span>{cfg.label}</span>
+                      <span className="text-muted-foreground">
+                        {Math.round(value)}%
+                      </span>
+                    </div>
+                    <LearningStyleBar
+                      value={value}
+                      color={styleBarColors[key]}
+                      delay={i * 0.1}
+                    />
                   </div>
-                  <LearningStyleBar
-                    value={key === style ? (profile?.style_confidence ?? 0) * 100 : 20}
-                    color={styleBarColors[key]}
-                    delay={i * 0.1}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : null}

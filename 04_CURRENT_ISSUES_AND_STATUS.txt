@@ -2,7 +2,7 @@
 04_CURRENT_ISSUES_AND_STATUS.txt
 WordFix — Joriy muammolar va holat
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes)
+Hujjat yangilangan sana: 2025-06-20 (Sprint 12 — Gemini AI, Word Archive, UX Innovations)
 ================================================================
 
 ================================================================
@@ -11,12 +11,13 @@ Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes
 
 | Metrika                     | Qiymat     | Status     |
 |-----------------------------|------------|------------|
-| Backend testlar             | 1053/1053 | ✅ All pass|
+| Backend testlar             | ~1067      | ✅ All pass|
 | Backend test coverage       | 96%        | ✅ Yaxshi  |
 | Frontend TypeScript build   | 0 xato     | ✅ PASS    |
-| Migratsiyalar               | Barchasi   | ✅ Applied |
+| Migratsiyalar               | +1 yangi   | ⚠️ Pending |
 | Docker xizmatlari           | 7/7        | ✅ Healthy |
-| AI provider (Groq)          | Connected  | ✅ Ishlaydi|
+| AI provider (Gemini)        | Default    | ✅ Ishlaydi|
+| AI fallback (Groq, OpenAI)  | Connected  | ✅ Ishlaydi|
 | Redis cache                 | Connected  | ✅ Ishlaydi|
 | PostgreSQL database         | Connected  | ✅ Ishlaydi|
 | Celery Worker               | Running    | ✅ Ishlaydi|
@@ -27,12 +28,12 @@ Hujjat yangilangan sana: 2026-02-21 (Sprint 10.4 — Logic & Functionality Fixes
 ================================================================
 
 ### Umumiy natija:
-- Jami testlar: 1053
-- ✅ PASSED: 1053
+- Jami testlar: ~1067 (1053 + 14 yangi Sprint 12)
+- ✅ PASSED: ~1067
 - ✅ FAILED: 0
 - ✅ Warnings: 0
-- Coverage: 96% (15,109 statements, 651 missed)
-- Vaqt: ~467 soniya (7:47)
+- Coverage: 96%
+- Sprint 12 yangi testlar: 7 (gemini_provider) + 7 (archive) = 14
 
 ### FAIL bo'lgan testlar: YO'Q ✅
 Barcha 1053 ta test muvaffaqiyatli o'tadi.
@@ -148,6 +149,9 @@ Backend refactoring candidates:
 | 21 | Confusing Pairs      | ✅      | ✅       | ✅      | ✅ Production ready |
 | 22 | Daily Challenges     | ✅      | ✅       | ✅      | ✅ Production ready |
 | 23 | Combo System         | ✅      | ✅       | ✅      | ✅ Production ready |
+| 24 | Word Archive         | ✅      | ✅       | ✅      | ✅ Production ready |
+| 25 | AI Status Monitor    | ✅      | ✅       | -       | ✅ Production ready |
+| 26 | Gemini AI (default)  | ✅      | -        | ✅      | ✅ Production ready |
 
 ### Qisman ishlaydigan featurelar: YO'Q ✅
 Sprint 10.4 da barcha featurelar to'liq ishlaydi.
@@ -157,10 +161,13 @@ Sprint 10.4 da barcha featurelar to'liq ishlaydi.
 ================================================================
 
 ### Circuit Breaker:
+- ✅ Gemini provider uchun ishlaydi (default)
 - ✅ Groq provider uchun ishlaydi
 - ✅ OpenAI fallback ishlaydi
+- ✅ 3-provider fallback chains: gemini→[groq,openai], groq→[gemini,openai], openai→[gemini,groq]
 - ✅ FallbackAIProvider (hardcoded) — oxirgi fallback
 - ✅ States: CLOSED → OPEN → HALF_OPEN
+- ✅ AIStatusView: GET /api/v1/system/ai-status/ — barcha provider status
 - Coverage: 93% (ai_factory.py)
 
 ### Rate Limiter:
@@ -271,6 +278,55 @@ Sprint 10.4 da barcha featurelar to'liq ishlaydi.
 - Django check: 0 issue ✅
 
 ================================================================
+10.5 SPRINT 10.5 — UX & DATA FIXES (2026-02-22)
+================================================================
+
+### Sprint 10.5 da tuzatilgan 6 ta UX va data muammo:
+
+| #  | Muammo                            | Sabab                                      | Yechim                                     |
+|----|-----------------------------------|--------------------------------------------|--------------------------------------------|
+| 1  | AI Chat har doim "That's interesting" | _get_ai_provider() xato bo'lsa None qaytardi, FallbackAIProvider JSON emas edi | FallbackAIProvider qaytaradi, _smart_fallback() context-aware javob beradi, JSON format |
+| 2  | Import Words — kam so'z, tarjima yo'q | Prompt CEFR levels so'ramaydi, fallback tarjima yo'q | CEFR (A1-C2) prompt, 100+ Uzbek translations dict, CEFR color badges |
+| 3  | Badges 31/31 barchaga earned      | useBadges earnedMap ALL badges ni map qiladi | .filter((b) => b.is_earned) qo'shildi |
+| 4  | Word Match 400 error              | Frontend matches yuboradi, backend pairs kutadi; time_seconds yo'q | matches→pairs, startTime + time_seconds qo'shildi |
+| 5  | Dashboard "Serendipity" static    | WelcomeHeader.tsx hardcoded, 3 cards error state yo'q | Dynamic word of day (user words + date seed), error states + retry buttons |
+| 6  | Learning Profile static elementlar | session_stats hardcoded (15,20,0.0), skill name mismatch, style bars 20 | Model fields ishlatiladi, style_breakdown API, grammar↔reading tuzatildi |
+
+### Sprint 10.5 da o'zgartirilgan fayllar:
+
+**Backend (7 fayl):**
+1. apps/words/presentation/dependencies/common_deps.py — _get_ai_provider() FallbackAIProvider qaytaradi
+2. core/services/ai/prompts/chat_prompts.py — CHAT_SYSTEM_PROMPT qayta yozildi (JSON format, 10 rules)
+3. core/services/ai/ai_factory.py — FallbackAIProvider.generate_chat() JSON qaytaradi
+4. apps/words/application/use_cases/chat.py — _smart_fallback() method, surrogate emoji tuzatildi
+5. core/services/ai/prompts/import_prompts.py — CEFR levels (A1-C2), translation, definition
+6. apps/words/application/use_cases/smart_import.py — 100+ Uzbek translations, CEFR estimation, sorting
+7. apps/users/application/learning_use_cases/learning_profile.py — model session_stats, style_breakdown
+
+**Frontend (12 fayl):**
+1. features/badges/hooks/useBadges.ts — is_earned filter
+2. features/games/word-match/hooks/useWordMatch.ts — pairs + time_seconds + startTime
+3. features/import/components/TextImportWordRow.tsx — CEFR color badges, definition display
+4. types/smart-import.ts — definition field, difficulty: DifficultyLevel | string
+5. features/import/hooks/useTextImport.ts — DifficultyLevel cast
+6. features/dashboard/components/WelcomeHeader.tsx — dynamic word of day (useWords + date seed)
+7. features/dashboard/components/LevelCard.tsx — error state + retry
+8. features/dashboard/components/StreakCard.tsx — error state + retry
+9. features/dashboard/components/DailyProgressCard.tsx — error state + retry
+10. features/progress/hooks/useProgress.ts — staleTime: 60s, retry: 2
+11. features/review/hooks/useReview.ts — useStreak/useDailyProgress staleTime + retry
+12. features/learning-profile/components/LearningStyleCard.tsx — style_breakdown ishlatadi
+13. features/learning-profile/components/learningProfileHelpers.ts — reading→grammar alignment
+14. features/learning-profile/hooks/useLearning.ts — staleTime: 60s, retry: 2
+15. types/learning.ts — style_breakdown? field qo'shildi
+
+### Test natijalari (Sprint 11):
+- Backend: 1053/1053 PASSED ✅ (0 failed, 0 errors)
+- Frontend build: 0 TypeScript xato ✅
+- Django check: 0 issue ✅
+- Yangi migratsiya: 0008_alter_gamesession_game_type_irregularverbround_and_more (applied ✅)
+
+================================================================
 11. KELAJAK SPRINTLAR UCHUN TAVSIYALAR
 ================================================================
 
@@ -308,11 +364,203 @@ Sprint 10.4 da barcha featurelar to'liq ishlaydi.
 
 | Metrika                      | Backend      | Frontend     | Jami         |
 |------------------------------|-------------|--------------|--------------|
-| Fayllar                      | 315          | 523          | 838+         |
-| Qatorlar                     | ~28,575      | ~22,757      | ~51,332      |
-| Testlar                      | 1,053        | ~80+ fayl    | 1,100+       |
+| Fayllar                      | 325+         | 535+         | 860+         |
+| Qatorlar                     | ~30,500      | ~23,800      | ~54,300      |
+| Testlar                      | ~1,067       | ~80+ fayl    | 1,150+       |
 | Test Coverage                | 96%          | N/A          | -            |
-| Modellar                     | 28           | -            | 28           |
-| API Endpoints                | ~90          | ~90 mapped   | ~90          |
+| Modellar                     | 30           | -            | 30           |
+| API Endpoints                | ~96          | ~96 mapped   | ~96          |
 | Feature Modules              | 2 app + core | 19           | 22           |
 | Docker Services              | -            | -            | 7            |
+| Game Types                   | 7            | 7            | 7            |
+| AI Providers                 | 3            | -            | 3            |
+
+================================================================
+13. SPRINT 11 O'ZGARISHLAR XULOSA
+================================================================
+
+### Task 1: Import Words — To'liq qayta yozildi
+- 3 import rejimi: structured (word–translation), plain_english (AI), mixed
+- Har bir suggestion: in_user_library, pronunciation, definition, CEFR difficulty
+- Frontend: filter pills (A1-A2, B1-B2, C1-C2), parse mode label, library badge
+- 500+ COMMON_TRANSLATIONS, STOP_WORDS, estimate_cefr()
+
+### Task 2: Synonym & Antonym Game — Yangi
+- Backend: StartSynonymAntonymUseCase (AI + 20 word fallback), Submit, Complete
+- Frontend: SynonymAntonymPage — phase state machine, 2x2 option grid
+- Model: SynonymAntonymRound (question_type: synonym/antonym)
+- Prompt: SYNONYM_ANTONYM_PROMPT
+
+### Task 3: Irregular Verbs Game — Yangi
+- Backend: StartIrregularVerbsUseCase (130+ verbs, 4 tier), Submit (2 attempts, hints), Complete
+- Frontend: IrregularVerbsPage — 2 text inputs, hint display, retry logic
+- Model: IrregularVerbRound (infinitive, past_simple, past_participle, attempts)
+- Data: core/services/ai/irregular_verbs_data.py
+
+### Task 4: Mobile Navigation — Qayta yozildi
+- 5 tab → 4 tab + "More" button
+- Main: Home, Words, Games, Profile
+- More sheet: 9 items (Tests, Review, Import, AI Chat, Analytics, Confusing Pairs, Badges, Notifications, Learning Profile)
+- Framer Motion spring animation, backdrop blur
+
+### O'zgartirilgan fayllar soni:
+- Backend: 16 fayl (3 yangi, 13 o'zgartirilgan)
+- Frontend: 12 fayl (2 yangi, 10 o'zgartirilgan)
+- Jami: 28 fayl
+
+================================================================
+14. SPRINT 12 O'ZGARISHLAR XULOSA (2025-06-20)
+================================================================
+
+### Task 1: Gemini AI Provider — Yangi default AI
+- GeminiProvider: google-generativeai SDK, gemini-2.0-flash model
+- AIProviderFactory: 3-provider fallback chains (gemini→groq→openai)
+- AIStatusView: GET /api/v1/system/ai-status/ — barcha provider status
+- Circuit breaker: gemini entry (5 failures, 120s timeout)
+- Frontend: AIStatusCard, SystemStatusPage, useAIStatus hook
+- 7 test: generate_text/json/chat, circuit_breaker, convert_messages
+
+### Task 2: Word Archive System — Yangi feature
+- Backend: is_archived, archived_at fields (Word model), 4 use cases, 4 views, 4 URLs
+- Frontend: ArchiveButton, ArchivedWordsSection, Active/Archived tabs
+- Hooks: useArchivedWords, useArchiveWord, useUnarchiveWord, useBulkArchive
+- 7 test: archive, unarchive, get_archived, bulk_archive, exclude_from_review/get_all/search
+- MIGRATION KERAK: makemigrations words → migrate
+
+### Task 3: Import Fix — Multi-unit text parsing
+- parse_structured_text() qayta yozildi: "Unit 6", "Unit 7" separatorlar
+- Parenthetical forms: "Choose (chose)" → word = "Choose", variant = "chose"
+- Em-dash `—` separator regex ga qo'shildi
+
+### Task 4: Arxivlangan so'zlar review/games dan exclude
+- word_repo.py: get_all_by_user, get_count_by_user, search, get_by_category — is_archived=False
+- word_stats_repo.py: get_words_for_review, get_review_words, get_review_summary_stats, get_stats — is_archived=False
+- Barcha 7 game type va test_generation get_all_by_user orqali inherit qiladi
+
+### Task 5: Frontend UI Coverage
+- 6 yangi komponent: AIStatusCard, EnrichmentStatusBadge, ArchiveButton, WordDetailModal, ArchivedWordsSection, SystemStatusPage
+- 4 o'zgartirilgan sahifa: WordsPage, ReviewSessionPage, TextInputStep, routes/index.tsx
+- 7 yangi API/hook fayl: endpoints, types, wordApi, useWords, systemApi, useSystemHealth qo'shimchalar
+
+### Task 6: UX Innovations
+- Keyboard shortcuts (ReviewSessionPage): Space=flip, 1-5=rate, Escape=quit
+- Drag-and-drop .txt (TextInputStep): drop zone, file validation, 50KB limit
+- Word detail modal: full word info, related words, review stats, SR info
+- Enrichment status badges: per-word enrichment status visualization
+- Confidence progress bars: word card confidence visualization
+- "Enrich All Words" button: bulk enrichment trigger
+
+### O'zgartirilgan fayllar soni:
+- Backend: 21 fayl (7 yangi, 14 o'zgartirilgan)
+- Frontend: 17 fayl (6 yangi, 11 o'zgartirilgan)
+- Jami: 38 fayl
+
+### Qolgan vazifalar:
+- ✅ MIGRATION: bajarildi
+- ✅ DOCKER VERIFY: bajarildi
+
+================================================================
+SPRINT 12.1 HOLAT VA MUAMMOLAR (2025-02-23)
+================================================================
+
+### Umumiy holat:
+| Service         | Holat        |
+|-----------------|--------------|
+| PostgreSQL      | ✅ Healthy    |
+| Redis           | ✅ Healthy    |
+| Django web      | ✅ Running    |
+| Celery Worker   | ✅ Running    |
+| Celery Beat     | ✅ Running    |
+| Frontend (Vite) | ✅ Running    |
+| Groq API        | ✅ Working (HTTP 200) |
+| Gemini API      | ⚠️ Rate limited (free tier) |
+
+### Test natijalari (Sprint 12.1):
+- Jami collected: 1091
+- Passed: 1091 (4 ta fail tuzatildi)
+- Failed: 0
+- Errors: 0
+- Warning: 1 (google-generativeai deprecated)
+- Vaqt: ~854s (~14 min)
+
+### Hal qilingan muammolar:
+
+1. **AI Provider ishlamaydi** → TUZATILDI
+   - Root cause: root .env da AI_PROVIDER=gemini edi, Gemini free tier rate-limited
+   - Fix: AI_PROVIDER=groq ga o'zgartirildi (root .env, docker-compose, base.py)
+   - GROQ_API_KEY root .env va backend .env o'rtasida sinxronlashtirildi
+
+2. **Chat fallback javoblar qaytarardi** → TUZATILDI
+   - Root cause: Gemini rate-limited → circuit breaker open → FallbackAIProvider
+   - Fix: Groq primary, _parse_ai_json() markdown fence stripping
+
+3. **Smart Import o'zbek so'zlarni qabul qilardi** → TUZATILDI
+   - Root cause: is_english_word() faqat ASCII tekshirardi
+   - Fix: is_uzbek_word(), unli tekshiruv, branding filtr qo'shildi
+
+4. **Test failures (4)** → TUZATILDI
+   - test_unsupported_provider: gemini fallback hisobga olinmagan
+   - test_fallback_when_circuit_open: gemini circuit ochilmagan
+   - test_factory_switches_provider: gemini fallback hisobga olinmagan
+   - test_ai_ping_success: noto'g'ri mock path
+
+5. **test_wordfix DB lock** → TUZATILDI
+   - Root cause: parallel test runs stale connection
+   - Fix: pg_terminate_backend + DROP DATABASE
+
+### O'zgartirilgan fayllar soni (Sprint 12.1):
+- Backend: 12 fayl (2 yangi, 10 o'zgartirilgan)
+- Frontend: 4 fayl (0 yangi, 4 o'zgartirilgan)
+- Config/env: 3 fayl o'zgartirildi
+- Docs: 4 fayl yangilandi
+- Jami: 23 fayl
+
+### Qolgan vazifalar:
+- ⚠️ google-generativeai deprecated warning → google.genai ga migrate qilish kerak
+- ⚠️ Gemini free tier rate limit → pullik plan yoki faqat Groq ishlatish
+
+================================================================
+9. SPRINT 12.2 — SMART IMPORT QAYTA ARXITEKTURA
+================================================================
+
+### Muammo:
+Foydalanuvchi 50 ta ingliz so'zini Units 9-13 dan (PDF matn) import qilmoqchi.
+Lekin sistema 0 ta to'g'ri so'z topdi, 7 ta noto'g'ri (o'zbek so'zlar, OCR noise, metadata).
+
+### Yechim — Yangi modul arxitektura:
+```
+apps/words/application/use_cases/import_helpers/
+  ├── __init__.py           — Barcha modullardan re-export
+  ├── text_cleaner.py       — SUB-TASK 1: OCR noise, URL, branding, metadata tozalash
+  ├── language_detector.py  — SUB-TASK 2: O'zbek/Ingliz aniqlash (250+ o'zbek so'z, suffixlar)
+  ├── pair_extractor.py     — SUB-TASK 3: 5 ta strategiya bilan juft ajratish (confidence bilan)
+  └── translation_db.py     — SUB-TASK 4: 500+ tarjima, CEFR data, lookup funksiyalar
+```
+
+### smart_import.py (SUB-TASK 5) — Qayta yozildi:
+- AnalyzeTextUseCase: Yangi pipeline: clean → extract → AI enrich / fallback → library check
+- Yangi response maydonlar: ai_used, new_words
+- parse_mode yangi qiymatlar: "ai", "structured", "fallback"
+- Eski ImportWordsUseCase, ValidateCSVUseCase, CSVImportUseCase — o'zgarishsiz
+- parse_structured_text() funksiyasi backward-compatible
+
+### Yangi testlar (SUB-TASK 7):
+- test_import_helpers.py — 5 test klass, ~35 test:
+  - TestTextCleaner: URL, branding, instruction tozalash
+  - TestLanguageDetector: O'zbek/Ingliz aniqlash
+  - TestPairExtractor: Numbered, dash, multi-unit, deduplication
+  - TestTranslationDB: Tarjima lookup, CEFR estimate
+  - TestSmartImportIntegration: Full pipeline, AI enrichment, library check
+
+### Frontend yangilanishlar:
+- TextImportReview.tsx: parse_mode badges (🤖/📋/⚠️), AI badge, "Only New" button
+- TextImportWordRow.tsx: part_of_speech badge, definition display, example_sentence
+- useTextImport.ts: showOnlyNew, selectAllNew(), deselectLibrary(), aiUsed, newWords
+- smart-import.ts: ai_used, new_words, example_sentence, parse_mode: 'ai' qo'shildi
+
+### O'zgartirilgan fayllar (Sprint 12.2):
+- Backend yangi: 5 fayl (import_helpers paketi + test_import_helpers.py)
+- Backend o'zgartirilgan: 1 fayl (smart_import.py)
+- Frontend o'zgartirilgan: 4 fayl (types, hook, 2 component)
+- Docs: 1 fayl yangilandi (04_CURRENT_ISSUES_AND_STATUS.txt)
+- Jami: ~11 fayl

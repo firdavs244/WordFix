@@ -91,4 +91,51 @@ export const wordsApi = {
   deleteCategory: async (id: string) => {
     await apiClient.delete(`/words/categories/${id}/`);
   },
+
+  // ─── Archive ─────────────────────────────────────────────────────────────
+
+  archiveWord: async (id: string) => {
+    const res = await apiClient.post<ApiResponse<{ id: string; is_archived: boolean }>>(
+      `/words/${id}/archive/`,
+    );
+    return res.data;
+  },
+
+  unarchiveWord: async (id: string) => {
+    const res = await apiClient.post<ApiResponse<{ id: string; is_archived: boolean }>>(
+      `/words/${id}/unarchive/`,
+    );
+    return res.data;
+  },
+
+  getArchivedWords: async (params?: { page?: number; page_size?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.page_size) qs.set('page_size', String(params.page_size));
+    const query = qs.toString();
+    const res = await apiClient.get<ApiResponse<Word[]>>(
+      query ? `/words/archived/?${query}` : '/words/archived/',
+    );
+    return res.data;
+  },
+
+  bulkArchiveWords: async (wordIds: string[]) => {
+    const res = await apiClient.post<ApiResponse<{ archived_count: number }>>(
+      '/words/archive/bulk/',
+      { word_ids: wordIds },
+    );
+    return res.data;
+  },
+
+  // ─── Enrichment ──────────────────────────────────────────────────────────
+
+  enrichWord: async (id: string) => {
+    const res = await apiClient.post<ApiResponse<unknown>>(`/words/${id}/enrich/`);
+    return res.data;
+  },
+
+  enrichAll: async () => {
+    const res = await apiClient.post<ApiResponse<unknown>>('/words/enrich-all/');
+    return res.data;
+  },
 };

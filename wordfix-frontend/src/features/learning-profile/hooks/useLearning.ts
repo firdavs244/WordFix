@@ -20,6 +20,8 @@ export function useLearningProfile() {
   return useQuery({
     queryKey: learningKeys.profile(),
     queryFn: () => learningApi.getLearningProfile(),
+    staleTime: 60_000,
+    retry: 2,
   });
 }
 

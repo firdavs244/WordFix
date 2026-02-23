@@ -2,34 +2,43 @@
 Smart import, distractor, and confusing pair drill prompts.
 """
 
-SMART_IMPORT_PROMPT = """You are a vocabulary analysis assistant. Analyze the given English text and \
-identify words that a {proficiency_level} level student (who speaks {native_language}) probably does NOT know.
+SMART_IMPORT_PROMPT = """You are a vocabulary extraction expert. Analyze the following English text \
+and extract ALL meaningful vocabulary words.
 
-Text to analyze:
+TEXT:
 \"\"\"
 {text}
 \"\"\"
 
-The student already knows these words (EXCLUDE them): {known_words}
+The learner's current level: {proficiency_level}
+The learner's native language: {native_language}
+Words the student already knows (EXCLUDE them): {known_words}
 
-Instructions:
-1. Find up to {max_words} words the student likely does NOT know
-2. Prioritize: rare/advanced words first, then medium, then common last
-3. Sort by difficulty: hardest first
-4. Skip very common words (the, is, are, have, do, go, get, make, take, etc.)
-5. Include: academic, professional, and idiomatic words
-6. Exclude proper nouns, numbers, and basic function words
-7. Focus on useful, practical vocabulary worth memorizing
+EXTRACTION RULES:
+1. Extract ALL unique content words (nouns, verbs, adjectives, adverbs)
+2. SKIP: articles (a, the), prepositions (in, on, at), pronouns (I, he, she),
+   common verbs (is, are, was, have, do, go, get, make, take),
+   conjunctions (and, but, or), numbers
+3. SKIP: proper nouns (names, places) unless they are commonly used words
+4. For EACH word, provide:
+   - The word in base/dictionary form (e.g., "running" -> "run")
+   - Part of speech
+   - CEFR difficulty level (A1, A2, B1, B2, C1, C2)
+   - Translation to {native_language} (2-3 main translations)
+   - A brief definition in English
+5. Sort by difficulty: C2 first, then C1, B2, B1, A2, A1
+6. Extract up to {max_words} words - get ALL meaningful words
 
 Respond ONLY with a valid JSON array:
 [
   {{
-    "word": "the vocabulary word (lowercase)",
-    "translation": "translation in {native_language}",
-    "part_of_speech": "noun|verb|adjective|adverb|preposition|conjunction|pronoun|interjection|phrase|other",
+    "word": "serendipity",
+    "part_of_speech": "noun",
+    "difficulty": "C1",
+    "translation": "kutilmagan topilma",
+    "definition": "the occurrence of finding pleasant things by chance",
     "context_sentence": "the sentence from the text where this word appears",
-    "difficulty": "easy|medium|hard",
-    "reason": "brief explanation why this word is worth learning for a {proficiency_level} student"
+    "reason": "Advanced vocabulary useful for academic reading"
   }}
 ]"""
 

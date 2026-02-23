@@ -9,6 +9,8 @@ import {
   Trash2,
   X,
   Check,
+  Archive,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,10 +19,15 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { listContainerVariants, listItemVariants, cardHoverVariants } from '@/components/animations/PageTransition';
-import { useWords, useDeleteWord, useWordStats } from '../hooks/useWords';
+import { useWords, useDeleteWord, useWordStats, useArchiveWord, useEnrichAll } from '../hooks/useWords';
 import AddWordModal from '../components/AddWordModal';
-import type { DifficultyLevel, WordFilters } from '@/types';
+import { WordDetailModal } from '../components/WordDetailModal';
+import { EnrichmentStatusBadge } from '../components/EnrichmentStatusBadge';
+import { ArchiveButton } from '../components/ArchiveButton';
+import { ArchivedWordsSection } from '../components/ArchivedWordsSection';
+import type { DifficultyLevel, WordFilters, Word } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const difficultyConfig = {
   easy: { label: 'Easy', variant: 'success' as const, color: 'bg-success/10 text-success' },
@@ -34,6 +41,8 @@ export function WordsPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | ''>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [selectedWord, setSelectedWord] = useState<Word | null>(null);
 
   const filters: WordFilters = useMemo(() => ({
     search: searchQuery || undefined,
@@ -46,6 +55,8 @@ export function WordsPage() {
   const { data: wordsData, isLoading } = useWords(filters);
   const { data: statsData } = useWordStats();
   const deleteWord = useDeleteWord();
+  const archiveWord = useArchiveWord();
+  const enrichAll = useEnrichAll();
 
   const words = wordsData?.data ?? [];
   const meta = wordsData?.meta;
@@ -74,6 +85,38 @@ export function WordsPage() {
           </Button>
         </div>
 
+        {/* Tab switcher: Active / Archived */}
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1 w-fit">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all',
+              activeTab === 'active' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <BookOpen className="h-4 w-4" />
+            Active
+          </button>
+          <button
+            onClick={() => setActiveTab('archived')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all',
+              activeTab === 'archived' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Archive className="h-4 w-4" />
+            Archived
+          </button>
+        </div>
+
+        {/* Archived tab */}
+        {activeTab === 'archived' && (
+          <ArchivedWordsSection onWordClick={setSelectedWord} />
+        )}
+
+        {/* Active tab content */}
+        {activeTab === 'active' && (
+        <>
         {/* Stats Cards */}
         {stats && stats.total > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -199,7 +242,10 @@ export function WordsPage() {
               return (
                 <motion.div key={word.id} variants={listItemVariants}>
                   <motion.div variants={cardHoverVariants} initial="rest" whileHover="hover" whileTap="tap">
-                    <Card className="cursor-pointer border-border/50 overflow-hidden group">
+                    <Card
+                      className="cursor-pointer border-border/50 overflow-hidden group"
+                      onClick={() => setSelectedWord(word)}
+                    >
                       <CardContent className={viewMode === 'grid' ? 'p-5' : 'flex items-center gap-4 p-4'}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -220,6 +266,21 @@ export function WordsPage() {
                               {word.definition}
                             </p>
                           )}
+                          {/* Confidence bar */}
+                          {word.confidence_score > 0 && viewMode === 'grid' && (
+                            <div className="mt-2">
+                              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className={cn(
+                                    'h-full rounded-full transition-all',
+                                    word.confidence_score >= 80 ? 'bg-success' :
+                                    word.confidence_score >= 50 ? 'bg-warning' : 'bg-destructive'
+                                  )}
+                                  style={{ width: `${word.confidence_score}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2 mt-3 flex-wrap">
                             <Badge variant={dc.variant}>{dc.label}</Badge>
                             {word.part_of_speech && (
@@ -234,9 +295,16 @@ export function WordsPage() {
                                 {word.category.name}
                               </Badge>
                             )}
+                            <EnrichmentStatusBadge status={word.enrichment_status} showLabel={false} />
                           </div>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ArchiveButton
+                            isArchived={false}
+                            onArchive={() => archiveWord.mutate(word.id)}
+                            onUnarchive={() => {}}
+                            size="icon"
+                          />
                           <Button
                             variant="ghost"
                             size="icon"
@@ -279,6 +347,36 @@ export function WordsPage() {
             </Button>
           </div>
         )}
+
+        {/* Enrich All button */}
+        {stats && stats.total > 0 && (
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => enrichAll.mutate()}
+              disabled={enrichAll.isPending}
+            >
+              <Sparkles className="h-4 w-4" />
+              {enrichAll.isPending ? 'Enriching...' : 'Enrich All Words'}
+            </Button>
+          </div>
+        )}
+
+        </>
+        )}
+
+        {/* Word Detail Modal */}
+        <AnimatePresence>
+          {selectedWord && (
+            <WordDetailModal
+              word={selectedWord}
+              onClose={() => setSelectedWord(null)}
+              onDelete={(id) => { handleDelete(id); setSelectedWord(null); }}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Add Word Modal */}
         <AnimatePresence>

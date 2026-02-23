@@ -1,5 +1,6 @@
 """
-Game use cases: Speed Round, Word Match, Word Context, Story Builder, Listening Challenge.
+Game use cases: Speed Round, Word Match, Word Context, Story Builder,
+Listening Challenge, Synonym & Antonym, Irregular Verbs.
 
 This package re-exports all game use cases for backward compatibility.
 """
@@ -17,6 +18,16 @@ from .listening import (  # noqa: F401
     SubmitListeningAnswerUseCase,
     CompleteListeningChallengeUseCase,
 )
+from .synonym_antonym import (  # noqa: F401
+    StartSynonymAntonymUseCase,
+    SubmitSynonymAntonymUseCase,
+    CompleteSynonymAntonymUseCase,
+)
+from .irregular_verbs import (  # noqa: F401
+    StartIrregularVerbsUseCase,
+    SubmitIrregularVerbUseCase,
+    CompleteIrregularVerbsUseCase,
+)
 from .game_stats import GetGameHistoryUseCase, GetGameStatsUseCase  # noqa: F401
 
 __all__ = [
@@ -32,6 +43,12 @@ __all__ = [
     "StartListeningChallengeUseCase",
     "SubmitListeningAnswerUseCase",
     "CompleteListeningChallengeUseCase",
+    "StartSynonymAntonymUseCase",
+    "SubmitSynonymAntonymUseCase",
+    "CompleteSynonymAntonymUseCase",
+    "StartIrregularVerbsUseCase",
+    "SubmitIrregularVerbUseCase",
+    "CompleteIrregularVerbsUseCase",
     "GetGameHistoryUseCase",
     "GetGameStatsUseCase",
 ]

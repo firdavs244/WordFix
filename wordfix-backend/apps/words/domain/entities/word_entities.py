@@ -72,6 +72,9 @@ class WordEntity:
     easiness_factor: float = 2.5
     repetition_number: int = 0
     interval_days: int = 0
+    # Archive fields
+    is_archived: bool = False
+    archived_at: datetime | None = None
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None

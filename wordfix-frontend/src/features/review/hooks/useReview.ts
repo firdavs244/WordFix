@@ -54,6 +54,8 @@ export function useStreak() {
   return useQuery({
     queryKey: reviewKeys.streak(),
     queryFn: () => reviewApi.getStreak(),
+    staleTime: 60_000,
+    retry: 2,
   });
 }
 
@@ -61,6 +63,8 @@ export function useDailyProgress() {
   return useQuery({
     queryKey: reviewKeys.dailyProgress(),
     queryFn: () => reviewApi.getDailyProgress(),
+    staleTime: 60_000,
+    retry: 2,
   });
 }
 

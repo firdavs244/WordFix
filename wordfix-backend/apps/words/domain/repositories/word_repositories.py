@@ -79,6 +79,24 @@ class AbstractWordRepository(ABC):
     def get_stats(self, user_id: UUID) -> dict:
         ...
 
+    @abstractmethod
+    def archive_word(self, user_id: UUID, word_id: UUID) -> WordEntity:
+        ...
+
+    @abstractmethod
+    def unarchive_word(self, user_id: UUID, word_id: UUID) -> WordEntity:
+        ...
+
+    @abstractmethod
+    def get_archived_words(
+        self, user_id: UUID, page: int = 1, page_size: int = 20,
+    ) -> tuple[list[WordEntity], int]:
+        ...
+
+    @abstractmethod
+    def bulk_archive(self, user_id: UUID, word_ids: list[UUID]) -> int:
+        ...
+
 
 class AbstractWordCategoryRepository(ABC):
     """Abstract repository for WordCategory."""

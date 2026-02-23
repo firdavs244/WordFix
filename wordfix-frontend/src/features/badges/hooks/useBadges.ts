@@ -9,9 +9,11 @@ export function useBadges() {
   const badges = useMemo<BadgeData[]>(() => {
     const all = allBadgesQuery.data?.data ?? [];
     const earned = userBadgesQuery.data?.data?.badges ?? [];
-    const earnedMap = new Map(earned.map((b) => [b.id, b]));
+    // Only include badges that are actually earned (is_earned === true)
+    const earnedOnly = earned.filter((b: BadgeData) => b.is_earned);
+    const earnedMap = new Map(earnedOnly.map((b: BadgeData) => [b.id, b]));
 
-    return all.map((badge) => {
+    return all.map((badge: BadgeData) => {
       const userBadge = earnedMap.get(badge.id);
       if (userBadge) {
         return { ...badge, is_earned: true, earned_at: userBadge.earned_at };
