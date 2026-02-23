@@ -1,0 +1,227 @@
+# =============================================================================
+# WordFix — Production Docker Compose
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Architecture:
+#   nginx (port 80) → serves frontend + proxies /api/ to Django (gunicorn)
+#   No CORS issues — everything on same origin
+# =============================================================================
+
+services:
+  # ── PostgreSQL Database ───────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: wordfix-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wordfix}
+      POSTGRES_USER: ${POSTGRES_USER:-wordfix_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wordfix_pass}
+    # Only bind to localhost — not exposed to the internet
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wordfix_user} -d ${POSTGRES_DB:-wordfix}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  # ── Redis Cache / Celery Broker ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: wordfix-redis
+    # Only bind to localhost — not exposed to the internet
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  # ── Django Backend (Gunicorn) ─────────────────────────────────────────────
+  web:
+    build:
+      context: ./wordfix-backend
+      dockerfile: docker/Dockerfile
+    container_name: wordfix-web
+    # NOT exposed to internet — nginx proxies to this
+    expose:
+      - "8000"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+      - backend_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.production}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - POSTGRES_DB=${POSTGRES_DB:-wordfix}
+      - POSTGRES_USER=${POSTGRES_USER:-wordfix_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-wordfix_pass}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - AI_PROVIDER=${AI_PROVIDER:-groq}
+      - AI_MAX_RETRIES=${AI_MAX_RETRIES:-3}
+      - AI_TIMEOUT=${AI_TIMEOUT:-30}
+      - WORD_ENRICHMENT_ENABLED=${WORD_ENRICHMENT_ENABLED:-True}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    # Production: gunicorn instead of runserver
+    command: >
+      gunicorn config.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers 3
+      --threads 2
+      --timeout 120
+      --access-logfile -
+      --error-logfile -
+      --log-level info
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/health/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  # ── Celery Worker ─────────────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./wordfix-backend
+      dockerfile: docker/Dockerfile
+    container_name: wordfix-celery-worker
+    command: celery -A config worker -l info --concurrency=2
+    volumes:
+      - media_data:/app/media
+      - backend_logs:/app/logs
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.production}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DEBUG=False
+      - POSTGRES_DB=${POSTGRES_DB:-wordfix}
+      - POSTGRES_USER=${POSTGRES_USER:-wordfix_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-wordfix_pass}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - AI_PROVIDER=${AI_PROVIDER:-groq}
+      - AI_MAX_RETRIES=${AI_MAX_RETRIES:-3}
+      - AI_TIMEOUT=${AI_TIMEOUT:-30}
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  # ── Celery Beat (Scheduler) ──────────────────────────────────────────────
+  celery_beat:
+    build:
+      context: ./wordfix-backend
+      dockerfile: docker/Dockerfile
+    container_name: wordfix-celery-beat
+    command: >
+      bash -c "sleep 15 && celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - backend_logs:/app/logs
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.production}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DEBUG=False
+      - POSTGRES_DB=${POSTGRES_DB:-wordfix}
+      - POSTGRES_USER=${POSTGRES_USER:-wordfix_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-wordfix_pass}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - AI_PROVIDER=${AI_PROVIDER:-groq}
+      - AI_MAX_RETRIES=${AI_MAX_RETRIES:-3}
+      - AI_TIMEOUT=${AI_TIMEOUT:-30}
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+  # ── Nginx Reverse Proxy + Frontend ────────────────────────────────────────
+  nginx:
+    build:
+      context: ./wordfix-frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_APP_NAME: ${VITE_APP_NAME:-WordFix}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+    container_name: wordfix-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - media_data:/app/media:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - wordfix-network
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  static_data:
+  backend_logs:
+
+# ── Network ──────────────────────────────────────────────────────────────────
+networks:
+  wordfix-network:
+    driver: bridge

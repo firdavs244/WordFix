@@ -2,7 +2,7 @@
 01_PROJECT_ARCHITECTURE.txt
 WordFix — AI-Powered English Vocabulary Learning Platform
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-23 (Sprint 12 — Gemini AI, Word Archive, Import Fix, UX Innovations)
+Hujjat yangilangan sana: 2026-02-23 (Sprint 13 — Production Deployment, Nginx, Gunicorn)
 ================================================================
 
 ================================================================
@@ -679,3 +679,37 @@ SPRINT 12.1 ARXITEKTURA O'ZGARISHLARI (2025-02-23)
 - _parse_ai_json() — Markdown code fence stripping support
 - CHAT_SYSTEM_PROMPT — Groq/Llama optimized (stricter JSON)
 - generate_chat() → _parse_ai_json() (was json.loads)
+
+================================================================
+SPRINT 13 — PRODUCTION DEPLOYMENT ARXITEKTURASI (2026-02-23)
+================================================================
+
+### Production Arxitektura (Nginx Reverse Proxy)
+```
+Internet:80 → nginx → / (Frontend SPA — static HTML/JS/CSS)
+                     → /api/ (proxy → gunicorn:8000)
+                     → /admin/ (proxy → gunicorn:8000)
+                     → /media/ (nginx direct serve)
+```
+
+### Yangi Fayllar
+| Fayl                              | Vazifasi                                    |
+|-----------------------------------|---------------------------------------------|
+| docker-compose.prod.yml           | Production compose (gunicorn + nginx)       |
+| deploy.sh                         | Auto-deploy script (IP detect, env gen)     |
+| nginx/nginx.conf                  | Reverse proxy + SPA serve                   |
+| wordfix-frontend/Dockerfile.prod  | Multi-stage build (node:20→nginx:alpine)    |
+| .env.production                   | Production env template                     |
+| wordfix-frontend/.env.production  | Frontend: VITE_API_URL=/api/v1              |
+
+### O'zgartirilgan Fayllar
+| Fayl                              | O'zgarish                                   |
+|-----------------------------------|---------------------------------------------|
+| client.ts                         | baseURL fallback → /api/v1 (relative)       |
+| production.py                     | USE_SSL, CSRF_TRUSTED_ORIGINS, proxy header |
+| docker/Dockerfile                 | CMD → gunicorn (dev compose override)       |
+
+### CORS Muammo Yechimi
+- Nginx reverse proxy orqali frontend va API bitta origin
+- Cross-origin so'rov umuman yo'q → CORS xatolik imkonsiz
+- Qo'shimcha: CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS env sozlangan

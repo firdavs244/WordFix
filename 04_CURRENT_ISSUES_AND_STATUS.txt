@@ -2,7 +2,7 @@
 04_CURRENT_ISSUES_AND_STATUS.txt
 WordFix — Joriy muammolar va holat
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2025-06-20 (Sprint 12 — Gemini AI, Word Archive, UX Innovations)
+Hujjat yangilangan sana: 2026-02-23 (Sprint 13 — Production Deployment, Nginx, Gunicorn)
 ================================================================
 
 ================================================================
@@ -22,6 +22,8 @@ Hujjat yangilangan sana: 2025-06-20 (Sprint 12 — Gemini AI, Word Archive, UX I
 | PostgreSQL database         | Connected  | ✅ Ishlaydi|
 | Celery Worker               | Running    | ✅ Ishlaydi|
 | Celery Beat                 | Running    | ✅ Ishlaydi|
+| Production Deploy (nginx)   | Ready      | ✅ Tayyor  |
+| CORS muammo                 | Fixed      | ✅ Hal     |
 
 ================================================================
 2. BACKEND TEST NATIJALARI
@@ -564,3 +566,149 @@ apps/words/application/use_cases/import_helpers/
 - Frontend o'zgartirilgan: 4 fayl (types, hook, 2 component)
 - Docs: 1 fayl yangilandi (04_CURRENT_ISSUES_AND_STATUS.txt)
 - Jami: ~11 fayl
+
+================================================================
+10. SPRINT 13 — PRODUCTION DEPLOYMENT (UBUNTU SERVER)
+================================================================
+Sana: 2026-02-23
+
+### Muammo:
+Loyiha development rejimida ishlaydi (runserver, Vite dev server).
+Ubuntu serverga (161.97.129.229) deploy qilganda CORS xatolik:
+  "Access to XMLHttpRequest at 'http://localhost:8000/api/v1/auth/register/'
+   from origin 'http://161.97.129.229:5173' has been blocked by CORS policy"
+
+Sabablari:
+1. Frontend `client.ts` da baseURL `http://localhost:8000` (hardcoded fallback)
+2. Frontend va Backend alohida portlarda (5173/8000) — cross-origin
+3. Production settings da SECURE_SSL_REDIRECT=True (SSL yo'q edi)
+4. CSRF_TRUSTED_ORIGINS sozlanmagan
+5. Docker Compose faqat development uchun (runserver, source mount)
+
+### Yechim — Nginx Reverse Proxy Arxitektura:
+```
+Internet → :80 → nginx → Frontend (/)        → static HTML/JS/CSS
+                       → API (/api/)          → gunicorn:8000 (Django)
+                       → Admin (/admin/)      → gunicorn:8000
+                       → Static (/static/)    → WhiteNoise via Django
+                       → Media (/media/)      → nginx to'g'ridan-to'g'ri
+```
+
+CORS muammo TO'LIQ BARTARAF ETILDI:
+- Frontend va API bitta origin dan (http://161.97.129.229:80)
+- Hech qanday cross-origin so'rov yo'q
+- CORS headerlari kerak emas
+
+### Yaratilgan yangi fayllar:
+
+1. docker-compose.prod.yml — Production Docker Compose
+   - `web` servisi: gunicorn (3 workers, 2 threads, 120s timeout)
+   - `nginx` servisi: reverse proxy + frontend static fayllar
+   - `db`, `redis`: faqat localhost:127.0.0.1 dan ochiq (xavfsiz)
+   - `celery_worker`, `celery_beat`: production settings bilan
+   - Volume'lar: postgres_data, redis_data, media_data, static_data, backend_logs
+   - Barcha env variables `.env.production` dan o'qiladi
+
+2. nginx/nginx.conf — Nginx Reverse Proxy Konfiguratsiyasi
+   - `/` → Frontend SPA (try_files $uri /index.html)
+   - `/api/` → Django backend (proxy_pass)
+   - `/admin/` → Django admin
+   - `/static/` → WhiteNoise orqali
+   - `/media/` → nginx to'g'ridan-to'g'ri
+   - Gzip compression yoqilgan
+   - Security headerlar (X-Frame-Options, X-Content-Type-Options, XSS-Protection)
+   - Static asset cache: 1 yil (immutable)
+
+3. wordfix-frontend/Dockerfile.prod — Multi-Stage Frontend Build
+   - Stage 1 (builder): node:20-alpine, npm ci, npm run build
+   - Stage 2 (serve): nginx:alpine, dist/ → /usr/share/nginx/html
+   - VITE_API_URL=/api/v1 (relative URL — CORS muammosiz)
+   - Build ARGs: VITE_API_URL, VITE_APP_NAME, VITE_APP_VERSION
+
+4. deploy.sh — Avtomatik Deployment Script
+   - Server IP auto-detect (ifconfig.me, ipify.org, hostname, ip route)
+   - .env.production auto-generate (SECRET_KEY, DB_PASSWORD random)
+   - ALLOWED_HOSTS va CORS_ALLOWED_ORIGINS auto-update
+   - Docker Compose build + start
+   - Health check kutish
+   - CLI: --stop, --logs, --status, --rebuild, --help
+
+5. .env.production — Production Environment Template
+   - Barcha kerakli env variablelar
+   - USE_SSL=False (HTTP rejim, keyinchalik True qilish mumkin)
+   - VITE_API_URL=/api/v1 (relative)
+
+6. wordfix-frontend/.env.production — Frontend Prod Env
+   - VITE_API_URL=/api/v1
+
+### O'zgartirilgan mavjud fayllar:
+
+1. wordfix-frontend/src/api/client.ts (1 qator)
+   - OLDIN: baseURL fallback = 'http://localhost:8000/api/v1'
+   - KEYIN: baseURL fallback = '/api/v1' (relative URL)
+   - Sabab: nginx proxy orqali ishlaydi, absolute URL kerak emas
+   - Dev rejim: .env.development da VITE_API_URL=http://localhost:8000/api/v1
+
+2. wordfix-backend/config/settings/production.py (to'liq qayta yozildi)
+   - OLDIN: SECURE_SSL_REDIRECT=True (hardcoded), X_FRAME_OPTIONS="DENY"
+   - KEYIN:
+     * USE_SSL env variable bilan boshqariladigan SSL sozlamalar
+     * SECURE_SSL_REDIRECT = _use_ssl (default: False)
+     * SESSION_COOKIE_SECURE = _use_ssl
+     * CSRF_COOKIE_SECURE = _use_ssl
+     * HSTS faqat SSL=True bo'lganda yoqiladi
+     * X_FRAME_OPTIONS = "SAMEORIGIN" (nginx iframe uchun)
+     * SECURE_PROXY_SSL_HEADER qo'shildi (nginx X-Forwarded-Proto)
+     * CSRF_TRUSTED_ORIGINS: SERVER_IP dan auto-detect
+     * python-decouple: env_config("SERVER_IP"), env_config("USE_SSL")
+
+3. wordfix-backend/docker/Dockerfile (1 qator)
+   - OLDIN: CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+   - KEYIN: CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", ...]
+   - Dev docker-compose.yml da `command: python manage.py runserver` override qiladi
+
+### Deploy qilish tartibi:
+```bash
+# 1. Loyihani serverga ko'chirish
+scp -r WordFix/ user@161.97.129.229:~/
+
+# 2. Serverga SSH kirish
+ssh user@161.97.129.229
+
+# 3. Deploy (IP auto-detect, .env generate, build + start)
+cd ~/WordFix
+chmod +x deploy.sh
+./deploy.sh
+
+# 4. API kalitlarni sozlash
+nano .env.production   # GROQ_API_KEY, GEMINI_API_KEY va h.k.
+./deploy.sh            # Qayta deploy
+
+# 5. Boshqa komandalar
+./deploy.sh --logs     # Loglar ko'rish
+./deploy.sh --stop     # Barcha xizmatlarni to'xtatish
+./deploy.sh --status   # Holat tekshirish
+./deploy.sh --rebuild  # Imagelarni qayta build qilish
+```
+
+### Deploy manzillari:
+- Frontend:  http://161.97.129.229
+- API:       http://161.97.129.229/api/v1/
+- Swagger:   http://161.97.129.229/api/v1/schema/swagger/
+- Admin:     http://161.97.129.229/admin/
+- Health:    http://161.97.129.229/api/v1/health/
+
+### O'zgartirilgan fayllar jadvali (Sprint 13):
+| Fayl                                    | Holat          | Izoh                                |
+|-----------------------------------------|----------------|-------------------------------------|
+| docker-compose.prod.yml                 | ✅ YANGI       | Production compose (gunicorn+nginx) |
+| deploy.sh                               | ✅ YANGI       | Auto-deploy script                  |
+| nginx/nginx.conf                        | ✅ YANGI       | Reverse proxy konfiguratsiya        |
+| wordfix-frontend/Dockerfile.prod        | ✅ YANGI       | Multi-stage build (node→nginx)      |
+| .env.production                         | ✅ YANGI       | Production env template             |
+| wordfix-frontend/.env.production        | ✅ YANGI       | Frontend prod env                   |
+| wordfix-frontend/src/api/client.ts      | ⚙️ O'ZGARGAN  | baseURL → /api/v1 (relative)        |
+| wordfix-backend/config/settings/prod.py | ⚙️ O'ZGARGAN  | SSL configurable, CSRF origins      |
+| wordfix-backend/docker/Dockerfile       | ⚙️ O'ZGARGAN  | CMD → gunicorn                      |
+| 04_CURRENT_ISSUES_AND_STATUS.txt        | ⚙️ O'ZGARGAN  | Sprint 13 hisobot qo'shildi        |
+| Jami                                    | 10 fayl        | 6 yangi + 4 o'zgartirilgan         |
