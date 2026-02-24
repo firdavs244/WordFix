@@ -2,7 +2,7 @@
 02_BACKEND_FULL_STATE.txt
 WordFix Backend — To'liq holat hujjati
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-23 (Sprint 12 — Gemini AI, Word Archive, Import Fix, UX)
+Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architecture)
 ================================================================
 
 ================================================================
@@ -918,7 +918,7 @@ Prefix: /api/v1/words/
 | StartChatUseCase               | use_cases/chat.py                       | 240   | AI chat sessiya boshlash                  |
 | SendChatMessageUseCase         | use_cases/chat.py                       |       | Chat xabar yuborish (AI javob)            |
 | EndChatUseCase                 | use_cases/chat.py                       |       | Chat tugatish                             |
-| AnalyzeTextUseCase             | use_cases/smart_import.py               | 318   | Matn tahlil (AI: so'zlarni ajratish)      |
+| AnalyzeTextUseCase             | use_cases/smart_import.py               | ~680  | AI-First matn tahlil (2-bosqichli pipeline)|
 | ImportWordsUseCase             | use_cases/smart_import.py               |       | Import qilingan so'zlarni qo'shish       |
 | CSVValidateUseCase             | use_cases/smart_import.py               |       | CSV faylni tekshirish                     |
 | CSVImportUseCase               | use_cases/smart_import.py               |       | CSV dan import                            |
@@ -1459,3 +1459,41 @@ SPRINT 12.1 BACKEND O'ZGARISHLARI (2025-02-23)
     - 1091 test collected
     - 1087 passed, 4 failed (tuzatildi → hozir 1091 passed)
     - 0 errors
+
+================================================================
+SPRINT 12.4 — AI-FIRST IMPORT ARCHITECTURE (2026-02-24)
+================================================================
+
+### Arxitektura o'zgarishi:
+**OLDIN (Sprint 12.2):** Matn → Python algoritm parse (import_helpers) → AI enrichment (optional)
+**KEYIN (Sprint 12.4):** Matn → Minimal clean → AI Call #1 (extract) → AI Call #2 (validate) → Return
+
+### AnalyzeTextUseCase to'liq qayta yozildi:
+- `__init__`: Soddalashtirildi (word_repo + ai_provider), **kwargs backward compat
+- `execute()`: Minimal clean → AI pipeline → fallback
+- `_minimal_clean()`: Faqat URL, email, BOM olib tashlash (~10 qator)
+- `_full_ai_pipeline()`: 2-bosqichli AI pipeline orchestrator
+- `_ai_extract()`: AI Call #1 — batafsil prompt, JSON extraction, deduplication
+- `_ai_extract_simple()`: Sodda backup prompt
+- `_build_extraction_prompt()`: 6 ta qoida bilan to'liq prompt (translation handling critical)
+- `_ai_validate()`: AI Call #2 — tarjima to'g'riligini tekshirish, non-English filtrlash
+- `_validate_batch()`: 30 talab batchlar
+- `_extract_json_from_text()`: Markdown, array, object JSON parsing
+- `_format_suggestions()`: Raw AI → frontend format
+- `_last_resort_fallback()`: import_helpers pipeline (oxirgi chora)
+- `_calc_difficulty()`: CEFR average hisoblash
+
+### Yangi response field lar:
+- `translation_source`: 'user' | 'ai' | 'corrected' | 'fallback'
+- `original_user_translation`: tuzatilgan tarjimalar uchun original
+
+### import_helpers/ papkasi — o'zgarishsiz, faqat fallback sifatida qoladi
+
+### O'zgartirilgan fayllar:
+1. **apps/words/application/use_cases/smart_import.py**: AnalyzeTextUseCase to'liq qayta yozildi
+2. **apps/words/tests/test_smart_import.py**: 18+ yangi AI-first test, eski DB-dependent test o'chirildi
+3. **apps/words/presentation/dependencies/import_deps.py**: user_repo, prompt_template, language_map olib tashlandi
+
+### Frontend o'zgarishlar:
+4. **types/smart-import.ts**: translation_source, original_user_translation fieldlar
+5. **TextImportWordRow.tsx**: 🔧/✓/🤖 translation_source badges

@@ -1,4 +1,4 @@
-import { Check, Library } from 'lucide-react';
+import { Check, Library, Wrench, Bot, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WordSuggestion } from '@/types';
 
@@ -68,9 +68,38 @@ export default function TextImportWordRow({ word, isSelected, onToggle }: TextIm
         </div>
         <div className="flex items-center gap-2">
           {word.translation ? (
-            <span className="text-xs text-muted-foreground">{word.translation}</span>
+            <span className={cn(
+              'text-xs text-muted-foreground',
+              word.translation_source === 'corrected' && 'text-emerald-600 dark:text-emerald-400 font-medium',
+            )}>
+              {word.translation}
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground/40">No translation</span>
+          )}
+          {word.translation_source === 'corrected' && (
+            <span
+              className="flex items-center gap-0.5 text-[9px] text-emerald-600 dark:text-emerald-400"
+              title={`AI tuzatdi. Asl tarjima: ${word.original_user_translation || '?'}`}
+            >
+              <Wrench className="h-2.5 w-2.5" />
+            </span>
+          )}
+          {word.translation_source === 'user' && (
+            <span
+              className="flex items-center gap-0.5 text-[9px] text-blue-500 dark:text-blue-400"
+              title="Foydalanuvchi tarjimasi saqlandi"
+            >
+              <CheckCircle className="h-2.5 w-2.5" />
+            </span>
+          )}
+          {word.translation_source === 'ai' && (
+            <span
+              className="flex items-center gap-0.5 text-[9px] text-violet-500 dark:text-violet-400"
+              title="AI tarjima qildi"
+            >
+              <Bot className="h-2.5 w-2.5" />
+            </span>
           )}
           {word.definition && (
             <span className="text-[10px] text-muted-foreground/50">— {word.definition}</span>

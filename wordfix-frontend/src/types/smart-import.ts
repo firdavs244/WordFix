@@ -14,6 +14,8 @@ export interface WordSuggestion {
   example_sentence?: string;
   in_user_library?: boolean;
   selected?: boolean;
+  translation_source?: 'user' | 'ai' | 'corrected' | 'fallback';
+  original_user_translation?: string;
 }
 
 export interface AnalyzeTextRequest {
@@ -23,7 +25,7 @@ export interface AnalyzeTextRequest {
 
 export interface AnalyzeTextResponse {
   suggestions: WordSuggestion[];
-  parse_mode: 'structured' | 'ai_extracted' | 'ai' | 'mixed' | 'fallback';
+  parse_mode: 'structured' | 'ai_extracted' | 'ai' | 'mixed' | 'fallback' | 'empty';
   total_found: number;
   already_in_library: number;
   new_words?: number;

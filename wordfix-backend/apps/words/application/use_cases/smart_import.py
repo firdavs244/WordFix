@@ -1,31 +1,41 @@
 """
-Smart import use cases: text analysis, word import, and CSV import.
+Smart Import — AI-First Architecture
 
-Sprint 12.2: Fully rewritten AnalyzeTextUseCase with import_helpers pipeline.
+Sprint 12.4: To'liq AI-first yondashuv.
+
+Tamoyil: AI HAMMA ishni qiladi. Python faqat AI ga so'rov yuboradi
+va natijani formatlaydi.
+
+Pipeline:
+1. Matnni minimal tozalash (URL, email olib tashlash)
+2. AI Call #1: Matndan ingliz so'zlarini ajratish + tarjima + metadata
+3. AI Call #2: Natijalarni validatsiya qilish (tarjima to'g'riligini tekshirish)
+4. Natijani frontend ga qaytarish
+
+Agar AI unavailable bo'lsa — oxirgi fallback (import_helpers) ishlatiladi.
 """
 
 import csv
 import io
+import json
 import logging
 import re
-from collections import Counter
 from uuid import UUID
-
-from .import_helpers.text_cleaner import clean_imported_text
-from .import_helpers.pair_extractor import extract_word_pairs
-from .import_helpers.language_detector import is_english_word, is_uzbek_word
-from .import_helpers.translation_db import (
-    COMMON_TRANSLATIONS,
-    CEFR_ORDER,
-    get_translation,
-    estimate_cefr,
-)
 
 logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════════════════
 # BACKWARD COMPATIBILITY — keep old names available for existing tests
 # ═══════════════════════════════════════════════════════════════════
+from .import_helpers.text_cleaner import clean_imported_text  # noqa: F401
+from .import_helpers.pair_extractor import extract_word_pairs  # noqa: F401
+from .import_helpers.language_detector import is_english_word, is_uzbek_word  # noqa: F401
+from .import_helpers.translation_db import (  # noqa: F401
+    COMMON_TRANSLATIONS,
+    CEFR_ORDER,
+    get_translation,
+    estimate_cefr,
+)
 
 STOP_WORDS = {
     "the", "and", "for", "are", "but", "not", "you", "all", "can",
@@ -60,23 +70,15 @@ STOP_WORDS = {
 
 
 def detect_structured_format(text: str) -> bool:
-    """Detect if text is in structured format (word – translation)."""
+    """Detect if text is in structured format (word – translation). Backward compat."""
     lines = text.strip().split('\n')
     non_empty = [l for l in lines if l.strip()]
     if not non_empty:
         return False
-
-    # Pattern 1: "number. word" lines
     numbered_lines = [l for l in non_empty if re.match(r'^\d+[\.\)]\s+[A-Za-z]', l.strip())]
-
-    # Pattern 2: "word – translation" or "word - translation" lines
     dash_lines = [l for l in non_empty if re.search(r'[A-Za-z]+\s*[–—\-:=]\s*\S+', l.strip())]
-
-    # If 5+ structured lines → structured
     if len(numbered_lines) >= 5 or len(dash_lines) >= 5:
         return True
-
-    # Original heuristic: separator ratio
     separator_count = 0
     for line in non_empty:
         if re.search(r'[–\-:=]', line) and re.search(r'[a-zA-Z]', line):
@@ -85,27 +87,17 @@ def detect_structured_format(text: str) -> bool:
 
 
 def parse_structured_text(text: str) -> list[dict]:
-    """Parse structured text (word – translation pairs) into word list.
-
-    Handles multi-unit texts like:
-        Unit 6: Our Favorite Hobbies
-        1. Clap – qarsak chalmoq
-        2. Choose (chose) – tanlamoq
-        Unit 7: ...
-    """
+    """Parse structured text (word – translation pairs) into word list. Backward compat."""
     results = []
     lines = text.strip().split('\n')
     for line in lines:
         line = line.strip()
         if not line:
             continue
-        # Skip headers: Unit X, Chapter X, Section X, Lesson X, Part X, Topic X
         if re.match(r'^(Unit|Chapter|Section|Lesson|Part|Topic)\s+\d', line, re.IGNORECASE):
             continue
-        # Skip lines that are pure titles (no separator and no number prefix)
         if not re.search(r'[–—\-:=]', line):
             continue
-        # Pattern: optional number + English word(s) + separator + translation
         match = re.match(
             r'(?:\d+[\.\)]\s*)?([A-Za-z][A-Za-z\s\'\-]*(?:\([^)]*\))?[A-Za-z\s\'\-]*?)\s*[–—\-:=]\s*(.+)',
             line
@@ -113,8 +105,6 @@ def parse_structured_text(text: str) -> list[dict]:
         if match:
             word_raw = match.group(1).strip()
             translation = match.group(2).strip()
-
-            # Extract parenthetical forms: "Choose (chose)" -> word="Choose", keep note
             paren_match = re.search(r'\(([^)]+)\)', word_raw)
             paren_note = ""
             if paren_match:
@@ -122,8 +112,6 @@ def parse_structured_text(text: str) -> list[dict]:
                 word_clean = re.sub(r'\s*\([^)]*\)', '', word_raw).strip()
             else:
                 word_clean = word_raw.strip()
-
-            # Make sure the first real token is English
             first_token = word_clean.split()[0] if word_clean.split() else ""
             if first_token and is_english_word(first_token):
                 entry = {
@@ -136,82 +124,40 @@ def parse_structured_text(text: str) -> list[dict]:
     return results
 
 
-# AI PROMPT for structured format enrichment
-STRUCTURED_ENRICHMENT_PROMPT = """For each English word below, provide additional learning information.
-The learner speaks {native_language} at {proficiency_level} level.
-
-Words: {word_list}
-
-For EACH word respond with:
-1. part_of_speech (noun/verb/adjective/adverb/phrase/other)
-2. difficulty (CEFR level: A1, A2, B1, B2, C1, C2)
-3. definition (brief English definition, appropriate for the learner's level)
-4. example (one natural example sentence)
-5. pronunciation (IPA format)
-
-Sort output by difficulty: A1 first → C2 last
-
-RESPOND ONLY with valid JSON:
-{{
-  "words": [
-    {{
-      "word": "clap",
-      "part_of_speech": "verb",
-      "difficulty": "A1",
-      "definition": "to hit your hands together to make a sound",
-      "example": "The audience clapped after the performance.",
-      "pronunciation": "/klæp/"
-    }}
-  ]
-}}"""
-
-
-# AI PROMPT for smart import pair enrichment
-SMART_IMPORT_ENRICHMENT_PROMPT = """You are an English vocabulary expert. I have these English words with Uzbek translations:
-
-{word_pairs}
-
-For each word, provide:
-1. pronunciation (IPA format, e.g. /ˈfɪʃ/)
-2. definition (short, in English, max 15 words)
-3. example_sentence (simple, A2-B1 level, max 12 words)
-4. part_of_speech (noun/verb/adjective/adverb/phrase/idiom)
-5. cefr (A1/A2/B1/B2/C1/C2)
-6. If translation is missing or "?", provide Uzbek translation
-
-Respond in JSON array format:
-[{{"word": "...", "pronunciation": "...", "definition": "...", "example": "...", "part_of_speech": "...", "cefr": "...", "translation": "..."}}]
-
-IMPORTANT: Return ONLY the JSON array, no other text."""
-
-
 class AnalyzeTextUseCase:
-    """Analyze text and suggest unknown words for the user.
+    """
+    AI-First text analysis — har qanday formatdagi matndan ingliz so'zlarini ajratish.
 
-    Sprint 12.2: New pipeline-based approach:
-    1. Text cleaning (remove noise, metadata, instructions)
-    2. Pair extraction (structured parsing with multiple strategies)
-    3. AI enrichment (if AI available)
-    4. Fallback enrichment (if AI unavailable)
-    5. User library check
-    6. Response formatting
+    Sprint 12.4: To'liq qayta yozildi.
 
-    Also supports legacy modes for backward compatibility:
-    - STRUCTURED: word – translation pairs (dash-separated)
-    - PLAIN ENGLISH: Extract vocabulary from English text via AI
-    - MIXED: Mixed language text, extract only English words
+    Qo'llab-quvvatlanadigan formatlar (AI tufayli CHEKLANMAGAN):
+    - "word - translation" lug'at formati
+    - "1. word / translation" raqamli format
+    - PDF dan ko'chirilgan matn (noise, metadata bilan)
+    - Oddiy ingliz matni (paragraph)
+    - Aralash matn (ingliz + o'zbek)
+    - Darslik sahifalari
+    - Har qanday boshqa format
     """
 
-    def __init__(self, word_repo, ai_provider=None, user_repo=None,
-                 prompt_template: str = "", language_map: dict = None):
+    def __init__(self, word_repo, ai_provider=None, **kwargs):
+        """
+        Initialize AnalyzeTextUseCase.
+
+        Args:
+            word_repo: Word repository for user library checks.
+            ai_provider: AI provider for text analysis.
+            **kwargs: Backward-compatible params (user_repo, prompt_template, language_map).
+        """
         self.word_repo = word_repo
         self.ai_provider = ai_provider
-        self.user_repo = user_repo
-        self.prompt_template = prompt_template
-        self.language_map = language_map or {}
+        # Kept for backward compat — no longer used in AI-first pipeline
+        self.user_repo = kwargs.get('user_repo')
+        self.prompt_template = kwargs.get('prompt_template', '')
+        self.language_map = kwargs.get('language_map', {})
 
     def execute(self, user_id, text: str, max_words: int = 100) -> dict:
-        user_id = UUID(str(user_id))
+        user_id_val = UUID(str(user_id))
 
         if not text or not text.strip():
             from apps.common.exceptions import ValidationError
@@ -221,416 +167,466 @@ class AnalyzeTextUseCase:
             from apps.common.exceptions import ValidationError
             raise ValidationError("Text is too long. Maximum 5000 characters allowed.")
 
-        # ── STEP 1: Get user's existing words ───────────────────────
-        existing_words = self._get_user_words(user_id)
+        # Minimal tozalash — faqat URL va email
+        cleaned = self._minimal_clean(text)
 
-        # ── STEP 2: Try new smart pipeline first ────────────────────
-        # Clean the text
-        cleaned = clean_imported_text(text)
+        if not cleaned or len(cleaned.strip()) < 3:
+            return self._empty_result()
 
-        # Extract word-translation pairs
-        pairs = extract_word_pairs(cleaned)
-
-        if pairs:
-            # Smart pipeline found pairs — use new flow
-            return self._handle_smart_pipeline(
-                pairs, existing_words, user_id, max_words
-            )
-
-        # ── STEP 3: Fallback — try legacy dash-separated format ─────
-        if detect_structured_format(text):
-            native_lang, proficiency = self._get_user_lang_info(user_id)
-            return self._handle_structured(
-                text, existing_words, native_lang, proficiency, max_words
-            )
-
-        # ── STEP 4: Fallback — try plain English AI extraction ──────
-        native_lang, proficiency = self._get_user_lang_info(user_id)
-        if self._is_likely_english_text(text):
-            return self._handle_plain_english(
-                text, existing_words, native_lang, proficiency, max_words
-            )
-
-        # ── STEP 5: Fallback — mixed text extraction ────────────────
-        return self._handle_mixed(
-            text, existing_words, native_lang, proficiency, max_words
-        )
-
-    # ═════════════════════════════════════════════════════════════════
-    # NEW SMART PIPELINE (Sprint 12.2)
-    # ═════════════════════════════════════════════════════════════════
-
-    def _handle_smart_pipeline(self, pairs, known_words_set, user_id, max_words):
-        """New smart import pipeline using import_helpers modules."""
-
-        # Try AI enrichment
-        parse_mode = "structured"
-        ai_used = False
-
-        if self.ai_provider:
+        # AI bilan tahlil
+        if self.ai_provider and self._provider_is_available():
             try:
-                pairs = self._enrich_with_ai(pairs)
+                suggestions = self._full_ai_pipeline(cleaned, max_words)
                 parse_mode = "ai"
-                ai_used = True
             except Exception as e:
-                logger.warning(f"AI enrichment failed, using fallback: {e}")
-                pairs = self._enrich_with_fallback(pairs)
+                logger.error(f"AI import pipeline failed: {e}", exc_info=True)
+                suggestions = self._last_resort_fallback(cleaned, max_words)
+                parse_mode = "fallback"
         else:
-            pairs = self._enrich_with_fallback(pairs)
+            logger.warning("AI provider not available for import")
+            suggestions = self._last_resort_fallback(cleaned, max_words)
+            parse_mode = "fallback"
 
-        # Build suggestions
-        suggestions = []
-        already_in_library = 0
+        # User library check
+        existing_words = self._get_user_words(user_id_val)
+        for s in suggestions:
+            s["in_user_library"] = s["word"].lower().strip() in existing_words
 
-        for pair in pairs[:max_words]:
-            word = pair["word"]
-            word_lower = word.lower().strip()
-            in_library = word_lower in known_words_set
-
-            if in_library:
-                already_in_library += 1
-
-            suggestions.append({
-                "word": word,
-                "translation": pair.get("translation", ""),
-                "pronunciation": pair.get("pronunciation", ""),
-                "definition": pair.get("definition", ""),
-                "context_sentence": pair.get("example", ""),
-                "example_sentence": pair.get("example", ""),
-                "part_of_speech": pair.get("part_of_speech", ""),
-                "difficulty": pair.get("cefr", estimate_cefr(word)),
-                "reason": "Smart import",
-                "in_user_library": in_library,
-            })
-
-        # Sort by CEFR difficulty (A1 first)
-        suggestions.sort(
-            key=lambda x: CEFR_ORDER.get(x.get("difficulty", "B1"), 3),
-            reverse=True
-        )
+        already_in = sum(1 for s in suggestions if s["in_user_library"])
 
         return {
             "suggestions": suggestions,
             "parse_mode": parse_mode,
             "total_found": len(suggestions),
-            "already_in_library": already_in_library,
-            "new_words": len(suggestions) - already_in_library,
-            "text_difficulty": self._estimate_text_difficulty(suggestions),
-            "ai_used": ai_used,
+            "already_in_library": already_in,
+            "new_words": len(suggestions) - already_in,
+            "text_difficulty": self._calc_difficulty(suggestions),
+            "ai_used": parse_mode == "ai",
         }
 
-    def _enrich_with_ai(self, pairs: list[dict]) -> list[dict]:
-        """Enrich word pairs using AI — pronunciation, definition, example."""
-
-        word_pairs_text = "\n".join(
-            f'- {p["word"]}: {p.get("translation", "?")}'
-            for p in pairs
-        )
-
-        prompt = SMART_IMPORT_ENRICHMENT_PROMPT.format(
-            word_pairs=word_pairs_text
-        )
-
-        result = self.ai_provider.generate_json(prompt, max_tokens=3000, temperature=0.3)
-
-        if isinstance(result, list):
-            ai_map = {
-                item["word"].lower(): item
-                for item in result
-                if isinstance(item, dict) and "word" in item
-            }
-            for pair in pairs:
-                ai_data = ai_map.get(pair["word"].lower(), {})
-                pair["pronunciation"] = ai_data.get("pronunciation", "")
-                pair["definition"] = ai_data.get("definition", "")
-                pair["example"] = ai_data.get("example", ai_data.get("example_sentence", ""))
-                pair["part_of_speech"] = ai_data.get("part_of_speech", "")
-                pair["cefr"] = ai_data.get("cefr", estimate_cefr(pair["word"]))
-                if not pair.get("translation") or pair["translation"] == "?":
-                    pair["translation"] = ai_data.get("translation", "")
-
-        return pairs
-
-    def _enrich_with_fallback(self, pairs: list[dict]) -> list[dict]:
-        """Enrich without AI — use translation_db and heuristics."""
-
-        for pair in pairs:
-            word = pair["word"]
-
-            # Translation from DB
-            if not pair.get("translation"):
-                pair["translation"] = get_translation(word) or ""
-
-            # CEFR estimation
-            pair["cefr"] = estimate_cefr(word)
-
-            # Empty fields for AI-only data
-            pair.setdefault("pronunciation", "")
-            pair.setdefault("definition", "")
-            pair.setdefault("example", "")
-            pair.setdefault("part_of_speech", "")
-
-        return pairs
-
     # ═════════════════════════════════════════════════════════════════
-    # LEGACY HANDLERS (kept for backward compatibility)
+    # MINIMAL CLEANING
     # ═════════════════════════════════════════════════════════════════
 
-    def _handle_structured(self, text, known_words_set, native_lang, proficiency, max_words):
-        """REGIME 1: Structured format (word – translation)."""
-        parsed = parse_structured_text(text)
-        if not parsed:
-            return self._handle_plain_english(text, known_words_set, native_lang, proficiency, max_words)
+    def _minimal_clean(self, text: str) -> str:
+        """Faqat texnik noise olib tashlash. Matn mazmuniga tegmaydi."""
+        if not text:
+            return ""
+        # URL va email
+        text = re.sub(r'https?://\S+', '', text)
+        text = re.sub(r'www\.\S+', '', text)
+        text = re.sub(r'\S+@\S+\.\S+', '', text)
+        # Unicode BOM va maxsus belgilar
+        text = text.replace('\ufeff', '').replace('\u200b', '')
+        # Ortiqcha bo'sh qatorlar
+        text = re.sub(r'\n{4,}', '\n\n\n', text)
+        return text.strip()
 
-        words_data = []
-        already_in_library = 0
-        for item in parsed:
-            word = item['word'].strip()
-            word_lower = word.lower()
-            in_library = word_lower in known_words_set
-            if in_library:
-                already_in_library += 1
-            words_data.append({
-                'word': word,
-                'translation': item['translation'],
-                'in_user_library': in_library,
-            })
+    # ═════════════════════════════════════════════════════════════════
+    # AI PIPELINE (2 bosqich)
+    # ═════════════════════════════════════════════════════════════════
 
-        # Try AI enrichment for additional metadata
-        enriched_map = {}
-        if self.ai_provider and words_data:
-            try:
-                word_list = ", ".join([w['word'] for w in words_data[:max_words]])
-                prompt = STRUCTURED_ENRICHMENT_PROMPT.format(
-                    native_language=native_lang,
-                    proficiency_level=proficiency,
-                    word_list=word_list,
-                )
-                result = self.ai_provider.generate_json(prompt, max_tokens=3000, temperature=0.3)
-                ai_words = result.get("words", []) if isinstance(result, dict) else result if isinstance(result, list) else []
-                for aw in ai_words:
-                    enriched_map[aw.get("word", "").lower()] = aw
-            except Exception as e:
-                logger.warning(f"AI enrichment for structured import failed: {e}")
+    def _full_ai_pipeline(self, text: str, max_words: int) -> list[dict]:
+        """
+        2 bosqichli AI pipeline:
 
-        suggestions = []
-        for wd in words_data[:max_words]:
-            word_lower = wd['word'].lower()
-            ai_data = enriched_map.get(word_lower, {})
-            suggestions.append({
-                "word": wd['word'],
-                "translation": wd['translation'],
-                "part_of_speech": ai_data.get("part_of_speech", ""),
-                "difficulty": ai_data.get("difficulty", estimate_cefr(wd['word'])),
-                "definition": ai_data.get("definition", ""),
-                "context_sentence": ai_data.get("example", ""),
-                "pronunciation": ai_data.get("pronunciation", ""),
-                "reason": "From structured text",
-                "in_user_library": wd['in_user_library'],
-            })
+        BOSQICH 1: Matndan so'zlarni ajratish + tarjima
+        BOSQICH 2: Tarjimalarni validatsiya va tuzatish
+        """
 
-        suggestions.sort(key=lambda x: CEFR_ORDER.get(x.get("difficulty", "B1"), 3), reverse=True)
+        # ═══ BOSQICH 1: AJRATISH ═══
+        raw_words = self._ai_extract(text, max_words)
 
-        return {
-            "suggestions": suggestions,
-            "parse_mode": "structured",
-            "total_found": len(suggestions),
-            "already_in_library": already_in_library,
-            "text_difficulty": self._estimate_text_difficulty(suggestions),
-        }
+        if not raw_words:
+            logger.warning("AI extraction returned empty, trying with simplified prompt")
+            raw_words = self._ai_extract_simple(text, max_words)
 
-    def _handle_plain_english(self, text, known_words_set, native_lang, proficiency, max_words):
-        """REGIME 2: Plain English text — AI extraction."""
-        known_words = list(known_words_set)[:200]
+        if not raw_words:
+            raise ValueError("AI could not extract any words")
 
-        if self.ai_provider:
-            try:
-                prompt = self.prompt_template.format(
-                    text=text[:5000],
-                    proficiency_level=proficiency,
-                    native_language=native_lang,
-                    known_words=", ".join(known_words) if known_words else "none",
-                    max_words=max_words,
-                )
-                result = self.ai_provider.generate_json(prompt, max_tokens=2000, temperature=0.3)
+        # ═══ BOSQICH 2: VALIDATSIYA ═══
+        validated = self._ai_validate(raw_words)
 
-                if isinstance(result, list):
-                    ai_suggestions = result
-                elif isinstance(result, dict) and "words" in result:
-                    ai_suggestions = result["words"]
-                else:
-                    ai_suggestions = [result] if isinstance(result, dict) else []
+        return validated
 
-                suggestions = []
-                already_in_library = 0
-                for s in ai_suggestions[:max_words]:
-                    word = s.get("word", "").lower().strip()
-                    if not word or len(word) < 3:
-                        continue
-                    in_library = word in known_words_set
-                    if in_library:
-                        already_in_library += 1
-                    s["word"] = word
-                    s["in_user_library"] = in_library
-                    if "translations" in s and isinstance(s["translations"], list):
-                        s["translation"] = ", ".join(s["translations"])
-                    if not s.get("translation"):
-                        s["translation"] = COMMON_TRANSLATIONS.get(word, "")
-                    suggestions.append(s)
+    def _ai_extract(self, text: str, max_words: int) -> list[dict]:
+        """AI Call #1 — matndan ingliz so'zlarini ajratish."""
 
-                return {
-                    "suggestions": suggestions,
-                    "parse_mode": "ai_extracted",
-                    "total_found": len(suggestions),
-                    "already_in_library": already_in_library,
-                    "text_difficulty": self._estimate_text_difficulty(suggestions),
-                }
+        # Matn juda uzun bo'lsa — qisqartirish
+        if len(text) > 6000:
+            text = text[:6000]
 
-            except Exception as e:
-                logger.warning(f"AI analysis failed, using fallback: {e}")
+        prompt = self._build_extraction_prompt(text, max_words)
 
-        return self._fallback_extract(text, known_words_set, max_words)
+        try:
+            result = self.ai_provider.generate_json(prompt)
+        except Exception:
+            # JSON parse fail bo'lsa — text sifatida olish va o'zimiz parse qilish
+            raw = self.ai_provider.generate_text(prompt)
+            result = self._extract_json_from_text(raw)
 
-    def _handle_mixed(self, text, known_words_set, native_lang, proficiency, max_words):
-        """REGIME 3: Mixed language text — extract only English words."""
-        words = re.findall(r'\b[a-zA-Z]{3,}\b', text)
-        unique_english = []
+        if not isinstance(result, list):
+            if isinstance(result, dict) and "words" in result:
+                result = result["words"]
+            else:
+                raise ValueError(f"AI returned unexpected format: {type(result)}")
+
+        # Dublikatlarni olib tashlash
         seen = set()
-        skipped_non_english = 0
+        unique = []
+        for item in result:
+            if not isinstance(item, dict) or "word" not in item:
+                continue
+            w = item["word"].lower().strip()
+            if w and w not in seen and len(w) >= 2:
+                seen.add(w)
+                unique.append(item)
+
+        return unique[:max_words]
+
+    def _build_extraction_prompt(self, text: str, max_words: int) -> str:
+        return f"""You are an expert English vocabulary extractor for language learners.
+
+I will give you a text. Your job is to extract ENGLISH vocabulary words from it.
+
+IMPORTANT RULES:
+
+1. WHAT TO EXTRACT:
+   - English words and phrases useful for language learning
+   - Phrasal verbs as single items: "look after", "give up", "pick up"
+   - Idioms as single items: "sore throat", "home run", "in fact"
+   - Common collocations: "make a decision", "take a break"
+
+2. WHAT TO SKIP (DO NOT include these):
+   - Words that are NOT English (Uzbek, Russian, or any other language)
+   - Document metadata: page numbers, dates, times, prices
+   - Brand names, platform names, author names
+   - Section headers like "Unit 5", "Chapter 3" (but extract words FROM those sections)
+   - OCR garbage/corrupted text (random letter sequences that aren't real words)
+   - Very common English function words used as structural text: "the", "a", "is", "are", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with" (UNLESS they are part of a phrasal verb or idiom)
+   - Instructions like "How to use", "Click here", "Keep practicing"
+
+3. TRANSLATION HANDLING — THIS IS CRITICAL:
+   - If the user's text ALREADY contains translations (e.g., "grip — ushlab olish" or "Female / Urg'ochi"), USE the user's translation — do NOT replace it
+   - BUT if the user's translation is OBVIOUSLY WRONG (e.g., "grip — koptok" where "koptok" means "ball" but "grip" means "ushlab olish"), then CORRECT the translation and set "translation_corrected" to true
+   - If NO translation is provided in the text, provide an Uzbek translation yourself
+   - Translations must be in UZBEK language
+
+4. FOR EACH WORD provide:
+   - "word": the English word/phrase (lowercase)
+   - "translation": Uzbek translation
+   - "translation_source": "user" if taken from user's text, "ai" if you provided it, "corrected" if you fixed user's wrong translation
+   - "original_user_translation": only if translation_source is "corrected" — what the user originally wrote
+   - "pronunciation": IPA format like /ˈæp.əl/
+   - "definition": short English definition (max 15 words)
+   - "example": simple example sentence using this word (max 15 words, A2-B1 level)
+   - "part_of_speech": one of: noun, verb, adjective, adverb, preposition, pronoun, phrase, phrasal_verb, idiom
+   - "cefr": one of: A1, A2, B1, B2, C1, C2
+
+5. SORTING: Sort by CEFR level — A1 first, C2 last. Within same level, alphabetical.
+
+6. MAXIMUM: Return at most {max_words} words.
+
+Respond with a JSON array only. No markdown code blocks, no explanation, no extra text.
+
+TEXT TO ANALYZE:
+\"\"\"
+{text}
+\"\"\"
+
+JSON ARRAY:"""
+
+    def _ai_extract_simple(self, text: str, max_words: int) -> list[dict]:
+        """Soddalashtirilgan prompt — agar birinchisi fail bo'lsa."""
+
+        prompt = f"""Extract English vocabulary words from this text.
+For each word give: word, uzbek translation, pronunciation (IPA), CEFR level (A1-C2).
+Skip non-English words, headers, metadata, garbage text.
+Return JSON array: [{{"word":"...","translation":"...","pronunciation":"...","cefr":"..."}}]
+Max {max_words} words.
+
+Text:
+{text[:3000]}
+
+JSON:"""
+
+        try:
+            result = self.ai_provider.generate_json(prompt)
+            if isinstance(result, list):
+                return result
+        except Exception:
+            raw = self.ai_provider.generate_text(prompt)
+            return self._extract_json_from_text(raw)
+
+        return []
+
+    # ═════════════════════════════════════════════════════════════════
+    # AI VALIDATION (BOSQICH 2)
+    # ═════════════════════════════════════════════════════════════════
+
+    def _ai_validate(self, words: list[dict]) -> list[dict]:
+        """
+        AI Call #2 — tarjimalar to'g'riligini tekshirish.
+
+        Nima uchun kerak:
+        - AI #1 xato tarjima bergan bo'lishi mumkin
+        - Foydalanuvchi matnida xato tarjima bo'lishi mumkin
+        - Ba'zi so'zlar aslida ingliz emas (AI #1 xato ajratgan)
+        """
+
+        if not words or len(words) == 0:
+            return []
+
+        # 30 tadan ko'p bo'lsa — batch qilib yuboramiz
+        if len(words) <= 30:
+            return self._validate_batch(words)
+        else:
+            result = []
+            for i in range(0, len(words), 30):
+                batch = words[i:i + 30]
+                validated = self._validate_batch(batch)
+                result.extend(validated)
+            return result
+
+    def _validate_batch(self, words: list[dict]) -> list[dict]:
+        """Bir batch so'zlarni validatsiya qilish."""
+
+        word_list = "\n".join(
+            f"- {w.get('word', '?')}: {w.get('translation', '?')}"
+            for w in words
+        )
+
+        prompt = f"""You are an English-Uzbek translation validator.
+
+Check each word-translation pair below. For each one:
+1. Is the "word" actually an English word? (not Uzbek, not gibberish, not a name)
+2. Is the Uzbek translation correct?
+3. If translation is wrong, what is the correct one?
+
+Word list:
+{word_list}
+
+For each word respond:
+- "word": the English word
+- "is_valid_english": true/false (is this actually an English vocabulary word?)
+- "translation_correct": true/false
+- "correct_translation": the correct Uzbek translation (whether original was right or wrong)
+- "cefr": A1/A2/B1/B2/C1/C2
+
+Return JSON array only. No explanation.
+JSON:"""
+
+        try:
+            validation = self.ai_provider.generate_json(prompt)
+        except Exception:
+            try:
+                raw = self.ai_provider.generate_text(prompt)
+                validation = self._extract_json_from_text(raw)
+            except Exception as e:
+                logger.warning(f"Validation AI call failed: {e}")
+                # Validatsiya fail — original larni qaytarish
+                return self._format_suggestions(words)
+
+        if not isinstance(validation, list):
+            return self._format_suggestions(words)
+
+        # Validation natijasini original words bilan birlashtirish
+        val_map = {}
+        for v in validation:
+            if isinstance(v, dict) and "word" in v:
+                val_map[v["word"].lower().strip()] = v
+
+        result = []
         for w in words:
-            wl = w.lower()
-            if wl in seen:
+            word_key = w.get("word", "").lower().strip()
+            val = val_map.get(word_key, {})
+
+            # Agar valid English emas — skip
+            if val.get("is_valid_english") is False:
+                logger.debug(f"Skipping non-English word: {word_key}")
                 continue
-            seen.add(wl)
-            if wl in STOP_WORDS:
-                continue
-            if not is_english_word(w):
-                skipped_non_english += 1
-                continue
-            unique_english.append(wl)
 
-        suggestions = []
-        already_in_library = 0
-        for word in unique_english[:max_words]:
-            in_library = word in known_words_set
-            if in_library:
-                already_in_library += 1
-            suggestions.append({
-                "word": word,
-                "translation": COMMON_TRANSLATIONS.get(word, ""),
-                "part_of_speech": "",
-                "difficulty": estimate_cefr(word),
-                "definition": "",
-                "context_sentence": "",
-                "pronunciation": "",
-                "reason": "Extracted from mixed text",
-                "in_user_library": in_library,
-            })
+            # Tarjima tuzatish
+            if val.get("correct_translation"):
+                final_translation = val["correct_translation"]
+            else:
+                final_translation = w.get("translation", "")
 
-        suggestions.sort(key=lambda x: CEFR_ORDER.get(x.get("difficulty", "B1"), 3), reverse=True)
+            # CEFR — validation dan yoki original dan
+            cefr = val.get("cefr") or w.get("cefr", "A2")
 
-        return {
-            "suggestions": suggestions,
-            "parse_mode": "mixed",
-            "total_found": len(suggestions),
-            "already_in_library": already_in_library,
-            "skipped_non_english": skipped_non_english,
-            "text_difficulty": self._estimate_text_difficulty(suggestions),
-        }
-
-    def _fallback_extract(self, text, known_words_set, max_words):
-        """Fallback: regex-based word extraction with heuristic difficulty."""
-        words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
-        word_counts = Counter(words)
-
-        candidates = []
-        skipped_non_english = 0
-        for word, count in word_counts.items():
-            if word in known_words_set or word in STOP_WORDS:
-                continue
-            if len(word) < 4:
-                continue
-            if not is_english_word(word):
-                skipped_non_english += 1
-                continue
-            candidates.append((word, count, len(word)))
-
-        candidates.sort(key=lambda x: (CEFR_ORDER.get(estimate_cefr(x[0]), 5), -x[2]))
-
-        suggestions = []
-        already_in_library = 0
-        for word, count, length in candidates[:max_words]:
-            cefr = estimate_cefr(word)
-            translation = COMMON_TRANSLATIONS.get(word, "")
-            suggestions.append({
-                "word": word,
-                "translation": translation,
-                "part_of_speech": "",
-                "context_sentence": "",
+            result.append({
+                "word": w.get("word", "").strip(),
+                "translation": final_translation,
+                "pronunciation": w.get("pronunciation", ""),
+                "definition": w.get("definition", ""),
+                "example_sentence": w.get("example", ""),
+                "part_of_speech": w.get("part_of_speech", ""),
                 "difficulty": cefr,
-                "definition": "",
-                "pronunciation": "",
-                "reason": f"Appears {count} time(s) in the text",
-                "in_user_library": False,
+                "translation_source": w.get("translation_source", "ai"),
+                "original_user_translation": w.get("original_user_translation", ""),
             })
 
-        return {
-            "suggestions": suggestions,
-            "parse_mode": "fallback",
-            "total_found": len(suggestions),
-            "already_in_library": already_in_library,
-            "skipped_non_english": skipped_non_english,
-            "text_difficulty": self._estimate_text_difficulty(suggestions),
-        }
+        return result
 
     # ═════════════════════════════════════════════════════════════════
-    # INTERNAL HELPERS
+    # JSON EXTRACTION HELPER
     # ═════════════════════════════════════════════════════════════════
+
+    def _extract_json_from_text(self, text: str) -> list:
+        """AI response dan JSON array ajratish."""
+        if not text:
+            return []
+
+        # Markdown code block ichidagi JSON
+        md_match = re.search(r'```(?:json)?\s*(\[[\s\S]*?\])\s*```', text)
+        if md_match:
+            try:
+                return json.loads(md_match.group(1))
+            except json.JSONDecodeError:
+                pass
+
+        # To'g'ridan-to'g'ri JSON array
+        arr_match = re.search(r'(\[[\s\S]*\])', text)
+        if arr_match:
+            try:
+                return json.loads(arr_match.group(1))
+            except json.JSONDecodeError:
+                pass
+
+        # JSON object ichida "words" key
+        obj_match = re.search(r'(\{[\s\S]*\})', text)
+        if obj_match:
+            try:
+                obj = json.loads(obj_match.group(1))
+                if isinstance(obj, dict):
+                    for key in ["words", "vocabulary", "results", "data"]:
+                        if key in obj and isinstance(obj[key], list):
+                            return obj[key]
+            except json.JSONDecodeError:
+                pass
+
+        return []
+
+    # ═════════════════════════════════════════════════════════════════
+    # YORDAMCHI METODLAR
+    # ═════════════════════════════════════════════════════════════════
+
+    def _format_suggestions(self, words: list[dict]) -> list[dict]:
+        """Raw AI natijasini frontend format ga keltirish."""
+        return [
+            {
+                "word": w.get("word", "").strip(),
+                "translation": w.get("translation", ""),
+                "pronunciation": w.get("pronunciation", ""),
+                "definition": w.get("definition", ""),
+                "example_sentence": w.get("example", ""),
+                "part_of_speech": w.get("part_of_speech", ""),
+                "difficulty": w.get("cefr", "A2"),
+                "translation_source": w.get("translation_source", "ai"),
+                "original_user_translation": w.get("original_user_translation", ""),
+            }
+            for w in words
+            if w.get("word", "").strip()
+        ]
+
+    def _provider_is_available(self) -> bool:
+        """Check if AI provider is available (with safe fallback)."""
+        try:
+            return self.ai_provider.is_available()
+        except Exception:
+            return False
 
     def _get_user_words(self, user_id) -> set[str]:
-        """Get set of lowercase words the user already has."""
+        """Foydalanuvchining mavjud so'zlari."""
         try:
             existing_words, _ = self.word_repo.get_all_by_user(
                 user_id=user_id, page=1, page_size=10000,
             )
             return {w.original_word.lower() for w in existing_words}
-        except Exception as e:
-            logger.warning(f"Failed to get user words: {e}")
-            return set()
+        except Exception:
+            try:
+                words = self.word_repo.get_user_word_list(user_id)
+                return {w.lower().strip() for w in words}
+            except Exception:
+                try:
+                    words = self.word_repo.get_words(user_id)
+                    return {
+                        w.original_word.lower().strip()
+                        for w in words
+                        if hasattr(w, 'original_word')
+                    }
+                except Exception:
+                    return set()
 
-    def _get_user_lang_info(self, user_id) -> tuple[str, str]:
-        """Get user's native language name and proficiency level."""
-        try:
-            if self.user_repo:
-                lang_info = self.user_repo.get_user_language_info(user_id)
-                native_lang = self.language_map.get(
-                    lang_info.get("native_language", "uz"), "Uzbek"
-                )
-                proficiency = lang_info.get("proficiency_level", "A2")
-                return native_lang, proficiency
-        except Exception as e:
-            logger.warning(f"Failed to get user lang info: {e}")
-        return "Uzbek", "A2"
-
-    @staticmethod
-    def _is_likely_english_text(text: str) -> bool:
-        """Check if text is predominantly English."""
-        words = text.split()
-        if not words:
-            return False
-        english_count = sum(1 for w in words if is_english_word(w))
-        return english_count / len(words) > 0.5
-
-    @staticmethod
-    def _estimate_text_difficulty(suggestions):
-        """Estimate overall text difficulty from word difficulties."""
+    def _calc_difficulty(self, suggestions: list[dict]) -> str:
+        """Matn qiyinligini hisoblash."""
         if not suggestions:
             return "A1"
-        levels = [s.get("difficulty", "B1") for s in suggestions if not s.get("in_user_library")]
-        if not levels:
+        levels = {"A1": 1, "A2": 2, "B1": 3, "B2": 4, "C1": 5, "C2": 6}
+        total = 0
+        count = 0
+        for s in suggestions:
+            diff = s.get("difficulty", "A2")
+            if diff in levels:
+                total += levels[diff]
+                count += 1
+        if count == 0:
             return "A1"
-        counter = Counter(levels)
-        return counter.most_common(1)[0][0]
+        avg = total / count
+        for level, val in sorted(levels.items(), key=lambda x: x[1]):
+            if avg <= val + 0.5:
+                return level
+        return "C2"
+
+    def _empty_result(self) -> dict:
+        return {
+            "suggestions": [],
+            "parse_mode": "empty",
+            "total_found": 0,
+            "already_in_library": 0,
+            "new_words": 0,
+            "text_difficulty": "A1",
+            "ai_used": False,
+        }
+
+    def _last_resort_fallback(self, text: str, max_words: int) -> list[dict]:
+        """
+        AI butunlay ishlamasa — import_helpers dan foydalanish.
+        Bu OXIRGI chora. Ideal holatda hech qachon chaqirilmasligi kerak.
+        """
+        try:
+            cleaned = clean_imported_text(text)
+            pairs = extract_word_pairs(cleaned)
+
+            suggestions = []
+            seen = set()
+            for pair in pairs:
+                word = pair.get("word", "").strip()
+                if not word or word.lower() in seen:
+                    continue
+                seen.add(word.lower())
+
+                translation = pair.get("translation", "")
+                if not translation:
+                    translation = get_translation(word) or ""
+
+                suggestions.append({
+                    "word": word,
+                    "translation": translation,
+                    "pronunciation": "",
+                    "definition": "",
+                    "example_sentence": "",
+                    "part_of_speech": "",
+                    "difficulty": estimate_cefr(word),
+                    "translation_source": "fallback",
+                    "original_user_translation": "",
+                })
+
+            return suggestions[:max_words]
+        except Exception as e:
+            logger.error(f"Last resort fallback also failed: {e}")
+            return []
 
 
 class ImportWordsUseCase:

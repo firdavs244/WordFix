@@ -2,7 +2,7 @@
 01_PROJECT_ARCHITECTURE.txt
 WordFix — AI-Powered English Vocabulary Learning Platform
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-23 (Sprint 13 — Production Deployment, Nginx, Gunicorn)
+Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architecture)
 ================================================================
 
 ================================================================
@@ -358,7 +358,7 @@ wordfix-backend/
 │       │   ├── chat.py                 (240 qator)
 │       │   ├── confusing_pairs.py      (257 qator)
 │       │   ├── daily_challenges.py     (130 qator)
-│       │   ├── smart_import.py         (318 qator)
+│       │   ├── smart_import.py         (~680 qator) # Sprint 12.4: AI-First Architecture
 │       │   ├── testing/
 │       │   │   ├── test_generation.py  (223 qator)
 │       │   │   └── test_session.py     (188 qator)
@@ -713,3 +713,35 @@ Internet:80 → nginx → / (Frontend SPA — static HTML/JS/CSS)
 - Nginx reverse proxy orqali frontend va API bitta origin
 - Cross-origin so'rov umuman yo'q → CORS xatolik imkonsiz
 - Qo'shimcha: CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS env sozlangan
+
+================================================================
+SPRINT 12.4 — AI-FIRST IMPORT ARCHITECTURE (2026-02-24)
+================================================================
+
+### Prinsip:
+Oldin: Matn → Python algoritm parse → AI boyitadi (optional)
+Keyin: Matn → AI HAMMA ishni qiladi → Python faqat natijani formatlab qaytaradi
+
+### AnalyzeTextUseCase Pipeline (2 bosqich):
+```
+1. Minimal tozalash (URL, email, BOM olib tashlash)
+2. AI Call #1: Matndan ingliz so'zlarini ajratish + tarjima + metadata (CEFR, IPA, definition)
+3. AI Call #2: Tarjimalarni validatsiya qilish (to'g'riligini tekshirish, non-English filtrlash)
+4. User library check + natijani frontend ga qaytarish
+```
+
+### Yangi response fieldlar:
+- translation_source: 'user' | 'ai' | 'corrected' | 'fallback'
+- original_user_translation: tuzatilgan tarjimalar uchun
+- parse_mode: 'ai' | 'fallback' | 'empty'
+
+### import_helpers/ papkasi O'ZGARTIRILMAGAN — faqat fallback sifatida qoladi
+
+### O'zgartirilgan fayllar:
+| Fayl                                    | O'zgarish                                   |
+|-----------------------------------------|---------------------------------------------|
+| smart_import.py                         | AnalyzeTextUseCase to'liq qayta yozildi     |
+| test_smart_import.py                    | 18+ yangi AI-first testlar                  |
+| import_deps.py                          | Soddalashtirilgan (user_repo kerak emas)    |
+| TextImportWordRow.tsx                   | translation_source UI badges                |
+| smart-import.ts                         | translation_source, original_user_translation|

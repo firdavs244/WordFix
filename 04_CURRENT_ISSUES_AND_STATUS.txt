@@ -2,7 +2,7 @@
 04_CURRENT_ISSUES_AND_STATUS.txt
 WordFix — Joriy muammolar va holat
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-23 (Sprint 13 — Production Deployment, Nginx, Gunicorn)
+Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architecture)
 ================================================================
 
 ================================================================
@@ -712,3 +712,30 @@ nano .env.production   # GROQ_API_KEY, GEMINI_API_KEY va h.k.
 | wordfix-backend/docker/Dockerfile       | ⚙️ O'ZGARGAN  | CMD → gunicorn                      |
 | 04_CURRENT_ISSUES_AND_STATUS.txt        | ⚙️ O'ZGARGAN  | Sprint 13 hisobot qo'shildi        |
 | Jami                                    | 10 fayl        | 6 yangi + 4 o'zgartirilgan         |
+
+================================================================
+SPRINT 12.4 — AI-FIRST IMPORT ARXITEKTURA (2026-02-24)
+================================================================
+
+### Maqsad:
+- Import tizimini Python regex/algorithm-based dan to'liq AI-First arxitekturaga o'tkazish
+- 2-bosqichli pipeline: Extract (AI) → Validate (AI)
+- translation_source tracking: user, ai, corrected, fallback
+
+### O'zgartirilgan fayllar:
+| Fayl                                          | Holat         | Tavsif                                        |
+|-----------------------------------------------|---------------|-----------------------------------------------|
+| apps/words/application/use_cases/smart_import.py | ⚙️ O'ZGARGAN | AnalyzeTextUseCase to'liq qayta yozildi (AI-First) |
+| apps/words/tests/test_smart_import.py             | ⚙️ O'ZGARGAN | 18+ yangi mock-based AI testlar               |
+| apps/words/presentation/dependencies/import_deps.py | ⚙️ O'ZGARGAN | Soddalashtirildi (user_repo, prompt olib tashlandi) |
+| wordfix-frontend/src/types/smart-import.ts        | ⚙️ O'ZGARGAN | translation_source, original_user_translation  |
+| wordfix-frontend/src/features/import/components/TextImportWordRow.tsx | ⚙️ O'ZGARGAN | translation_source badges (Wrench/Bot/CheckCircle) |
+| 01_PROJECT_ARCHITECTURE.txt                       | ⚙️ O'ZGARGAN | Sprint 12.4 section qo'shildi                 |
+| 02_BACKEND_FULL_STATE.txt                         | ⚙️ O'ZGARGAN | Sprint 12.4 section qo'shildi                 |
+| 03_FRONTEND_FULL_STATE.txt                        | ⚙️ O'ZGARGAN | Sprint 12.4 section qo'shildi                 |
+| 04_CURRENT_ISSUES_AND_STATUS.txt                  | ⚙️ O'ZGARGAN | Sprint 12.4 section qo'shildi                 |
+
+### Arxitektura o'zgarishi:
+- OLDIN: detect_structured_format() → handler tanlash → regex parsing → optional AI enrichment
+- KEYIN: _minimal_clean() → _full_ai_pipeline() → _ai_extract() + _ai_validate() → fallback
+- Backward compat: parse_structured_text, detect_structured_format, STOP_WORDS saqlanadi

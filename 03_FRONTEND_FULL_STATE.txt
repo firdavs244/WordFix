@@ -2,7 +2,7 @@
 03_FRONTEND_FULL_STATE.txt
 WordFix Frontend — To'liq holat hujjati
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2025-06-20 (Sprint 12 — Gemini AI, Word Archive, UX Innovations)
+Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import, translation_source UI)
 ================================================================
 
 ================================================================
@@ -877,3 +877,18 @@ SPRINT 12.1 FRONTEND O'ZGARISHLARI (2025-02-23)
 - ArchiveButton.tsx: to'liq (toggle, 2 sizes)
 - ArchivedWordsSection.tsx: to'liq (grid, search, pagination, unarchive)
 - WordsPage.tsx: Active/Archived tabs, WordDetailModal, AddWordModal
+
+================================================================
+SPRINT 12.4 — AI-FIRST IMPORT UI O'ZGARISHLARI (2026-02-24)
+================================================================
+
+### TextImportWordRow.tsx o'zgarishlari:
+- translation_source === 'corrected': 🔧 (Wrench) icon, yashil rang, tooltip "AI tuzatdi. Asl tarjima: ..."
+- translation_source === 'user': ✓ (CheckCircle) icon, ko'k rang, tooltip "Foydalanuvchi tarjimasi saqlandi"
+- translation_source === 'ai': 🤖 (Bot) icon, binafsha rang, tooltip "AI tarjima qildi"
+- Yangi import: Wrench, Bot, CheckCircle from lucide-react
+
+### smart-import.ts type o'zgarishlari:
+- WordSuggestion: translation_source?: 'user' | 'ai' | 'corrected' | 'fallback' qo'shildi
+- WordSuggestion: original_user_translation?: string qo'shildi
+- AnalyzeTextResponse: parse_mode ga 'empty' qo'shildi

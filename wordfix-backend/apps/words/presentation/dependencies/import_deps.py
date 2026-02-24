@@ -13,20 +13,14 @@ from apps.words.application.use_cases import (
 from .common_deps import (
     _get_ai_provider,
     _get_enrich_task,
-    get_user_repository,
     get_word_repository,
 )
 
 
 def get_analyze_text_use_case() -> AnalyzeTextUseCase:
-    from core.services.ai.prompts import NATIVE_LANGUAGE_MAP, SMART_IMPORT_PROMPT
-
     return AnalyzeTextUseCase(
         word_repo=get_word_repository(),
         ai_provider=_get_ai_provider(),
-        user_repo=get_user_repository(),
-        prompt_template=SMART_IMPORT_PROMPT,
-        language_map=NATIVE_LANGUAGE_MAP,
     )
 
 
