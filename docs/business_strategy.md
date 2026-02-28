@@ -2,7 +2,7 @@
 
 > Bu fayl loyihaning biznes strategiyasini, bozor tahlilini va monetizatsiya rejasini tavsiflaydi.
 > Barcha raqamlar haqiqiy bozor ma'lumotlari va kod bazasidan olingan.
-> Oxirgi yangilangan: 2026-02-27
+> Oxirgi yangilangan: 2026-02-28
 
 ### CHANGELOG (2026-02-27 Audit)
 
@@ -18,6 +18,22 @@
 - Mahalliy raqobatchilar qo'shildi
 - Free tier limitlari barcha hujjatlarda birlashtirildi
 - Badge soni 18 → 31 ga tuzatildi
+
+### CHANGELOG (2026-02-28 Monetizatsiya Rewrite)
+
+- **Tier nomlar o'zgardi:** Basic → Starter, Enterprise → Premium (individual), yangi Enterprise = B2B
+- **Narxlar:** Free/0 → Starter/29K → Pro/59K → Premium/99K UZS (Enterprise alohida B2B: $49-99/oy)
+- **Yillik rejalar qo'shildi:** Starter 249K, Pro 499K, Premium 849K UZS (~29-30% chegirma)
+- **AI Model Selection tizimi qo'shildi:** Basic(Groq)/Standard(Gemini)/Professional(GPT-4o) — user tanlaydi
+- **Falsafa o'zgardi:** "BARCHA funksiyalar barchaga ochiq — faqat MIQDOR farq qiladi"
+- Free tier saxiyroq: 30 so'z/kun (150 max), 15 AI chat, 30 o'yin, 30 AI enrichment, 5 test, 50 CSV
+- ❌ Hech qanday funksiya yopilmaydi (AI Chat, Smart Import, CSV — barchaga ochiq)
+- ❌ PDF Import — hech qanday tier'da yo'q
+- Arxivlangan so'zlar jami sig'imga kiradi
+- MRR formula yangilandi: (Starter × 29K) + (Pro × 59K) + (Premium × 99K)
+- AI API xarajat taqsimoti tier bo'yicha qo'shildi
+- ARPU qayta hisoblandi: $3.83 (eski $3.95)
+- Konversiya trigeri aniqlandi: "150 ta so'z limiti tugadi"
 
 ---
 
@@ -80,47 +96,142 @@
 
 ## 2. MONETIZATSIYA STRATEGIYASI
 
-### 2.1 Narx Rejalari (Yagona — barcha hujjatlarda bir xil)
+### 2.0 Asosiy Falsafa
 
-| Reja           | Narx (oylik) | Narx (USD ekvivalent) | Maqsadli auditoriya                       |
-| -------------- | ------------ | --------------------- | ----------------------------------------- |
-| **Free**       | 0 UZS        | $0                    | Barcha — funnel boshi                     |
-| **Basic**      | 29,000 UZS   | ~$2.29                | Talabalar, o'z-o'zini rivojlantiruvchilar |
-| **Pro**        | 59,000 UZS   | ~$4.66                | Faol o'rganuvchilar                       |
-| **Enterprise** | 149,000 UZS  | ~$11.79               | Professional / korporativ                 |
+> **"FREE tier — SAXIY bo'lsin. Foydalanuvchi bepul rejada WordFix'dan haqiqiy foyda ko'rsin. BARCHA funksiyalar barchaga ochiq — faqat MIQDOR farq qiladi."**
+
+- ❌ Hech qanday funksiya butunlay yopilmaydi (AI Chat, Smart Import, CSV — barchaga ochiq)
+- ✅ Barcha 7 ta o'yin — barchaga ochiq
+- ✅ Barcha analytics, gamification, review — to'liq ochiq
+- ✅ Farq faqat: kunlik limit, so'z sig'imi, AI model tanlovi
+- 🎯 Konversiya trigeri: **"150 ta so'z limiti tugadi"** — bu eng kuchli upsell moment
+
+### 2.1 AI Model Tanlov Tizimi (YANGI)
+
+> Foydalanuvchi o'zi tanlaydi qaysi AI modeldan foydalanish. Bu subscription tier bilan bog'liq.
+
+| AI Tier             | Model                | Tezlik      | Sifat      | Narx (1K tokenga) | Subscription kerak |
+| ------------------- | -------------------- | ----------- | ---------- | ----------------- | ------------------ |
+| 🟢 **Basic**        | Groq (llama-3.3-70b) | ⚡ Juda tez | ⭐⭐⭐     | ~$0 (free tier)   | Free               |
+| 🟡 **Standard**     | Gemini 2.0 Flash     | 🚀 Tez      | ⭐⭐⭐⭐   | ~$0.10            | Starter+           |
+| 🔴 **Professional** | GPT-4o-mini / GPT-4o | 🐢 O'rtacha | ⭐⭐⭐⭐⭐ | ~$0.50            | Pro+               |
+
+**AI Model + Subscription aloqasi:**
+
+| Subscription | Basic (Groq) | Standard (Gemini) | Professional (GPT-4o) |
+| ------------ | ------------ | ----------------- | --------------------- |
+| **Free**     | ✅ (30/kun)  | ❌                | ❌                    |
+| **Starter**  | ✅ Cheksiz   | ✅ (60/kun)       | ❌                    |
+| **Pro**      | ✅ Cheksiz   | ✅ Cheksiz        | ✅ (50/kun)           |
+| **Premium**  | ✅ Cheksiz   | ✅ Cheksiz        | ✅ Cheksiz            |
+
+> **Texnik:** Mavjud fallback zanjiri (Groq → Gemini → OpenAI → Hardcoded) saqlanadi. Foydalanuvchi tanlagan model **birinchi** uriniladi, keyin fallback ishlaydi.
+
+### 2.2 Narx Rejalari (Yagona — barcha hujjatlarda bir xil)
+
+| Reja           | Oylik narx          | USD ekvivalent | Yillik narx | Yillik USD | Chegirma | Maqsadli auditoriya                       |
+| -------------- | ------------------- | -------------- | ----------- | ---------- | -------- | ----------------------------------------- |
+| **Free**       | 0 UZS               | $0             | —           | —          | —        | Barcha — funnel boshi                     |
+| **Starter**    | 29,000 UZS          | ~$2.29         | 249,000 UZS | ~$19.68    | ~29%     | Talabalar, o'z-o'zini rivojlantiruvchilar |
+| **Pro**        | 59,000 UZS          | ~$4.66         | 499,000 UZS | ~$39.45    | ~30%     | Faol o'rganuvchilar                       |
+| **Premium**    | 99,000 UZS          | ~$7.83         | 849,000 UZS | ~$67.11    | ~29%     | Jiddiy professional o'rganuvchilar        |
+| **Enterprise** | $49-99/oy (per org) | —              | Kelishiladi | —          | —        | B2B: ta'lim muassasalari, korporativ      |
 
 > **Kurs:** 1 USD ≈ 12,650 UZS (2025-Q4 o'rtacha)
+>
+> **Enterprise** alohida B2B tier: 50 ta user per org, admin panel, bulk licensing, priority support. Individual subscription bilan aralashtirilMASIN.
 
-### 2.2 Reja Xususiyatlari
+### 2.3 Reja Xususiyatlari — Batafsil Solishtirish
 
-| Xususiyat           | Free          | Basic           | Pro         | Enterprise     |
-| ------------------- | ------------- | --------------- | ----------- | -------------- |
-| So'zlar limiti      | 50 ta         | 500 ta          | Cheksiz     | Cheksiz        |
-| Review / kun        | 5 ta          | Cheksiz         | Cheksiz     | Cheksiz        |
-| Test / kun          | 1 ta          | 3 ta            | Cheksiz     | Cheksiz        |
-| O'yinlar            | 3 ta (asosiy) | Barcha 7 ta     | Barcha 7 ta | Barcha 7 ta    |
-| AI Enrichment       | 5 / kun       | 20 / kun        | Cheksiz     | Cheksiz        |
-| AI Chat             | ❌            | 3 sessiya/kun   | Cheksiz     | Cheksiz        |
-| Smart Import (matn) | ❌            | 3 / kun         | Cheksiz     | Cheksiz        |
-| CSV Import          | ❌            | ❌              | ✅          | ✅             |
-| Analytics           | Asosiy        | Asosiy          | To'liq      | To'liq         |
-| Confusing Pairs     | Ko'rish       | Ko'rish + Drill | To'liq      | To'liq         |
-| Learning Profile    | ❌            | Asosiy          | To'liq + AI | To'liq + AI    |
-| Priority support    | ❌            | ❌              | ❌          | ✅ (24h email) |
-| API access          | ❌            | ❌              | ❌          | ✅             |
+> **Prinsip:** Barcha funksiyalar barchaga ochiq. Faqat **miqdor** farq qiladi.
+
+#### 📦 So'z Saqlash
+
+| Xususiyat         | Free                 | Starter (29K)        | Pro (59K)            | Premium (99K)        |
+| ----------------- | -------------------- | -------------------- | -------------------- | -------------------- |
+| Kunlik qo'shish   | 30 ta/kun            | 120 ta/kun           | 500 ta/kun           | 1,000 ta/kun         |
+| Jami so'z sig'imi | 150 ta               | 400 ta               | 1,200 ta             | 2,000 ta             |
+| Archive           | ✅ (sig'imga kiradi) | ✅ (sig'imga kiradi) | ✅ (sig'imga kiradi) | ✅ (sig'imga kiradi) |
+
+> ⚠️ Arxivlangan so'zlar ham jami sig'imga kiritiladi. Masalan: Free user 100 ta aktiv + 50 ta arxiv = 150 ta limit to'lgan.
+
+#### 🎮 O'yinlar
+
+| Xususiyat           | Free        | Starter     | Pro         | Premium     |
+| ------------------- | ----------- | ----------- | ----------- | ----------- |
+| O'yin turlari       | Barcha 7 ta | Barcha 7 ta | Barcha 7 ta | Barcha 7 ta |
+| Kunlik o'yin limiti | 30 ta/kun   | 100 ta/kun  | Cheksiz     | Cheksiz     |
+
+#### 🤖 AI Xususiyatlar
+
+| Xususiyat           | Free           | Starter                | Pro                                   | Premium                 |
+| ------------------- | -------------- | ---------------------- | ------------------------------------- | ----------------------- |
+| AI Enrichment       | 30 ta/kun      | 120 ta/kun             | 500 ta/kun                            | Cheksiz                 |
+| AI Chat             | 15 xabar/kun   | 60 xabar/kun           | Cheksiz                               | Cheksiz                 |
+| AI Test generatsiya | 5 ta/kun       | 20 ta/kun              | Cheksiz                               | Cheksiz                 |
+| AI Model            | 🟢 Basic faqat | 🟢 Basic + 🟡 Standard | 🟢🟡🔴 Barchasi (50/kun Professional) | 🟢🟡🔴 Barchasi Cheksiz |
+
+#### 📥 Import
+
+| Xususiyat           | Free        | Starter      | Pro          | Premium      |
+| ------------------- | ----------- | ------------ | ------------ | ------------ |
+| Smart Import (matn) | 30 ta/kun   | 100 ta/kun   | 200 ta/kun   | Cheksiz      |
+| CSV Import          | 50 ta/batch | 150 ta/batch | 300 ta/batch | 500 ta/batch |
+
+> ❌ **PDF Import** — hech qanday tier'da yo'q. Roadmap'da ham yo'q.
+
+#### 🔥 Streak & Offline
+
+| Xususiyat         | Free  | Starter    | Pro        | Premium |
+| ----------------- | ----- | ---------- | ---------- | ------- |
+| Streak Protection | ❌    | 1 marta/oy | 3 marta/oy | Cheksiz |
+| Offline so'zlar   | 50 ta | 200 ta     | 500 ta     | Cheksiz |
+
+#### 📊 Har kunda ochiq (BARCHA tierlarda bir xil)
+
+| Xususiyat                  | Holat                  |
+| -------------------------- | ---------------------- |
+| Spaced Repetition (SM-2)   | ✅ To'liq — limit yo'q |
+| Analytics (haftalik/oylik) | ✅ To'liq — limit yo'q |
+| Badges + XP + Level        | ✅ To'liq — limit yo'q |
+| Confusing Pairs            | ✅ To'liq — limit yo'q |
+| Learning Profile           | ✅ To'liq — limit yo'q |
+| Daily Challenges           | ✅ To'liq — limit yo'q |
+| Notifications              | ✅ To'liq — limit yo'q |
+
+#### 📢 Reklama
+
+| Xususiyat | Free                | Starter+ (barcha pullik)  |
+| --------- | ------------------- | ------------------------- |
+| Reklama   | ✅ Minimal (banner) | ❌ Reklama yo'q (Ad-free) |
+
+#### 🏢 Enterprise (alohida B2B tier)
+
+| Xususiyat               | Enterprise ($49-99/oy per org) |
+| ----------------------- | ------------------------------ |
+| Foydalanuvchilar        | 50 ta per org                  |
+| Barcha Premium features | ✅                             |
+| Admin Panel (org)       | ✅ Team management             |
+| Bulk Licensing          | ✅                             |
+| Priority Support        | ✅ (24h email, dedicated)      |
+| Custom Analytics        | ✅ Organization-level report   |
+| SSO (SAML/OAuth)        | ✅ (Sprint 35)                 |
+| API Access              | ✅                             |
 
 > ⚠️ **MUHIM:** Hozirgi kod bazasida premium/subscription modeli **mavjud emas**. Faqat `CustomUser.is_premium` boolean field va `premium_until` DateTimeField bor. To'liq subscription management Sprint 25 da rejalashtirilgan. Yuqoridagi limitlar **kelajak reja** — hozir barcha funksiyalar barcha foydalanuvchilar uchun ochiq.
 
-### 2.3 Konversiya Funneli (Maqsad)
+### 2.4 Konversiya Funneli (Maqsad)
 
 ```
 Free Users (100%)
     │
-    ├── Month 1-3:  2% → Basic,  1% → Pro,   0.1% → Enterprise
-    ├── Month 4-6:  5% → Basic,  3% → Pro,   0.5% → Enterprise
-    ├── Month 7-12: 8% → Basic,  5% → Pro,   1.0% → Enterprise
-    └── Month 13+: 10% → Basic,  7% → Pro,   2.0% → Enterprise
+    ├── Month 1-3:  3% → Starter,  1% → Pro,   0.2% → Premium
+    ├── Month 4-6:  5% → Starter,  3% → Pro,   0.5% → Premium
+    ├── Month 7-12: 8% → Starter,  5% → Pro,   1.0% → Premium
+    └── Month 13+: 10% → Starter,  7% → Pro,   2.0% → Premium
 ```
+
+> **Asosiy konversiya trigeri:** "150 ta so'z limiti tugadi" — bu moment foydalanuvchi uchun eng og'riqli va Starter'ga o'tish motivatsiyasi eng yuqori.
 
 ---
 
@@ -128,45 +239,59 @@ Free Users (100%)
 
 ### 3.1 MRR (Monthly Recurring Revenue) Hisoblari
 
-> **Formula:** MRR = (Basic users × 29,000) + (Pro users × 59,000) + (Enterprise users × 149,000)
+> **Formula:** MRR = (Starter users × 29,000) + (Pro users × 59,000) + (Premium users × 99,000) UZS
+>
+> **Enterprise** B2B alohida hisoblanadi (individual MRR ga kiritilmaydi)
 
-| Oy  | Basic  | Pro   | Enterprise | MRR (UZS)     | MRR (USD) | Kumulyativ (UZS) |
-| --- | ------ | ----- | ---------- | ------------- | --------- | ---------------- |
-| 1   | 3      | 2     | 0          | 205,000       | $16       | 205,000          |
-| 3   | 30     | 15    | 3          | 2,202,000     | $174      | 4,609,000        |
-| 6   | 130    | 70    | 25         | 11,625,000    | $919      | 38,484,000       |
-| 12  | 560    | 280   | 120        | 50,640,000    | $4,003    | 248,244,000      |
-| 18  | 1,700  | 900   | 400        | 162,000,000   | $12,806   | 1,128,244,000    |
-| 24  | 4,800  | 2,500 | 1,200      | 465,500,000   | $36,798   | 4,308,244,000    |
-| 36  | 10,500 | 5,500 | 3,000      | 1,076,000,000 | $85,059   | 15,000,000,000+  |
+| Oy  | Starter | Pro   | Premium | MRR (UZS)   | MRR (USD) | Kumulyativ (UZS) |
+| --- | ------- | ----- | ------- | ----------- | --------- | ---------------- |
+| 1   | 5       | 2     | 0       | 263,000     | $21       | 263,000          |
+| 3   | 35      | 15    | 5       | 2,395,000   | $189      | 5,053,000        |
+| 6   | 150     | 70    | 30      | 11,450,000  | $905      | 38,753,000       |
+| 12  | 600     | 300   | 100     | 44,900,000  | $3,549    | 215,653,000      |
+| 18  | 1,800   | 950   | 350     | 142,350,000 | $11,249   | 978,753,000      |
+| 24  | 5,000   | 2,600 | 1,000   | 398,400,000 | $31,494   | 3,678,753,000    |
+| 36  | 11,000  | 6,000 | 2,500   | 920,500,000 | $72,767   | 12,500,000,000+  |
 
 > **Eslatma:** Bu proyeksiyalar OPTIMISTIK senariy. "Conservativ" senariy uchun barcha raqamlarni 3x ga bo'ling. Dastlabki 6 oy daromad deyarli nol bo'lishi kutiladi.
+>
+> **Enterprise B2B qo'shimcha:** Oy 12+ da 5-10 ta org × $49-99/oy = $245-$990/oy qo'shimcha daromad.
 
 ### 3.2 Xarajatlar Tuzilmasi
 
 | Xarajat turi       | Oy 1-3   | Oy 4-6   | Oy 7-12   | Oy 13-24  | Oy 25-36    | Izoh                          |
 | ------------------ | -------- | -------- | --------- | --------- | ----------- | ----------------------------- |
 | Server (VPS/Cloud) | $20/oy   | $50/oy   | $100/oy   | $300/oy   | $800/oy     | Hetzner → DigitalOcean → AWS  |
-| AI API             | $5/oy    | $20/oy   | $80/oy    | $250/oy   | $600/oy     | Groq (free tier) → paid       |
+| AI API (jami)      | $5/oy    | $25/oy   | $100/oy   | $300/oy   | $700/oy     | Quyida tier bo'yicha taqsimot |
 | Domain + SSL       | $15/yil  | —        | $15/yil   | $15/yil   | $15/yil     | .uz yoki .com                 |
 | Marketing          | $0/oy    | $0/oy    | $50/oy    | $200/oy   | $500/oy     | Telegram ads, SEO, influencer |
 | TTS API            | $0/oy    | $5/oy    | $20/oy    | $50/oy    | $100/oy     | Google TTS / Azure            |
 | Developer          | $0\*     | $0\*     | $0\*      | $0\*      | $0-2000\*   | \*qarang: pastda              |
-| **Jami (oylik)**   | **~$25** | **~$75** | **~$265** | **~$815** | **~$2,015** |                               |
+| **Jami (oylik)**   | **~$25** | **~$80** | **~$285** | **~$865** | **~$2,115** |                               |
 
 > **\*Developer xarajat eslatmasi:** Hozir loyiha solo developer tomonidan rivojlantiriladi (Firdavs). Oy haqqi $0, lekin imkoniyat xarajati (opportunity cost) ~$400-800/oy (O'zbekiston developer o'rtacha maoshi). 25+ oyda jamoa kengaytirish rejalashtirilgan ($1,000-2,000/oy).
+
+#### AI API Xarajat Taqsimoti (tier bo'yicha)
+
+| AI Tier         | Model            | Narx/1K token   | Free user xarajat | Starter xarajat | Pro xarajat | Premium xarajat |
+| --------------- | ---------------- | --------------- | ----------------- | --------------- | ----------- | --------------- |
+| 🟢 Basic        | Groq llama-3.3   | ~$0 (free tier) | $0                | $0              | $0          | $0              |
+| 🟡 Standard     | Gemini 2.0 Flash | ~$0.10/1K token | —                 | ~$0.005/user    | ~$0.02/user | ~$0.05/user     |
+| 🔴 Professional | GPT-4o-mini/4o   | ~$0.50/1K token | —                 | —               | ~$0.03/user | ~$0.10/user     |
+
+> **Strategiya:** Free userlar faqat Groq (tekin) ishlatadi → AI xarajat $0. Asosiy xarajat Pro/Premium userlarning Professional model tanlashida.
 
 ### 3.3 Break-Even Tahlili
 
 ```
 Break-even = Oylik xarajat / O'rtacha ARPU
 
-O'rtacha ARPU (taxminiy): (29,000 × 0.6) + (59,000 × 0.3) + (149,000 × 0.1) = 50,000 UZS ≈ $3.95
+O'rtacha ARPU (taxminiy): (29,000 × 0.55) + (59,000 × 0.30) + (99,000 × 0.15) = 48,500 UZS ≈ $3.83
 
-Month 1-3:  $25 / $3.95 = 7 to'lovchi user → Break-even
-Month 7-12: $265 / $3.95 = 68 to'lovchi user → Break-even
-Month 13-24: $815 / $3.95 = 207 to'lovchi user → Break-even
-Month 25-36: $2,015 / $3.95 = 511 to'lovchi user → Break-even
+Month 1-3:  $25 / $3.83 = 7 to'lovchi user → Break-even
+Month 7-12: $285 / $3.83 = 75 to'lovchi user → Break-even
+Month 13-24: $865 / $3.83 = 226 to'lovchi user → Break-even
+Month 25-36: $2,115 / $3.83 = 553 to'lovchi user → Break-even
 ```
 
 > **Xulosa:** Dastlabki 6 oyda break-even 7-20 to'lovchi user bilan erishilishi mumkin. Bu juda qulay chunki server xarajati past ($20-50/oy).
@@ -175,13 +300,13 @@ Month 25-36: $2,015 / $3.95 = 511 to'lovchi user → Break-even
 
 | Oy  | MRR (USD) | Xarajat (USD) | Sof foyda (USD) | Marja    |
 | --- | --------- | ------------- | --------------- | -------- |
-| 1   | $16       | $25           | -$9             | ❌ Zarar |
-| 3   | $174      | $25           | +$149           | 86%      |
-| 6   | $919      | $75           | +$844           | 92%      |
-| 12  | $4,003    | $265          | +$3,738         | 93%      |
-| 18  | $12,806   | $815          | +$11,991        | 94%      |
-| 24  | $36,798   | $815          | +$35,983        | 98%      |
-| 36  | $85,059   | $2,015        | +$83,044        | 98%      |
+| 1   | $21       | $25           | -$4             | ❌ Zarar |
+| 3   | $189      | $25           | +$164           | 87%      |
+| 6   | $905      | $80           | +$825           | 91%      |
+| 12  | $3,549    | $285          | +$3,264         | 92%      |
+| 18  | $11,249   | $865          | +$10,384        | 92%      |
+| 24  | $31,494   | $865          | +$30,629        | 97%      |
+| 36  | $72,767   | $2,115        | +$70,652        | 97%      |
 
 > **Ogohlantirish:** Yuqori marja SaaS industryada normal (70-90%), lekin bu raqamlar developer maoshi HISOBGA OLINMAGAN. Agar $800/oy developer maoshi qo'shilsa, dastlabki 12 oyda marja ~50-60% ga tushadi.
 
@@ -326,7 +451,7 @@ Month 25-36: $2,015 / $3.95 = 511 to'lovchi user → Break-even
 - PWA + Offline mode
 - i18n (Rus, Qozoq tili)
 - Payment integration (Payme/Click)
-- Feature gating (Free/Basic/Pro/Enterprise limitlar)
+- Feature gating (Free/Starter/Pro/Premium limitlar)
 - Advanced Leaderboard + Social features
 
 ### Phase 3: Scale (Oy 13-24)
@@ -358,7 +483,7 @@ Month 25-36: $2,015 / $3.95 = 511 to'lovchi user → Break-even
 | Free → Paid konversiya | 3%            | 5%             | 8%             | To'lovchi / jami users   |
 | Day 7 Retention        | 40%           | 50%            | 60%            | 7-kun qaytish            |
 | Day 30 Retention       | 20%           | 30%            | 40%            | 30-kun qaytish           |
-| ARPU (oylik)           | $2.00         | $3.50          | $4.00          | MRR / to'lovchi users    |
+| ARPU (oylik)           | $2.50         | $3.83          | $4.50          | MRR / to'lovchi users    |
 | Churn rate             | <10%          | <8%            | <5%            | Oylik bekor qilish       |
 | NPS                    | 30+           | 40+            | 50+            | Net Promoter Score       |
 
@@ -370,7 +495,7 @@ Register → Onboarding: 80-90%
 Onboarding → 1st Word: 70-80%
 1st Word → Day 7:      40-50%
 Day 7 → Day 30:        50-60%
-Day 30 → Premium:      3-8%
+Day 30 → Premium:      5-8%
 ```
 
 ---
@@ -381,3 +506,4 @@ Day 30 → Premium:      3-8%
 | ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-02-27 | AI Agent | Dastlabki versiya yaratildi                                                                                                               |
 | 2026-02-27 | AI Audit | MRR qayta hisoblandi, server cost realga moslandi, raqobatchi SR tuzatildi, marketing byudjet qo'shildi, mahalliy raqobatchilar qo'shildi |
+| 2026-02-28 | AI Agent | Monetizatsiya to'liq rewrite: tier nomlar (Starter/Pro/Premium), AI Model Selection, saxiy free tier, yillik rejalar, narx 99K Premium    |

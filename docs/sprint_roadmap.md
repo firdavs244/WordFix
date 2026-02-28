@@ -2,7 +2,7 @@
 
 > Bu fayl loyihaning sprint rejasini batafsil tavsiflaydi.
 > Har sprint tugagandan so'ng yangilanadi.
-> Oxirgi yangilangan: 2026-02-27
+> Oxirgi yangilangan: 2026-02-28
 
 ### CHANGELOG (2026-02-27 Audit)
 
@@ -23,7 +23,14 @@
 - Rollback strategiya bo'limi qo'shildi
 - UX vazifalar tegishli sprintlarga qo'shildi
 - KPI va metriklar bo'limi yangilandi
-- Narxlar BS bilan birlashtirildi (Free/Basic/Pro/Enterprise — UZS)
+- Narxlar BS bilan birlashtirildi (Free/Starter/Pro/Premium — UZS)
+
+### CHANGELOG (2026-02-28 Monetizatsiya Rewrite)
+
+- Sprint 16 Feature Gating: tier nomlar yangilandi (Starter/Pro/Premium), UsageTracker model, AI Model Selection
+- Sprint 16 limitlar jadvali to'liq rewrite: saxiy free tier (30 so'z/kun, 15 AI chat, 30 o'yin)
+- Sprint 25 narxlar yangilandi: Premium 99K (eski Enterprise 149K o'rniga), yillik rejalar qo'shildi
+- Biznes KPIlar MRR yangilandi: Sprint 36 maqsad $72,767 (eski $85,059)
 
 ---
 
@@ -241,48 +248,88 @@ features/contact/
 
 ### Sprint 16: Feature Gating (3-4 kun) ⚠️ YANGI — ko'chirildi Sprint 30 dan
 
-**Maqsad:** Free/Basic/Pro/Enterprise limitlarni implement qilish
+**Maqsad:** Free/Starter/Pro/Premium limitlarni implement qilish + AI Model Selection
 
 **Sabab:** Feature gating Sprint 30 ga rejalashtirilgan edi, lekin Admin Panel (Sprint 16-17) dan OLDIN bo'lishi mantiqiy. Admin panelda foydalanuvchi rejasini boshqarish kerak.
 
-**Backend (2 kun):**
+**Falsafa:** "BARCHA funksiyalar barchaga ochiq — faqat MIQDOR farq qiladi."
 
+**Backend (2.5 kun):**
+
+- [ ] UsageTracker model yaratish (kunlik limit hisobi)
 - [ ] Feature Gating middleware yoki decorator yaratish
 - [ ] Plan-based permission checks (DRF permissions)
-- [ ] Usage tracking (kundalik limit hisobi)
+- [ ] AI Model Selection permission (tier → ruxsat berilgan modellar)
+- [ ] Usage tracking (kundalik limit hisobi — so'z, AI chat, test, game, import)
 - [ ] Limit configuration (settings yoki database)
 
 ```python
 # Misol:
-class PremiumRequiredPermission(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_premium_active
-
-class RateLimitedFeature:
+class UsageTracker:
+    """Har bir feature uchun kunlik/jami limit tekshiruvi"""
     LIMITS = {
-        'free': {'words': 50, 'reviews_per_day': 5, 'tests_per_day': 1},
-        'basic': {'words': 500, 'reviews_per_day': -1, 'tests_per_day': 3},
-        'pro': {'words': -1, 'reviews_per_day': -1, 'tests_per_day': -1},
-        'enterprise': {'words': -1, 'reviews_per_day': -1, 'tests_per_day': -1},
+        'free': {
+            'words_per_day': 30, 'words_total': 150,
+            'ai_chat_per_day': 15, 'ai_enrichment_per_day': 30,
+            'ai_tests_per_day': 5, 'games_per_day': 30,
+            'smart_import_per_day': 30, 'csv_per_batch': 50,
+            'ai_models': ['basic'],  # faqat Groq
+        },
+        'starter': {
+            'words_per_day': 120, 'words_total': 400,
+            'ai_chat_per_day': 60, 'ai_enrichment_per_day': 120,
+            'ai_tests_per_day': 20, 'games_per_day': 100,
+            'smart_import_per_day': 100, 'csv_per_batch': 150,
+            'ai_models': ['basic', 'standard'],  # Groq + Gemini
+        },
+        'pro': {
+            'words_per_day': 500, 'words_total': 1200,
+            'ai_chat_per_day': -1, 'ai_enrichment_per_day': 500,
+            'ai_tests_per_day': -1, 'games_per_day': -1,
+            'smart_import_per_day': 200, 'csv_per_batch': 300,
+            'ai_models': ['basic', 'standard', 'professional'],  # 50/kun Pro limit
+        },
+        'premium': {
+            'words_per_day': 1000, 'words_total': 2000,
+            'ai_chat_per_day': -1, 'ai_enrichment_per_day': -1,
+            'ai_tests_per_day': -1, 'games_per_day': -1,
+            'smart_import_per_day': -1, 'csv_per_batch': 500,
+            'ai_models': ['basic', 'standard', 'professional'],  # cheksiz
+        },
     }
+    # -1 = cheksiz
+
+class AIModelPermission(BasePermission):
+    """Foydalanuvchi tanlagan AI model uchun tier ruxsatini tekshirish"""
+    def has_permission(self, request, view):
+        requested_model = request.data.get('ai_model', 'basic')
+        user_plan = request.user.subscription_tier  # free/starter/pro/premium
+        allowed = UsageTracker.LIMITS[user_plan]['ai_models']
+        return requested_model in allowed
 ```
 
 **Frontend (1-2 kun):**
 
-- [ ] Upgrade prompt component (limit reached → "Upgrade to Basic")
-- [ ] Feature lock UI (grayed out + lock icon)
-- [ ] Plan badge (Header da: "Free", "Basic", "Pro", "Enterprise")
+- [ ] Upgrade prompt component (limit reached → "Starter'ga o'ting!")
+- [ ] AI Model selector UI (🟢 Basic / 🟡 Standard / 🔴 Professional)
+- [ ] Usage counter display (30/150 so'z, 15/15 AI chat)
+- [ ] Plan badge (Header da: "Free", "Starter", "Pro", "Premium")
+- [ ] Soft paywall UX (limit tugaganda — "150 ta so'z limiti tugadi" + upsell)
 
 **Limitlar (narxlar Business Strategy bilan bir xil):**
 
-| Xususiyat    | Free | Basic (29K UZS) | Pro (59K UZS) | Enterprise (149K UZS) |
-| ------------ | ---- | --------------- | ------------- | --------------------- |
-| So'zlar      | 50   | 500             | Cheksiz       | Cheksiz               |
-| Review / kun | 5    | Cheksiz         | Cheksiz       | Cheksiz               |
-| Test / kun   | 1    | 3               | Cheksiz       | Cheksiz               |
-| AI Chat      | ❌   | 3 / kun         | Cheksiz       | Cheksiz               |
-| Smart Import | ❌   | 3 / kun         | Cheksiz       | Cheksiz               |
-| CSV Import   | ❌   | ❌              | ✅            | ✅                    |
+| Xususiyat         | Free           | Starter (29K UZS) | Pro (59K UZS)   | Premium (99K UZS) |
+| ----------------- | -------------- | ----------------- | --------------- | ----------------- |
+| So'z/kun (jami)   | 30 (150 max)   | 120 (400 max)     | 500 (1200 max)  | 1000 (2000 max)   |
+| AI Chat           | 15 xabar/kun   | 60 xabar/kun      | Cheksiz         | Cheksiz           |
+| AI Enrichment     | 30/kun         | 120/kun           | 500/kun         | Cheksiz           |
+| AI Test           | 5/kun          | 20/kun            | Cheksiz         | Cheksiz           |
+| O'yinlar          | 30/kun (7 ta)  | 100/kun (7 ta)    | Cheksiz         | Cheksiz           |
+| Smart Import      | 30/kun         | 100/kun           | 200/kun         | Cheksiz           |
+| CSV Import        | 50/batch       | 150/batch         | 300/batch       | 500/batch         |
+| AI Model          | 🟢 Basic faqat | 🟢+🟡             | 🟢🟡🔴 (50/kun) | 🟢🟡🔴 Cheksiz    |
+| Streak Protection | ❌             | 1/oy              | 3/oy            | Cheksiz           |
+| Reklama           | Minimal banner | ❌ Ad-free        | ❌ Ad-free      | ❌ Ad-free        |
 
 ---
 
@@ -561,9 +608,10 @@ apps/payments/
 **Narxlar (BS bilan bir xil):**
 
 - Free: 0 UZS
-- Basic: 29,000 UZS/oy (~$2.29)
-- Pro: 59,000 UZS/oy (~$4.66)
-- Enterprise: 149,000 UZS/oy (~$11.79)
+- Starter: 29,000 UZS/oy (~$2.29) | Yillik: 249,000 UZS (~29% chegirma)
+- Pro: 59,000 UZS/oy (~$4.66) | Yillik: 499,000 UZS (~30% chegirma)
+- Premium: 99,000 UZS/oy (~$7.83) | Yillik: 849,000 UZS (~29% chegirma)
+- Enterprise: $49-99/oy per org (50 users) — alohida B2B flow
 
 ---
 
@@ -738,10 +786,10 @@ npm run build
 | ---------------------- | ----------- | ----------- | --------- |
 | MAU (Monthly Active)   | 500         | 5,000       | 100,000   |
 | DAU/MAU ratio          | 15%         | 25%         | 30%       |
-| Free → Paid konversiya | 2%          | 5%          | 8%        |
+| Free → Paid konversiya | 3%          | 5%          | 8%        |
 | Day 7 Retention        | 35%         | 50%         | 60%       |
 | Day 30 Retention       | 15%         | 30%         | 40%       |
-| MRR (USD)              | $50         | $919        | $85,059   |
+| MRR (USD)              | $50         | $905        | $72,767   |
 | NPS                    | 20+         | 40+         | 50+       |
 
 ---
@@ -766,3 +814,4 @@ npm run build
 | ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-02-27 | AI Agent | Dastlabki versiya yaratildi                                                                                                                                                                                       |
 | 2026-02-27 | AI Audit | Raqamlar tuzatildi (103 EP, 31 model, 87 UC, 34 route), Sprint 13.5/16/18.5/24.5/29.5 qo'shildi, Sprint 14 kengaytirildi, vaqt baholar tuzatildi, rollback strategiya qo'shildi, dependencies diagramma qo'shildi |
+| 2026-02-28 | AI Agent | Monetizatsiya rewrite: Sprint 16 Feature Gating (UsageTracker + AI Model Selection + saxiy limitlar), Sprint 25 narxlar yangilandi, KPI MRR targets yangilandi                                                    |

@@ -2,7 +2,7 @@
 
 > Bu fayl loyihaning texnik arxitekturasini batafsil tavsiflaydi.
 > Har sprint oxirida yangilanadi.
-> Oxirgi yangilangan: 2026-02-27
+> Oxirgi yangilangan: 2026-02-28
 
 ### CHANGELOG (2026-02-27 Audit)
 
@@ -17,6 +17,12 @@
 - Contact/Feedback sprint raqami 14 → 15 ga tuzatildi
 - API Documentation endpointlari qo'shildi (SpectacularSwaggerView, SpectacularAPIView)
 - Yangi Section 11: "Ma'lum Arxitektura Muammolar (Texnik Qarz)" qo'shildi
+
+### CHANGELOG (2026-02-28 Monetizatsiya Rewrite)
+
+- Section 4 AI Provider Flow yangilandi: AI Model Selection tizimi qo'shildi (user tanlaydi: Basic/Standard/Professional)
+- AI Model → Subscription Tier mapping jadvali qo'shildi
+- AIModelPermission tekshiruvi flow diagrammaga kiritildi
 
 ---
 
@@ -591,10 +597,16 @@ POST   /api/v1/system/ai-ping/                 → AIPingView               [Aut
 
 ## 4. SERVICE DEPENDENCIES
 
-### AI Provider Flow
+### AI Provider Flow (with Model Selection)
 
 ```
-Views → Use Cases → AIProviderFactory.get_provider()
+User tanlaydi: 🟢 Basic / 🟡 Standard / 🔴 Professional
+    │
+    ▼
+Views → Use Cases → AIModelPermission (tier ruxsat tekshiruvi)
+                         │
+                         ▼ (ruxsat berilsa)
+                    AIProviderFactory.get_provider(user_selected_model)
                          │
                     ┌────┴────┐
                     │ Circuit │
@@ -604,7 +616,8 @@ Views → Use Cases → AIProviderFactory.get_provider()
          ┌───────────────┼───────────────┐
          │               │               │
     GroqProvider   GeminiProvider   OpenAIProvider
-    (PRIMARY)      (FALLBACK 1)    (FALLBACK 2)
+    🟢 BASIC       🟡 STANDARD     🔴 PROFESSIONAL
+    (Free+)        (Starter+)      (Pro+)
          │               │               │
          └───────────────┼───────────────┘
                          │ (barcha fail)
@@ -612,6 +625,16 @@ Views → Use Cases → AIProviderFactory.get_provider()
                 FallbackAIProvider
                 (hardcoded responses)
 ```
+
+**AI Model → Subscription Tier Mapping:**
+
+| AI Model                 | Free | Starter | Pro         | Premium    |
+| ------------------------ | ---- | ------- | ----------- | ---------- |
+| 🟢 Basic (Groq)          | ✅   | ✅      | ✅          | ✅         |
+| 🟡 Standard (Gemini)     | ❌   | ✅      | ✅          | ✅         |
+| 🔴 Professional (GPT-4o) | ❌   | ❌      | ✅ (50/kun) | ✅ Cheksiz |
+
+> **Texnik nota:** User tanlagan model birinchi uriniladi. Fail bo'lsa fallback zanjiri ishlaydi: Tanlangan → Groq → Gemini → OpenAI → Hardcoded.
 
 ### XP → Badge → Notification Flow
 
@@ -1024,3 +1047,4 @@ features/contact/
 | ---------- | -------- | ------------------------------------------------------------------------------------------------------------ |
 | 2026-02-27 | AI Agent | Dastlabki versiya yaratildi — to'liq arxitektura map                                                         |
 | 2026-02-27 | AI Audit | To'liq audit: model 30→31, endpoint ~96→103, use case ~42→87, badge 18→31, route 31→34, Section 11 qo'shildi |
+| 2026-02-28 | AI Agent | Monetizatsiya rewrite: AI Provider Flow → AI Model Selection flow, tier mapping jadvali qo'shildi            |

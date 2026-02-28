@@ -2,7 +2,7 @@
 
 > Bu fayl loyihaning to'liq texnik va biznes identifikatsiyasini tavsiflaydi.
 > Yangi developer yoki AI agent uchun "bitta fayl — butun loyiha" maqsadida yaratilgan.
-> Oxirgi yangilangan: 2026-02-27
+> Oxirgi yangilangan: 2026-02-28
 
 ### CHANGELOG (2026-02-27 Audit)
 
@@ -19,6 +19,16 @@
 - Environment Variables bo'limi qo'shildi (27 ta)
 - "Ma'lum Texnik Muammolar" bo'limi qo'shildi
 - Free tier limitlari barcha hujjatlarga moslandi
+
+### CHANGELOG (2026-02-28 Monetizatsiya Rewrite)
+
+- **Tier nomlar:** Basic → Starter, Enterprise → Premium (individual), yangi Enterprise = B2B
+- **Narxlar:** Free/0 → Starter/29K → Pro/59K → Premium/99K UZS + Enterprise B2B $49-99/oy
+- **Yillik rejalar:** Starter 249K, Pro 499K, Premium 849K UZS (~29-30% chegirma)
+- **AI Model Selection:** User tanlaydi — 🟢 Basic(Groq) / 🟡 Standard(Gemini) / 🔴 Professional(GPT-4o)
+- **Falsafa:** Barcha funksiyalar barchaga ochiq — faqat miqdor farq qiladi
+- Section 6 to'liq rewrite (3 sub-section: Individual, Enterprise B2B, AI Model)
+- AI Stack (2.3) yangilandi — user-selectable model system
 
 ---
 
@@ -77,15 +87,20 @@
 
 ### 2.3 AI Stack
 
-| Provider      | Model                   | Rol         | API Key Env Var |
-| ------------- | ----------------------- | ----------- | --------------- |
-| Groq          | llama-3.3-70b-versatile | PRIMARY     | GROQ_API_KEY    |
-| Google Gemini | gemini-2.0-flash        | FALLBACK #1 | GEMINI_API_KEY  |
-| OpenAI        | gpt-4o-mini             | FALLBACK #2 | OPENAI_API_KEY  |
-| (Hardcoded)   | FallbackAIProvider      | LAST RESORT | —               |
+> Foydalanuvchi o'zi AI modelni tanlaydi. Subscription tier qaysi modelga ruxsat berishini belgilaydi.
+
+| Provider      | Model                   | AI Tier         | Subscription kerak | API Key Env Var |
+| ------------- | ----------------------- | --------------- | ------------------ | --------------- |
+| Groq          | llama-3.3-70b-versatile | 🟢 Basic        | Free+              | GROQ_API_KEY    |
+| Google Gemini | gemini-2.0-flash        | 🟡 Standard     | Starter+           | GEMINI_API_KEY  |
+| OpenAI        | gpt-4o-mini / gpt-4o    | 🔴 Professional | Pro+               | OPENAI_API_KEY  |
+| (Hardcoded)   | FallbackAIProvider      | — (last resort) | —                  | —               |
 
 ```
-Fallback zanjiri: Groq → (fail) → Gemini → (fail) → OpenAI → (fail) → FallbackAIProvider (hardcoded)
+Foydalanuvchi model tanlaydi → Ruxsat tekshiriladi (subscription tier) → API call
+    │ (fail bo'lsa)
+    ▼
+Fallback zanjiri: Tanlangan → Groq → Gemini → OpenAI → FallbackAIProvider (hardcoded)
 CircuitBreaker: 3 consecutive fail → provider skip → 60s cooldown
 ```
 
@@ -218,32 +233,52 @@ class WordListCreateView(APIView):
 
 ## 6. NARX STRATEGIYASI (Yagona — barcha hujjatlarda bir xil)
 
-| Reja           | Oylik narx  | USD ekvivalent | Asosiy cheklovlar                               |
-| -------------- | ----------- | -------------- | ----------------------------------------------- |
-| **Free**       | 0 UZS       | $0             | 50 so'z, 5 review/kun, 1 test/kun, AI chat yo'q |
-| **Basic**      | 29,000 UZS  | ~$2.29         | 500 so'z, 3 AI chat/kun, barcha 7 o'yin         |
-| **Pro**        | 59,000 UZS  | ~$4.66         | Cheksiz so'z, to'liq analytics, CSV import      |
-| **Enterprise** | 149,000 UZS | ~$11.79        | API access, priority email support (24h)        |
+> **Falsafa:** "BARCHA funksiyalar barchaga ochiq — faqat MIQDOR farq qiladi." Hech qanday funksiya yopilmaydi.
 
-> ⚠️ **Kodda holat:** Hozir subscription modeli yo'q. Faqat `is_premium` boolean + `premium_until` DateTimeField. Feature gating Sprint 25 da rejalashtirilgan.
+### 6.1 Individual Rejalar
+
+| Reja        | Oylik narx | USD ekvivalent | Yillik narx | Asosiy cheklovlar                                             |
+| ----------- | ---------- | -------------- | ----------- | ------------------------------------------------------------- |
+| **Free**    | 0 UZS      | $0             | —           | 30 so'z/kun (150 max), 15 AI chat, 🟢 Basic AI faqat          |
+| **Starter** | 29,000 UZS | ~$2.29         | 249,000 UZS | 120 so'z/kun (400 max), 60 AI chat, 🟢+🟡 AI                  |
+| **Pro**     | 59,000 UZS | ~$4.66         | 499,000 UZS | 500 so'z/kun (1200 max), cheksiz chat, 🟢🟡🔴 AI (50/kun Pro) |
+| **Premium** | 99,000 UZS | ~$7.83         | 849,000 UZS | 1000 so'z/kun (2000 max), hammasi cheksiz, 🟢🟡🔴 AI cheksiz  |
+
+### 6.2 Enterprise (alohida B2B tier)
+
+| Xususiyat    | Tafsilot                           |
+| ------------ | ---------------------------------- |
+| **Narx**     | $49-99/oy per org (50 users)       |
+| **Features** | Barcha Premium + Admin Panel + SSO |
+| **Maqsad**   | Ta'lim muassasalari, korporativ    |
+
+### 6.3 AI Model Tanlov Tizimi
+
+| AI Tier         | Model                | Free | Starter | Pro         | Premium    |
+| --------------- | -------------------- | ---- | ------- | ----------- | ---------- |
+| 🟢 Basic        | Groq (llama-3.3-70b) | ✅   | ✅      | ✅          | ✅         |
+| 🟡 Standard     | Gemini 2.0 Flash     | ❌   | ✅      | ✅          | ✅         |
+| 🔴 Professional | GPT-4o-mini / GPT-4o | ❌   | ❌      | ✅ (50/kun) | ✅ Cheksiz |
+
+> ⚠️ **Kodda holat:** Hozir subscription modeli yo'q. Faqat `is_premium` boolean + `premium_until` DateTimeField. Feature gating Sprint 16, AI Model Selection Sprint 25 da rejalashtirilgan.
 
 ---
 
 ## 7. RAQOBATCHILAR SOLISHTIRMASI
 
-| Xususiyat                 | WordFix            | Duolingo      | Quizlet          | Anki         | Memrise          |
-| ------------------------- | ------------------ | ------------- | ---------------- | ------------ | ---------------- |
-| **SR algoritmi**          | SM-2 + AI Adaptive | ⚠️ Birdbrain  | ⚠️ Learn mode SR | ✅ SM-2      | ⚠️ O'z algoritmi |
-| **AI boyitish**           | ✅ 3 provider      | ❌            | ❌               | ❌           | ❌               |
-| **AI Chat**               | ✅                 | ❌            | ❌               | ❌           | ❌               |
-| **O'zbek tili**           | ✅ To'liq          | ⚠️ Cheklangan | ❌               | ⚠️ Community | ❌               |
-| **O'yin turlari**         | 7 ta               | 5-6 ta        | 3-4 ta           | 0 ta         | 2-3 ta           |
-| **Badge tizimi**          | 31 ta (4 rarity)   | Bor           | Yo'q             | Yo'q         | Bor              |
-| **Smart Import**          | ✅ AI-First        | ❌            | ❌               | ❌           | ❌               |
-| **Confusing Pairs**       | ✅ AI              | ❌            | ❌               | ❌           | ❌               |
-| **Learning Profile**      | ✅ Adaptive        | ⚠️            | ❌               | ❌           | ❌               |
-| **Narx**                  | Free / $2.29       | Free / $7.99  | Free / $7.99     | Free         | Free / $8.49     |
-| **Mahalliy to'lov (UZS)** | ✅ Payme/Click     | ❌            | ❌               | —            | ❌               |
+| Xususiyat                 | WordFix                | Duolingo      | Quizlet          | Anki         | Memrise          |
+| ------------------------- | ---------------------- | ------------- | ---------------- | ------------ | ---------------- |
+| **SR algoritmi**          | SM-2 + AI Adaptive     | ⚠️ Birdbrain  | ⚠️ Learn mode SR | ✅ SM-2      | ⚠️ O'z algoritmi |
+| **AI boyitish**           | ✅ 3 provider          | ❌            | ❌               | ❌           | ❌               |
+| **AI Chat**               | ✅                     | ❌            | ❌               | ❌           | ❌               |
+| **O'zbek tili**           | ✅ To'liq              | ⚠️ Cheklangan | ❌               | ⚠️ Community | ❌               |
+| **O'yin turlari**         | 7 ta                   | 5-6 ta        | 3-4 ta           | 0 ta         | 2-3 ta           |
+| **Badge tizimi**          | 31 ta (4 rarity)       | Bor           | Yo'q             | Yo'q         | Bor              |
+| **Smart Import**          | ✅ AI-First            | ❌            | ❌               | ❌           | ❌               |
+| **Confusing Pairs**       | ✅ AI                  | ❌            | ❌               | ❌           | ❌               |
+| **Learning Profile**      | ✅ Adaptive            | ⚠️            | ❌               | ❌           | ❌               |
+| **Narx**                  | Free / $2.29 (Starter) | Free / $7.99  | Free / $7.99     | Free         | Free / $8.49     |
+| **Mahalliy to'lov (UZS)** | ✅ Payme/Click         | ❌            | ❌               | —            | ❌               |
 
 > **SR izohlar:** Duolingo o'z "Birdbrain" algoritmini ishlatadi (SM-2/SM-5 emas). Quizlet "Learn mode" da yuzaki SR bor (klassik Leitner emas). Memrise o'z proprietar SR algoritmini ishlatadi. Faqat Anki va WordFix haqiqiy SM-2 implementatsiyaga ega.
 
@@ -587,3 +622,4 @@ docker-compose -f docker-compose.prod.yml up -d
 | ---------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-02-27 | AI Agent | Dastlabki versiya yaratildi                                                                                                                                                                               |
 | 2026-02-27 | AI Audit | Narxlar birlashtirildi, badge 18→31, use case ~42→87, model 30→31, endpoint ~96→103, route 31→34, LoginView xavfsizlik muammosi hujjatlashtirildi, env vars qo'shildi, texnik muammolar bo'limi qo'shildi |
+| 2026-02-28 | AI Agent | Monetizatsiya rewrite: tier nomlar (Starter/Pro/Premium), AI Model Selection, saxiy free tier, yillik rejalar, Enterprise B2B, Section 6 + AI Stack 2.3 yangilandi                                        |
