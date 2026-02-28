@@ -2,7 +2,7 @@
 04_CURRENT_ISSUES_AND_STATUS.txt
 WordFix — Joriy muammolar va holat
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architecture)
+Hujjat yangilangan sana: 2026-02-27 (docs/ AI Memory Architecture, sprint roadmap reference)
 ================================================================
 
 ================================================================
@@ -11,7 +11,7 @@ Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architectur
 
 | Metrika                     | Qiymat     | Status     |
 |-----------------------------|------------|------------|
-| Backend testlar             | ~1067      | ✅ All pass|
+| Backend testlar             | ~1091      | ✅ All pass|
 | Backend test coverage       | 96%        | ✅ Yaxshi  |
 | Frontend TypeScript build   | 0 xato     | ✅ PASS    |
 | Migratsiyalar               | +1 yangi   | ⚠️ Pending |
@@ -739,3 +739,18 @@ SPRINT 12.4 — AI-FIRST IMPORT ARXITEKTURA (2026-02-24)
 - OLDIN: detect_structured_format() → handler tanlash → regex parsing → optional AI enrichment
 - KEYIN: _minimal_clean() → _full_ai_pipeline() → _ai_extract() + _ai_validate() → fallback
 - Backward compat: parse_structured_text, detect_structured_format, STOP_WORDS saqlanadi
+
+================================================================
+DOCS/ — AI MEMORY ARCHITECTURE (2026-02-27)
+================================================================
+
+To'liq loyiha audit o'tkazildi va 4 ta hujjat yaratildi:
+
+| Fayl | Nima haqida |
+|------|-------------|
+| docs/project_dna.md | Loyiha asoslari, arxitektura qoidalari, kod/test/git qoidalari, audit natijasi |
+| docs/architecture_map.md | 30 model, 96 endpoint, 42 use case, service/Docker/Celery/middleware map |
+| docs/sprint_roadmap.md | Sprint 1-13 tarixi + Sprint 14-36+ to'liq reja (6 kategoriya) |
+| docs/business_strategy.md | 3 persona, monetizatsiya table, revenue projection, raqobat tahlili |
+
+Keyingi sprint reja: docs/sprint_roadmap.md (Sprint 14: Email/Password Reset)

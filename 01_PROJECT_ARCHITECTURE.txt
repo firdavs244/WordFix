@@ -2,7 +2,7 @@
 01_PROJECT_ARCHITECTURE.txt
 WordFix — AI-Powered English Vocabulary Learning Platform
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architecture)
+Hujjat yangilangan sana: 2026-02-27 (docs/ AI Memory Architecture qo'shildi)
 ================================================================
 
 ================================================================
@@ -745,3 +745,19 @@ Keyin: Matn → AI HAMMA ishni qiladi → Python faqat natijani formatlab qaytar
 | import_deps.py                          | Soddalashtirilgan (user_repo kerak emas)    |
 | TextImportWordRow.tsx                   | translation_source UI badges                |
 | smart-import.ts                         | translation_source, original_user_translation|
+
+================================================================
+DOCS/ — AI MEMORY ARCHITECTURE (2026-02-27)
+================================================================
+
+### docs/ papkasi — loyiha haqidagi barcha bilim bazasi
+```
+docs/
+├── project_dna.md          # Loyiha asoslari, qoidalar, audit natijasi
+├── architecture_map.md     # 30 model, 96 endpoint, use case, service map
+├── sprint_roadmap.md       # Sprint tarixi va 14-36+ sprint rejasi
+└── business_strategy.md    # Bozor tahlili, monetizatsiya, personas, KPI
+```
+
+Bu fayllar har sprint oxirida yangilanadi.
+AI agent yangi sessiyada avval docs/ o'qiydi va loyiha kontekstini tushunadi.

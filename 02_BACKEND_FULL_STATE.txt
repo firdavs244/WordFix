@@ -2,7 +2,7 @@
 02_BACKEND_FULL_STATE.txt
 WordFix Backend — To'liq holat hujjati
 Hujjat yaratilgan sana: 2026-02-21
-Hujjat yangilangan sana: 2026-02-24 (Sprint 12.4 — AI-First Import Architecture)
+Hujjat yangilangan sana: 2026-02-27 (docs/ reference, Admin/Contact arxitektura rejasi)
 ================================================================
 
 ================================================================
@@ -1497,3 +1497,21 @@ SPRINT 12.4 — AI-FIRST IMPORT ARCHITECTURE (2026-02-24)
 ### Frontend o'zgarishlar:
 4. **types/smart-import.ts**: translation_source, original_user_translation fieldlar
 5. **TextImportWordRow.tsx**: 🔧/✓/🤖 translation_source badges
+
+================================================================
+KELAJAK ARXITEKTURA REJALARI (Sprint 14-16)
+================================================================
+
+### Admin Panel — apps/admin_panel/ (Sprint 16)
+To'liq arxitektura: docs/architecture_map.md (Section 9)
+- Domain: AdminRole, AuditLogEntry entities
+- Application: 5 ta use case guruhi (dashboard, users, words, ai, health)
+- Infrastructure: AdminRole, AdminPermission, AuditLog models
+- Presentation: 5 ta view guruhi, IsAdmin/IsModerator/IsSupport/IsAnalyst permissions
+
+### Contact/Feedback — apps/contact/ (Sprint 15)
+To'liq arxitektura: docs/architecture_map.md (Section 10)
+- Domain: ContactMessage, Feedback, BugReport entities
+- Application: 3 ta use case guruhi (contact, feedback, bug_report)
+- Infrastructure: 4 ta model (ContactMessage, Feedback, BugReport, Attachment)
+- Presentation: 3 ta view, ContactRateThrottle, FeedbackRateThrottle

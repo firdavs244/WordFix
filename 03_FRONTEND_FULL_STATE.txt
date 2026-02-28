@@ -892,3 +892,27 @@ SPRINT 12.4 — AI-FIRST IMPORT UI O'ZGARISHLARI (2026-02-24)
 - WordSuggestion: translation_source?: 'user' | 'ai' | 'corrected' | 'fallback' qo'shildi
 - WordSuggestion: original_user_translation?: string qo'shildi
 - AnalyzeTextResponse: parse_mode ga 'empty' qo'shildi
+
+================================================================
+KELAJAK FRONTEND REJALARI (Sprint 17-18)
+================================================================
+
+### Admin Panel Frontend — features/admin/ (Sprint 17)
+To'liq arxitektura: docs/architecture_map.md (Section 9)
+- Pages: AdminDashboardPage, AdminUsersPage, AdminUserDetailPage,
+         AdminWordsPage, AdminContactsPage, AdminFeedbacksPage,
+         AdminBugReportsPage, AdminAIMonitoringPage, AdminSystemHealthPage
+- Components: AdminLayout, AdminSidebar, DashboardStats, UserTable,
+             WordModerationTable, AIMonitoringPanel, SystemHealthPanel
+- Hooks: useAdminDashboard, useAdminUsers, useAdminContacts
+- Route guard: /admin/* → isAdmin check
+
+### Contact/Feedback Frontend — features/contact/ (Sprint 17-18)
+To'liq arxitektura: docs/architecture_map.md (Section 10)
+- Pages: ContactPage, MyMessagesPage
+- Components: ContactForm, FeedbackModal (floating button), BugReportForm
+- Hooks: useContact, useFeedback, useBugReport
+
+### Yangi Sahifalar (Sprint 18)
+- SettingsPage, AboutPage, PrivacyPolicyPage, TermsPage
+- Account deletion modal + backend API
