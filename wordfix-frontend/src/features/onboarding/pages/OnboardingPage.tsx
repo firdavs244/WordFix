@@ -14,7 +14,6 @@ type Phase = 'welcome' | 'questions' | 'result';
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const fetchProfile = useAuthStore((s) => s.fetchProfile);
   const user = useAuthStore((s) => s.user);
   const markOnboardingCompleted = useAuthStore((s) => s.markOnboardingCompleted);
   const [phase, setPhase] = useState<Phase>('welcome');
@@ -48,15 +47,14 @@ export default function OnboardingPage() {
 
     const payload: OnboardingAnswer[] = Array.from(next.entries()).map(([question_id, answer]) => ({ question_id, answer }));
     submitMutation.mutate(payload, {
-      onSuccess: async (data) => {
+      onSuccess: (data) => {
         markOnboardingCompleted();
         setResult(data.data);
         setPhase('result');
-        await fetchProfile().catch(() => {});
       },
       onError: () => { toast.error('Failed to submit answers.'); },
     });
-  }, [current, selected, answers, isLast, submitMutation, fetchProfile, markOnboardingCompleted]);
+  }, [current, selected, answers, isLast, submitMutation, markOnboardingCompleted]);
 
   useEffect(() => {
     if (phase !== 'questions') return;
@@ -67,9 +65,8 @@ export default function OnboardingPage() {
 
   const handleSkip = () => {
     skipMutation.mutate(undefined, {
-      onSuccess: async () => {
+      onSuccess: () => {
         markOnboardingCompleted();
-        await fetchProfile().catch(() => {});
         navigate('/', { replace: true });
       },
       onError: () => { toast.error('Failed to skip onboarding.'); },

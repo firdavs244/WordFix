@@ -70,6 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('onboarding_completed');
       set({ user: null, isAuthenticated: false, isLoading: false });
       toast.success('Logged out successfully.');
     }
@@ -78,7 +79,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchProfile: async () => {
     try {
       const response = await authApi.getProfile();
-      set({ user: response.data, isAuthenticated: true, isLoading: false });
+      const user = response.data;
+      // Auth-service may not have the latest onboarding state (split-brain).
+      // Prefer the local flag until the services sync.
+      if (localStorage.getItem('onboarding_completed') === 'true') {
+        user.has_completed_onboarding = true;
+      }
+      set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
@@ -96,6 +103,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   markOnboardingCompleted: () => {
     const currentUser = get().user;
     if (!currentUser) return;
+    localStorage.setItem('onboarding_completed', 'true');
     set({ user: { ...currentUser, has_completed_onboarding: true } });
   },
 }));
