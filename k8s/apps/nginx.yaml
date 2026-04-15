@@ -28,7 +28,13 @@ metadata:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/part-of: wordfix
 spec:
-  replicas: 1
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: nginx
@@ -39,6 +45,13 @@ spec:
         app.kubernetes.io/component: proxy
         app.kubernetes.io/part-of: wordfix
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: nginx
       containers:
         - name: nginx
           image: wordfix/frontend:latest
@@ -52,6 +65,11 @@ spec:
             limits:
               memory: 128Mi
               cpu: 250m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_BIND_SERVICE"]
           volumeMounts:
             - name: nginx-conf
               mountPath: /etc/nginx/conf.d/default.conf

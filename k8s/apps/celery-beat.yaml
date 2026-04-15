@@ -10,6 +10,7 @@ metadata:
     app.kubernetes.io/part-of: wordfix
 spec:
   replicas: 1
+  revisionHistoryLimit: 5
   # Recreate ensures only one beat instance runs at a time (singleton)
   strategy:
     type: Recreate
@@ -23,6 +24,12 @@ spec:
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: wordfix
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
       initContainers:
         - name: wait-for-web
           image: busybox:1.36
@@ -58,6 +65,18 @@ spec:
             limits:
               memory: 256Mi
               cpu: 250m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "celery -A config inspect ping --timeout 10 2>/dev/null | grep -q pong"]
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 15
+            failureThreshold: 3
           volumeMounts:
             - name: logs
               mountPath: /app/logs

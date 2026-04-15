@@ -38,10 +38,14 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   line-height: 1.6;
+  min-width: 320px;
+  width: 100%;
 }
 
 #root {
   padding-top: 56px;
+  width: 100%;
+  min-height: 100vh;
 }
 
 ::-webkit-scrollbar {

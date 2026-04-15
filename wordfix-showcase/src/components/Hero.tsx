@@ -47,7 +47,7 @@ export default function Hero() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
         >
-          11 Pod &bull; 7 Deployment &bull; 4 StatefulSet &bull; k3s Klaster
+          11 Pod &bull; 5 HPA &bull; 7 PDB &bull; Zero-Trust Network &bull; k3s Klaster
         </motion.div>
 
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-[1.1]">

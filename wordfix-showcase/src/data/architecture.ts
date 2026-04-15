@@ -87,13 +87,13 @@ export const flowSteps: FlowStep[] = [
 
 export const k8sResources = {
   deployments: [
-    { name: 'nginx', replicas: 1, image: 'wordfix/frontend:latest', status: 'Running' },
-    { name: 'gateway', replicas: 1, image: 'wordfix/api-gateway:latest', status: 'Running' },
-    { name: 'auth-service', replicas: 1, image: 'wordfix/auth-service:latest', status: 'Running' },
-    { name: 'web', replicas: 1, image: 'wordfix/monolith:latest', status: 'Running' },
-    { name: 'celery-worker', replicas: 1, image: 'wordfix/monolith:latest', status: 'Running' },
-    { name: 'celery-beat', replicas: 1, image: 'wordfix/monolith:latest', status: 'Running' },
-    { name: 'showcase', replicas: 1, image: 'wordfix/showcase:latest', status: 'Running' },
+    { name: 'nginx', replicas: 2, maxReplicas: 4, image: 'wordfix/frontend:latest', status: 'Running', hpa: true },
+    { name: 'gateway', replicas: 2, maxReplicas: 4, image: 'wordfix/api-gateway:latest', status: 'Running', hpa: true },
+    { name: 'auth-service', replicas: 2, maxReplicas: 4, image: 'wordfix/auth-service:latest', status: 'Running', hpa: true },
+    { name: 'web', replicas: 2, maxReplicas: 5, image: 'wordfix/monolith:latest', status: 'Running', hpa: true },
+    { name: 'celery-worker', replicas: 1, maxReplicas: 3, image: 'wordfix/monolith:latest', status: 'Running', hpa: true },
+    { name: 'celery-beat', replicas: 1, maxReplicas: 1, image: 'wordfix/monolith:latest', status: 'Running', hpa: false },
+    { name: 'showcase', replicas: 1, maxReplicas: 1, image: 'wordfix/showcase:latest', status: 'Running', hpa: false },
   ],
   statefulSets: [
     { name: 'db', replicas: 1, image: 'postgres:16-alpine', storage: '5Gi', status: 'Running' },
@@ -119,6 +119,33 @@ export const k8sResources = {
     { name: 'auth-db data', size: '2Gi', access: 'RWO (volumeClaimTemplate)' },
     { name: 'redis data', size: '1Gi', access: 'RWO (volumeClaimTemplate)' },
     { name: 'rabbitmq data', size: '1Gi', access: 'RWO (volumeClaimTemplate)' },
+  ],
+  hpas: [
+    { name: 'web-hpa', target: 'web', minReplicas: 2, maxReplicas: 5, cpuTarget: 70, memTarget: 80 },
+    { name: 'gateway-hpa', target: 'gateway', minReplicas: 2, maxReplicas: 4, cpuTarget: 70, memTarget: 80 },
+    { name: 'auth-service-hpa', target: 'auth-service', minReplicas: 2, maxReplicas: 4, cpuTarget: 70, memTarget: 80 },
+    { name: 'celery-worker-hpa', target: 'celery-worker', minReplicas: 1, maxReplicas: 3, cpuTarget: 75, memTarget: 80 },
+    { name: 'nginx-hpa', target: 'nginx', minReplicas: 2, maxReplicas: 4, cpuTarget: 70, memTarget: 80 },
+  ],
+  pdbs: [
+    { name: 'web-pdb', target: 'web', minAvailable: 1 },
+    { name: 'gateway-pdb', target: 'gateway', minAvailable: 1 },
+    { name: 'auth-service-pdb', target: 'auth-service', minAvailable: 1 },
+    { name: 'nginx-pdb', target: 'nginx', minAvailable: 1 },
+    { name: 'db-pdb', target: 'db', minAvailable: 1 },
+    { name: 'redis-pdb', target: 'redis', minAvailable: 1 },
+    { name: 'rabbitmq-pdb', target: 'rabbitmq', minAvailable: 1 },
+  ],
+  networkPolicies: [
+    { name: 'default-deny-ingress', description: 'Barcha ingress trafik bloklangan (zero-trust)' },
+    { name: 'allow-nginx-ingress', description: 'Nginx: tashqi HTTP trafik' },
+    { name: 'allow-gateway-from-nginx', description: 'Gateway: faqat Nginx dan' },
+    { name: 'allow-web-ingress', description: 'Django: Gateway, Nginx, Celery dan' },
+    { name: 'allow-auth-service-ingress', description: 'Auth: Gateway va Django dan' },
+    { name: 'allow-db-ingress', description: 'DB: faqat Django va Celery dan' },
+    { name: 'allow-auth-db-ingress', description: 'Auth DB: faqat Auth Service dan' },
+    { name: 'allow-redis-ingress', description: 'Redis: barcha backend servislar dan' },
+    { name: 'allow-rabbitmq-ingress', description: 'RabbitMQ: barcha backend servislar dan' },
   ],
 };
 

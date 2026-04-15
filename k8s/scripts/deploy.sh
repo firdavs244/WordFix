@@ -92,13 +92,18 @@ ok "Infrastructure ready"
 info "Deploying applications..."
 kubectl apply -f "$K8S_DIR/apps/"
 
-for deploy in web gateway auth-service celery-worker celery-beat nginx; do
+for deploy in web gateway auth-service celery-worker celery-beat nginx showcase; do
   echo "  -> Waiting for $deploy..."
   kubectl rollout status deployment/"$deploy" -n "$NAMESPACE" --timeout=180s
 done
 ok "All applications deployed"
 
-# ── Step 7: Summary ─────────────────────────────────────────────
+# ── Step 7: Apply scaling policies ───────────────────────────────
+info "Applying scaling policies (HPA, PDB, NetworkPolicy)..."
+kubectl apply -f "$K8S_DIR/scaling/"
+ok "Scaling policies applied"
+
+# ── Step 8: Summary ─────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  WordFix Kubernetes deployment complete!  ${NC}"
@@ -107,6 +112,8 @@ echo ""
 kubectl get pods -n "$NAMESPACE" -o wide
 echo ""
 kubectl get svc -n "$NAMESPACE"
+echo ""
+kubectl get hpa -n "$NAMESPACE"
 echo ""
 echo -e "${CYAN}Access the application:${NC}"
 echo -e "  Frontend:  ${GREEN}http://localhost:30080${NC}"

@@ -31,7 +31,13 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/part-of: wordfix
 spec:
-  replicas: 1
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: auth-service
@@ -42,6 +48,18 @@ spec:
         app.kubernetes.io/component: backend
         app.kubernetes.io/part-of: wordfix
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: auth-service
       initContainers:
         # 1. Wait for auth database
         - name: wait-for-auth-db
@@ -102,6 +120,11 @@ spec:
             limits:
               memory: 256Mi
               cpu: 500m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
           startupProbe:
             httpGet:
               path: /health/

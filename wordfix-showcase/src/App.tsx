@@ -8,7 +8,7 @@ import TechStack from './components/TechStack';
 function App() {
   return (
     <div className="min-h-screen">
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg bg-[var(--color-bg-primary)]/80 border-b border-[var(--color-border-glass)]">
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg border-b border-[var(--color-border-glass)]" style={{ background: 'rgba(10,10,26,0.8)' }}>
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <span className="text-lg font-bold gradient-text">WordFix</span>
           <div className="hidden lg:flex items-center gap-6 text-sm text-[var(--color-text-secondary)]">

@@ -1,0 +1,101 @@
+# ============================================================
+# PodDisruptionBudgets — availability guarantees
+# ============================================================
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: auth-service
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nginx-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: db-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: db
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rabbitmq-pdb
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: wordfix
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
