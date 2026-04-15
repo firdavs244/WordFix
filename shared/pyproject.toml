@@ -1,0 +1,18 @@
+[project]
+name = "wordfix-shared"
+version = "0.1.0"
+description = "Shared library for WordFix microservices"
+requires-python = ">=3.12"
+dependencies = [
+    "pyjwt>=2.8.0",
+    "aio-pika>=9.4.0",
+    "pydantic>=2.5.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["wordfix_shared*"]

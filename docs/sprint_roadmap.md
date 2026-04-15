@@ -38,36 +38,42 @@
 
 ### Tugallangan Sprintlar (1-12.5)
 
-| Sprint | Nomi                      | Natija                                              | Holat         |
-| ------ | ------------------------- | --------------------------------------------------- | ------------- |
-| 1      | Project Setup             | Django + React + Docker + PostgreSQL + Redis        | ✅ Tugallandi |
-| 2      | Auth System               | Register + Login + JWT + Google OAuth               | ✅ Tugallandi |
-| 3      | Word CRUD                 | So'z CRUD + Categories + Bulk add                   | ✅ Tugallandi |
-| 4      | AI Enrichment             | 3 provider fallback + Circuit Breaker + Celery      | ✅ Tugallandi |
-| 5      | Review System             | SM-2 + Sessions + Combo + Streak                    | ✅ Tugallandi |
-| 6      | Tests                     | 4 test turi + AI generatsiya + scoring              | ✅ Tugallandi |
-| 7      | Dashboard + Analytics     | Dashboard widgets + Weekly/Monthly stats + Calendar | ✅ Tugallandi |
-| 8      | Games (Part 1)            | Speed Round + Word Match + Word Context             | ✅ Tugallandi |
-| 9      | Games (Part 2)            | Story Builder + Listening Challenge                 | ✅ Tugallandi |
-| 10     | XP + Badge + Gamification | 31 badge + XP + Level + Combo + Notification        | ✅ Tugallandi |
-| 11     | Onboarding + Profile      | Assessment + CEFR level + Profile management        | ✅ Tugallandi |
-| 12.1   | AI Chat                   | Context-aware chat + Grammar correction             | ✅ Tugallandi |
-| 12.2   | Confusing Pairs           | Auto-detect + AI Drill + Resolve                    | ✅ Tugallandi |
-| 12.3   | Skip Onboarding           | OnboardingSkipView + SkipOnboardingUseCase          | ✅ Tugallandi |
-| 12.4   | Smart Import              | AI-First pipeline + CSV import + validation         | ✅ Tugallandi |
-| 12.5   | Games (Part 3)            | Synonym-Antonym + Irregular Verbs + Game Stats      | ✅ Tugallandi |
+| Sprint | Nomi                      | Natija                                               | Holat         |
+| ------ | ------------------------- | ---------------------------------------------------- | ------------- |
+| 1      | Project Setup             | Django + React + Docker + PostgreSQL + Redis         | ✅ Tugallandi |
+| 2      | Auth System               | Register + Login + JWT + Google OAuth                | ✅ Tugallandi |
+| 3      | Word CRUD                 | So'z CRUD + Categories + Bulk add                    | ✅ Tugallandi |
+| 4      | AI Enrichment             | 3 provider fallback + Circuit Breaker + Celery       | ✅ Tugallandi |
+| 5      | Review System             | SM-2 + Sessions + Combo + Streak                     | ✅ Tugallandi |
+| 6      | Tests                     | 4 test turi + AI generatsiya + scoring               | ✅ Tugallandi |
+| 7      | Dashboard + Analytics     | Dashboard widgets + Weekly/Monthly stats + Calendar  | ✅ Tugallandi |
+| 8      | Games (Part 1)            | Speed Round + Word Match + Word Context              | ✅ Tugallandi |
+| 9      | Games (Part 2)            | Story Builder + Listening Challenge                  | ✅ Tugallandi |
+| 10     | XP + Badge + Gamification | 31 badge + XP + Level + Combo + Notification         | ✅ Tugallandi |
+| 11     | Onboarding + Profile      | Assessment + CEFR level + Profile management         | ✅ Tugallandi |
+| 12.1   | AI Chat                   | Context-aware chat + Grammar correction              | ✅ Tugallandi |
+| 12.2   | Confusing Pairs           | Auto-detect + AI Drill + Resolve                     | ✅ Tugallandi |
+| 12.3   | Skip Onboarding           | OnboardingSkipView + SkipOnboardingUseCase           | ✅ Tugallandi |
+| 12.4   | Smart Import              | AI-First pipeline + CSV import + validation          | ✅ Tugallandi |
+| 12.5   | Games (Part 3)            | Synonym-Antonym + Irregular Verbs + Game Stats       | ✅ Tugallandi |
+| 13     | Production Deploy         | Nginx + docker-compose.prod + deploy.sh              | ✅ Tugallandi |
+| 13.5   | Microservices Phase 1     | API Gateway + Auth Service + RabbitMQ + Docker Swarm | ✅ Tugallandi |
+| 14     | Immersive 3D Game Phase 1 | 3D NPC suhbat + STT + AI tahlil + 4 scenario        | ✅ Tugallandi |
+| 15     | Immersive 3D Game Phase 2 | TTS fix + timeout + 10 scenario + enterprise UI      | ✅ Tugallandi |
 
-### Hozirgi Raqamlar (Sprint 12.5 tugashi)
+### Hozirgi Raqamlar (Sprint 15 tugashi)
 
 | Metrika            | Soni |
 | ------------------ | ---- |
-| Database modellari | 31   |
-| API endpointlari   | 103  |
-| Use Cases          | 87   |
-| Frontend routes    | 34   |
-| Frontend features  | 19   |
+| Database modellari | 35   |
+| API endpointlari   | 112  |
+| Use Cases          | 94   |
+| Frontend routes    | 35   |
+| Frontend features  | 21   |
 | Badges             | 31   |
-| O'yin turlari      | 7    |
+| O'yin turlari      | 8    |
+| 3D sahnalar        | 10   |
+| Immersive scenariolar | 10 |
 
 ---
 
@@ -128,31 +134,63 @@ Sprint 36 ───────────────────────�
 
 ---
 
-### Sprint 13.5: Emergency Monitoring (2-3 kun) ⚠️ YANGI
+### Sprint 13.5: Microservices Migration Phase 1 (7-10 kun) ✅ Tugallandi
 
-**Maqsad:** Production xatolarini kuzatish tizimi
+**Maqsad:** Monolith → Microservices migratsiyaning birinchi bosqichi. Strangler Fig pattern.
 
-**Sabab:** Hozir backend xatolari faqat `logs/` papkaga yoziladi. Production da real-time xato kuzatish **yo'q**.
+**Arxitektura:**
 
-**Backend (1-2 kun):**
+- Custom FastAPI API Gateway (REST → gRPC/HTTP proxy)
+- Auth Service (FastAPI + SQLAlchemy + gRPC, o'z database)
+- RabbitMQ event bus (async komunikatsiya)
+- Docker Swarm stack (10 service, overlay network)
 
-- [ ] Sentry SDK integratsiya (sentry-sdk[django])
-- [ ] Environment-based DSN configuration
-- [ ] Custom error context (user_id, request_id, sprint_version)
-- [ ] Performance monitoring (transaction sampling)
-- [ ] Celery task error tracking
+**Yaratilgan komponentlar:**
 
-**Frontend (1 kun):**
+- [x] Shared Library (wordfix-shared) — exceptions, JWT, events, health
+- [x] gRPC Proto definitions (auth.proto — 11 RPC)
+- [x] RabbitMQ event schemas (3 ta: user.registered, logged_in, profile_updated)
+- [x] Auth Service — 7 use case, Clean Architecture, PBKDF2 compatible
+- [x] API Gateway — auth routing (gRPC), monolith proxy (HTTP), health
+- [x] Docker Swarm stack — docker-stack.yml (10 service)
+- [x] nginx update — /api/ → API Gateway
+- [x] User data migration script (monolith → auth DB)
 
-- [ ] Sentry React SDK integratsiya
-- [ ] Error boundary + Sentry reporting
-- [ ] Source map upload (Vite plugin)
+**Kommunikatsiya:**
 
-**Natija:** 2 ta yangi env variable: `SENTRY_DSN_BACKEND`, `SENTRY_DSN_FRONTEND`
+- gRPC (sync): Gateway ↔ Auth Service
+- RabbitMQ (async): Auth Service → Monolith (events)
+- REST: faqat Frontend → Gateway
+
+**Natija:** ~52 yangi fayl, 2 yangi service, 3 yangi infrastructure (RabbitMQ, auth-db, Swarm)
 
 ---
 
-### Sprint 14: Security Hardening (7-8 kun) ⚠️ KENGAYTIRILDI
+### Sprint 13.5-ESKI: Emergency Monitoring (DEFERRED → Sprint 15+)
+
+> Sentry monitoring Sprint 13.5 dan microservices migratsiyaga almashtirildi.
+> Monitoring microservices arxitekturaga o'tgandan keyin qayta rejalashtiriladi.
+
+---
+
+### Sprint 14: Immersive 3D Language Learning Game — Phase 1 Foundation (TUGALLANDI)
+
+**Maqsad:** 3D muhitda NPC bilan suhbatlashish — STT, TTS, AI tahlil
+
+- [x] `apps/immersive/` Django app (DDD-lite: domain, application, infrastructure, presentation)
+- [x] 4 database model: ImmersiveScenario, NPCCharacter, ImmersiveSession, ConversationTurn
+- [x] Groq Whisper STT integratsiya (whisper-large-v3-turbo)
+- [x] 5 AI prompt (NPC system, analyze, hint, error correction, continue)
+- [x] 7 use case (ListScenarios, GetDetail, Start, Submit, SubmitVoice, Complete, Hint)
+- [x] 9 API endpoint (/api/v1/immersive/*)
+- [x] React Three Fiber 3D sahnalar (Office, Restaurant, Airport)
+- [x] Voice recorder (MediaRecorder API) + conversation panel
+- [x] 4 starter scenario: Job Interview, Restaurant, Airport, Hospital
+- [x] GamesPage ga "Immersive 3D" game card qo'shildi
+
+---
+
+### Sprint 15: Security Hardening (7-8 kun) ⚠️ KENGAYTIRILDI
 
 **Maqsad:** Barcha ma'lum xavfsizlik muammolarni tuzatish + backup
 

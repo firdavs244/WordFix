@@ -1,0 +1,356 @@
+================================================================================
+              WORDS SAHIFASI - API ENDPOINTLAR VA DATA FLOW
+              Barcha REST API endpointlar + frontend-backend aloqa
+================================================================================
+
+1. WORDS CRUD API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/words/
+Autentifikatsiya: JWT Bearer Token (IsAuthenticated)
+
+┌───────┬───────────────────────────────────────┬──────────────────────────────────────┐
+│ HTTP  │ Endpoint                              │ Vazifasi                             │
+├───────┼───────────────────────────────────────┼──────────────────────────────────────┤
+│ GET   │ /api/v1/words/                        │ So'zlar ro'yxati (paginated,filter)  │
+│ POST  │ /api/v1/words/                        │ Yangi so'z qo'shish                  │
+│ GET   │ /api/v1/words/{id}/                   │ So'z tafsilotlari                    │
+│ PATCH │ /api/v1/words/{id}/                   │ So'zni tahrirlash                    │
+│ DEL   │ /api/v1/words/{id}/                   │ So'zni o'chirish                     │
+│ POST  │ /api/v1/words/bulk/                   │ Bir nechta so'z qo'shish (max 100)   │
+│ GET   │ /api/v1/words/stats/                  │ Statistika (total,mastered,learning) │
+│ GET   │ /api/v1/words/review/                 │ Review uchun so'zlar                 │
+│ GET   │ /api/v1/words/categories/             │ Kategoriyalar ro'yxati               │
+│ POST  │ /api/v1/words/categories/             │ Yangi kategoriya                     │
+│ DEL   │ /api/v1/words/categories/{id}/        │ Kategoriyani o'chirish               │
+│ POST  │ /api/v1/words/{id}/enrich/            │ So'zni AI bilan boyitish             │
+│ GET   │ /api/v1/words/{id}/enrichment-status/ │ Enrichment holatini tekshirish       │
+│ POST  │ /api/v1/words/{id}/enrichment-retry/  │ Muvaffaqiyatsiz enrichment qaytadan  │
+│ POST  │ /api/v1/words/enrich-all/             │ Barcha pending so'zlarni boyitish    │
+│ POST  │ /api/v1/words/{id}/archive/           │ So'zni arxivlash                     │
+│ POST  │ /api/v1/words/{id}/unarchive/         │ So'zni arxivdan chiqarish            │
+│ GET   │ /api/v1/words/archived/               │ Arxivlangan so'zlar ro'yxati         │
+│ POST  │ /api/v1/words/archive/bulk/           │ Bir nechta so'zni arxivlash          │
+└───────┴───────────────────────────────────────┴──────────────────────────────────────┘
+
+
+2. IMPORT API ENDPOINTLAR
+================================================================================
+
+┌───────┬──────────────────────────────────────┬──────────────────────────────────────┐
+│ POST  │ /api/v1/words/import/analyze/        │ Matn tahlili (AI 2-stage pipeline)   │
+│ POST  │ /api/v1/words/import/add/            │ Tahlil natijalarini qo'shish         │
+│ POST  │ /api/v1/words/import/csv/validate/   │ CSV faylni tekshirish                │
+│ POST  │ /api/v1/words/import/csv/            │ CSV'dan import qilish                │
+└───────┴──────────────────────────────────────┴──────────────────────────────────────┘
+
+
+3. CONFUSING PAIRS API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/words/confusing-pairs/
+
+┌───────┬──────────────────────────────────────────────┬────────────────────────────┐
+│ GET   │ /api/v1/words/confusing-pairs/               │ Chalkash juftliklar ro'yxat│
+│ GET   │ /api/v1/words/confusing-pairs/{id}/          │ Juftlik tafsilotlari       │
+│ POST  │ /api/v1/words/confusing-pairs/{id}/drill/    │ AI-mashq yaratish          │
+│ POST  │ /api/v1/words/confusing-pairs/{id}/resolve/  │ Juftlikni hal qilish       │
+│ GET   │ /api/v1/words/confusing-pairs/count/         │ Juftliklar soni            │
+└───────┴──────────────────────────────────────────────┴────────────────────────────┘
+
+
+4. REVIEW API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/review/
+
+┌───────┬──────────────────────────────────────────┬────────────────────────────────┐
+│ GET   │ /api/v1/review/words/                    │ Review uchun so'zlar           │
+│ POST  │ /api/v1/review/sessions/                 │ Yangi review session boshlash  │
+│ GET   │ /api/v1/review/sessions/{id}/            │ Session tafsilotlari           │
+│ POST  │ /api/v1/review/sessions/{id}/answer/     │ Javob yuborish (SM-2)         │
+│ POST  │ /api/v1/review/sessions/{id}/complete/   │ Sessionni yakunlash           │
+│ GET   │ /api/v1/review/summary/                  │ Review xulosasi               │
+│ GET   │ /api/v1/review/streak/                   │ Streak ma'lumotlari            │
+│ GET   │ /api/v1/review/daily-progress/           │ Kunlik progress               │
+│ GET   │ /api/v1/review/history/                  │ Review tarixi                 │
+└───────┴──────────────────────────────────────────┴────────────────────────────────┘
+
+
+5. TEST API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/tests/
+
+┌───────┬──────────────────────────────────────┬────────────────────────────────────┐
+│ POST  │ /api/v1/tests/generate/              │ Yangi test yaratish                │
+│ GET   │ /api/v1/tests/history/               │ Test tarixi                        │
+│ GET   │ /api/v1/tests/{id}/                  │ Test tafsilotlari                  │
+│ POST  │ /api/v1/tests/{id}/answer/           │ Javob yuborish                     │
+│ POST  │ /api/v1/tests/{id}/complete/         │ Testni yakunlash                   │
+└───────┴──────────────────────────────────────┴────────────────────────────────────┘
+
+
+6. GAMES API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/games/
+7 o'yin turi, har biri start/submit/complete pattern'da:
+
+Speed Round:      /games/speed-round/start/    → /submit/
+Word Match:       /games/word-match/start/     → /submit/
+Word Context:     /games/word-context/start/   → /submit/
+Story Builder:    /games/story-builder/start/  → /submit/ → /complete/
+Listening:        /games/listening/start/       → /answer/ → /complete/
+Synonym-Antonym:  /games/synonym-antonym/start/ → /answer/ → /complete/
+Irregular Verbs:  /games/irregular-verbs/start/ → /answer/ → /complete/
+
+Qo'shimcha:
+  GET /games/history/  - O'yin tarixi
+  GET /games/stats/    - O'yin statistikasi
+
+
+7. CHAT API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/chat/
+
+┌───────┬──────────────────────────────────────────┬────────────────────────────────┐
+│ POST  │ /api/v1/chat/start/                      │ AI chat boshlash               │
+│ GET   │ /api/v1/chat/history/                    │ Chat tarixi                    │
+│ GET   │ /api/v1/chat/sessions/{id}/              │ Chat session tafsilotlari      │
+│ POST  │ /api/v1/chat/sessions/{id}/message/      │ Xabar yuborish                 │
+│ POST  │ /api/v1/chat/sessions/{id}/end/          │ Chatni yakunlash               │
+└───────┴──────────────────────────────────────────┴────────────────────────────────┘
+
+
+8. ANALYTICS API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/analytics/
+
+┌───────┬──────────────────────────────────────────┬────────────────────────────────┐
+│ GET   │ /api/v1/analytics/overview/              │ Umumiy tahlil                  │
+│ GET   │ /api/v1/analytics/weekly/                │ Haftalik statistika            │
+│ GET   │ /api/v1/analytics/monthly/               │ Oylik statistika               │
+│ GET   │ /api/v1/analytics/difficult-words/       │ Qiyin so'zlar                  │
+│ GET   │ /api/v1/analytics/word-progress/         │ So'z progressi                 │
+│ GET   │ /api/v1/analytics/calendar/              │ O'qish kalendari               │
+└───────┴──────────────────────────────────────────┴────────────────────────────────┘
+
+
+9. CHALLENGES API ENDPOINTLAR
+================================================================================
+
+Prefix: /api/v1/challenges/
+
+┌───────┬──────────────────────────────────────────┬────────────────────────────────┐
+│ GET   │ /api/v1/challenges/today/                │ Bugungi challenge'lar          │
+│ POST  │ /api/v1/challenges/claim/                │ Bonus olish                    │
+└───────┴──────────────────────────────────────────┴────────────────────────────────┘
+
+
+10. DATA FLOW DIAGRAMMALARI
+================================================================================
+
+10.1 SO'Z QO'SHISH OQIMI:
+─────────────────────────
+Frontend (AddWordForm)
+    │
+    ▼
+POST /api/v1/words/
+    │
+    ▼
+WordListCreateView.post()
+    │
+    ├── WordCreateSerializer.is_valid()  ← Validation
+    │
+    ├── get_add_word_use_case()          ← Dependency Injection
+    │
+    ▼
+AddWordUseCase.execute()
+    │
+    ├── DjangoWordRepository.create()    ← DB yozish
+    │       │
+    │       ├── unique_together tekshirish (user + original_word)
+    │       ├── Word.objects.create()
+    │       └── Cache invalidation
+    │
+    ├── enrich_word_task.delay()         ← Celery'ga jo'natish (async)
+    │       │
+    │       ▼  (Background)
+    │   EnrichWordUseCase.execute()
+    │       ├── AI Provider → generate_json(prompt)
+    │       ├── WordEnrichmentDomainService.enrich_word()
+    │       ├── TTS Provider → generate_audio()
+    │       ├── word_repo.update() (enriched data saqlash)
+    │       └── generate_distractors_task.delay()
+    │
+    ├── _award_xp(user_id, "word_added")     ← XP berish
+    ├── _increment_progress(words_learned=1)  ← Progress yangilash
+    ├── _check_badges(user_id)                ← Badge tekshirish
+    └── UpdateChallengeProgressUseCase        ← Daily challenge progress
+    │
+    ▼
+Response: { success: true, data: {word + xp_earned + new_badges}, status: 201 }
+    │
+    ▼
+Frontend: React Query cache invalidation → wordKeys.lists(), wordKeys.stats()
+    │
+    ▼
+UI yangilanadi: yangi so'z ro'yxatda paydo bo'ladi + toast notification
+
+
+10.2 SO'ZLAR RO'YXATINI OLISH OQIMI:
+──────────────────────────────────────
+Frontend (WordsPage loads)
+    │
+    ├── useWords(filters) hook
+    │       │
+    │       ▼
+    │   wordsApi.list(filters)
+    │       │
+    │       ▼
+    │   GET /api/v1/words/?page=1&page_size=20&ordering=-created_at&search=...
+    │
+    └── useWordStats() hook
+            │
+            ▼
+        GET /api/v1/words/stats/
+
+Backend:
+    WordListCreateView.get()
+        │
+        ├── Query params → filters dict
+        ├── get_words_use_case() 
+        ├── GetWordsUseCase.execute()
+        │       │
+        │       ▼
+        │   DjangoWordRepository.get_all_by_user()
+        │       ├── Filter: category, difficulty, is_mastered, part_of_speech, search
+        │       ├── Ordering: created_at, original_word, confidence_score
+        │       ├── Pagination: (page-1)*page_size : page*page_size
+        │       └── Return: (list[WordEntity], total_count)
+        │
+        ▼
+    Response: {
+        success: true,
+        data: [...words],
+        meta: { page, total_pages, total_count, page_size }
+    }
+
+
+10.3 ENRICHMENT OQIMI:
+───────────────────────
+POST /api/v1/words/{id}/enrich/
+    │
+    ▼
+EnrichWordView.post()
+    │
+    ├── word_repo.get_by_id()  ← So'z mavjudligini tekshirish
+    ├── enrich_word_task.delay(word_id, user_id)  ← Celery'ga
+    │
+    ▼ (Celery worker - asinxron)
+enrich_word_task()
+    │
+    ├── get_enrich_use_case()  ← DI
+    ▼
+EnrichWordUseCase.execute()
+    │
+    ├── word_repo.get_by_id()
+    ├── user_repo.get_user_language_info()  ← Foydalanuvchi tili
+    ├── ai_provider.is_available()
+    ├── word_repo.update(enrichment_status="enriching")
+    │
+    ├── ai_provider.generate_json(prompt)   ← AI chaqirish
+    │   Prompt ichida: native_language, proficiency_level, word
+    │   AI javob: {
+    │       translation, pronunciation, part_of_speech,
+    │       definition, example_sentence, example_translation,
+    │       synonyms[], antonyms[], collocations[], word_family[],
+    │       difficulty_level, mnemonic, usage_notes
+    │   }
+    │
+    ├── WordEnrichmentDomainService.enrich_word()  ← Domain mapping
+    │
+    ├── tts_provider.generate_audio()       ← TTS audio
+    │   → media/audio/words/{user_id}/{word_id}/pronunciation.mp3
+    │
+    ├── word_repo.update(enriched fields)   ← DB yangilash
+    │
+    └── generate_distractors_task.delay()   ← Distractor yaratish
+        │
+        ▼
+    Smart distractors (AI-based)
+        → WordDistractor model'ga saqlash
+
+
+10.4 SO'Z STATISTIKASI OQIMI:
+──────────────────────────────
+GET /api/v1/words/stats/
+    │
+    ▼
+WordStatsView.get()
+    │
+    ▼
+GetWordStatsUseCase.execute()
+    │
+    ▼
+DjangoWordRepository.get_stats()  (WordStatsMixin)
+    │
+    ├── cache.get("word_stats_{user_id}")  ← Cache tekshirish
+    ├── Word.objects.filter(user_id=...).aggregate(...)
+    │
+    ▼
+Response: {
+    total: 150,
+    mastered: 45,
+    learning: 80,
+    new: 25,
+    by_difficulty: { easy: 50, medium: 70, hard: 30 },
+    by_category: [{ name: "IT", color: "#6C5CE7", count: 20 }, ...],
+    average_confidence: 62.5
+}
+
+
+11. RESPONSE FORMAT
+================================================================================
+
+Barcha API response'lar yagona formatda:
+
+{
+    "success": true/false,
+    "data": { ... },          // Asosiy ma'lumot
+    "message": "Success",     // Xabar
+    "errors": null,           // Xatolar (agar bo'lsa)
+    "meta": {                 // Sahifalash (agar kerak bo'lsa)
+        "page": 1,
+        "total_pages": 8,
+        "total_count": 150,
+        "page_size": 20
+    }
+}
+
+
+12. FRONTEND → BACKEND INTEGRATSIYA
+================================================================================
+
+Frontend API client: src/api/client.ts
+  - Axios instance
+  - Base URL: VITE_API_URL (environment variable)
+  - JWT Authentication: Authorization: Bearer {access_token}
+  - Automatic token refresh interceptor (401 → refresh → retry)
+
+Feature API: src/features/words/api/wordApi.ts
+  - 19 metod (list, getById, create, update, delete, bulkCreate, getStats, 
+    getReviewWords, listCategories, createCategory, deleteCategory,
+    archiveWord, unarchiveWord, getArchivedWords, bulkArchiveWords,
+    enrichWord, enrichAll)
+
+React Query hooks: src/features/words/hooks/useWords.ts
+  - Query key factory: wordKeys.all → wordKeys.lists() → wordKeys.list(filters)
+  - 6 query hooks: useWords, useWord, useWordStats, useReviewWords, useCategories, useArchivedWords
+  - 11 mutation hooks: useCreateWord, useUpdateWord, useDeleteWord, useBulkCreateWords,
+    useCreateCategory, useDeleteCategory, useArchiveWord, useUnarchiveWord,
+    useBulkArchive, useEnrichWord, useEnrichAll
+  - Har bir mutation → automatic cache invalidation + toast notification

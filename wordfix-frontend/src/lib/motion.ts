@@ -31,7 +31,7 @@ export const scaleIn = {
 
 export const cardHover = {
   rest: { y: 0, boxShadow: 'var(--shadow-card)' },
-  hover: { y: -3, boxShadow: 'var(--shadow-card-hover)', transition: { type: 'spring', stiffness: 400, damping: 25 } },
+  hover: { y: -3, boxShadow: 'var(--shadow-card-hover)', transition: { type: 'spring', stiffness: 400, damping: 25 } } as const,
   tap: { scale: 0.98, transition: { duration: 0.1 } },
 };
 

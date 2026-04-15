@@ -754,3 +754,402 @@ To'liq loyiha audit o'tkazildi va 4 ta hujjat yaratildi:
 | docs/business_strategy.md | 3 persona, monetizatsiya table, revenue projection, raqobat tahlili |
 
 Keyingi sprint reja: docs/sprint_roadmap.md (Sprint 14: Email/Password Reset)
+
+================================================================
+SPRINT 13.5 — MICROSERVICES MIGRATION PHASE 1 (2026-04-15)
+================================================================
+
+### Maqsad:
+Monolith arxitekturani to'liq microservicesga o'tkazishning birinchi bosqichi.
+Strangler Fig pattern — yangi servicelar monolith yonida ishlaydi, traffic
+asta-sekin ko'chadi.
+
+### Arxitektura o'zgarishi:
+
+OLDIN:
+```
+Browser → nginx → Django monolith → PostgreSQL (1 ta)
+```
+
+KEYIN (Sprint 13.5):
+```
+Browser → nginx → API Gateway (FastAPI) ──→ Auth Service → Auth DB
+                                         └─→ Django monolith → Monolith DB
+
+Inter-service: gRPC (sync) + RabbitMQ (async events)
+Frontend → Gateway: REST
+```
+
+### Kommunikatsiya patternlari:
+| Pattern | Foydalanish | Texnologiya |
+|---------|-------------|-------------|
+| REST | Frontend → Gateway (tashqi) | FastAPI, httpx |
+| gRPC | Gateway ↔ Auth Service (ichki, sync) | grpcio, protobuf |
+| RabbitMQ | Auth Service → Monolith (async events) | aio-pika, topic exchange |
+
+### Yangi servicelar:
+
+| Service | Framework | Port | Database | Vazifa |
+|---------|-----------|------|----------|--------|
+| API Gateway | FastAPI | 8080 | — | Routing, JWT validation, proxy |
+| Auth Service | FastAPI + SQLAlchemy | 8001 (HTTP), 50051 (gRPC) | wordfix_auth (Postgres 16) | Register, Login, JWT, Google OAuth, Profile |
+
+### Infrastructure yangiliklari:
+
+| Komponent | O'zgarish |
+|-----------|-----------|
+| Docker Swarm | docker-stack.yml — 10 service, overlay network |
+| RabbitMQ 3.13 | Event bus — wordfix.events topic exchange |
+| PostgreSQL (auth) | Alohida auth-db container, wordfix_auth database |
+| Redis DB/3 | Token blacklist (Auth Service uchun) |
+| nginx | /api/ → API Gateway (oldin Django ga to'g'ridan-to'g'ri edi) |
+
+### API Gateway routing jadvali:
+
+| Route | Target | Metod |
+|-------|--------|-------|
+| /api/v1/auth/register/ | Auth Service | POST |
+| /api/v1/auth/login/ | Auth Service | POST |
+| /api/v1/auth/logout/ | Auth Service | POST |
+| /api/v1/auth/token/refresh/ | Auth Service | POST |
+| /api/v1/auth/profile/ | Auth Service | GET/PATCH |
+| /api/v1/auth/change-password/ | Auth Service | POST |
+| /api/v1/auth/google/ | Auth Service | POST |
+| /api/v1/auth/providers/ | Auth Service | GET |
+| /api/v1/auth/onboarding/* | Monolith (proxy) | * |
+| /api/v1/words/* | Monolith (proxy) | * |
+| /api/v1/review/* | Monolith (proxy) | * |
+| /api/v1/tests/*, /games/*, etc. | Monolith (proxy) | * |
+| /api/v1/health/ | Gateway (aggregated) | GET |
+
+### RabbitMQ eventlar:
+
+| Event | Routing Key | Publisher | Consumer |
+|-------|-------------|-----------|----------|
+| user.registered | user.registered | Auth Service | Monolith (UserProgress yaratadi) |
+| user.logged_in | user.logged_in | Auth Service | — (logging) |
+| user.profile_updated | user.profile_updated | Auth Service | Monolith (user data sync) |
+
+### gRPC proto definitionlar:
+- protos/auth/v1/auth.proto — AuthService (7 RPC), UserService (4 RPC)
+- 11 request message, 7 response message
+
+### JWT Compatibility:
+- Xuddi shu SECRET_KEY (env variable orqali)
+- SimpleJWT payload format: token_type, exp, iat, jti, user_id
+- Access: 60 min, Refresh: 7 kun, rotation: yes
+- Password hash: Django PBKDF2 compatible (pbkdf2_sha256$...)
+
+### Shared Library (wordfix-shared):
+| Modul | Vazifa |
+|-------|--------|
+| exceptions.py | WordFixBaseException hierarchy (8 ta exception) |
+| response.py | build_success/error_response (frontend format) |
+| auth/jwt_utils.py | JWT create/validate (PyJWT, SimpleJWT compatible) |
+| auth/middleware.py | FastAPI JWT middleware |
+| events/publisher.py | RabbitMQ async event publisher |
+| events/consumer.py | RabbitMQ async event consumer |
+| events/schemas.py | Event envelope (Pydantic) |
+| health.py | Postgres/Redis/RabbitMQ health checks |
+| grpc_utils/interceptors.py | gRPC logging interceptor |
+
+### Auth Service Clean Architecture:
+```
+presentation/ → application/ → domain/ ← infrastructure/
+(FastAPI routes,   (Use Cases:     (UserEntity,    (SQLAlchemy models,
+ Pydantic schemas)  Register,       Abstract        Repository impl,
+                    Login,          Repository)      JWT service,
+                    GoogleLogin,                     Google OAuth,
+                    Profile,                         Password hashing)
+                    Logout,
+                    TokenRefresh,
+                    ChangePassword)
+```
+
+### Yaratilgan yangi fayllar:
+
+**Shared Library (10 fayl):**
+| Fayl | Vazifa |
+|------|--------|
+| shared/pyproject.toml | wordfix-shared paket konfiguratsiyasi |
+| shared/wordfix_shared/__init__.py | Paket init |
+| shared/wordfix_shared/exceptions.py | Exception hierarchy |
+| shared/wordfix_shared/response.py | Response builders |
+| shared/wordfix_shared/auth/__init__.py | Auth modul |
+| shared/wordfix_shared/auth/jwt_utils.py | JWT utilities |
+| shared/wordfix_shared/auth/middleware.py | FastAPI JWT middleware |
+| shared/wordfix_shared/events/__init__.py | Events modul |
+| shared/wordfix_shared/events/schemas.py | Event envelope schema |
+| shared/wordfix_shared/events/publisher.py | RabbitMQ publisher |
+| shared/wordfix_shared/events/consumer.py | RabbitMQ consumer |
+| shared/wordfix_shared/health.py | Health check utilities |
+| shared/wordfix_shared/grpc_utils/__init__.py | gRPC modul |
+| shared/wordfix_shared/grpc_utils/interceptors.py | gRPC interceptors |
+
+**Proto & Event Schemas (4 fayl):**
+| Fayl | Vazifa |
+|------|--------|
+| protos/auth/v1/auth.proto | gRPC service definitionlar |
+| events/schemas/user_registered.json | User registered event schema |
+| events/schemas/user_logged_in.json | User logged in event schema |
+| events/schemas/user_profile_updated.json | User profile updated event schema |
+
+**Auth Service (24 fayl):**
+| Fayl | Vazifa |
+|------|--------|
+| services/auth-service/pyproject.toml | Dependencies |
+| services/auth-service/Dockerfile | Docker image build |
+| services/auth-service/alembic.ini | Alembic config |
+| services/auth-service/alembic/env.py | Migration environment |
+| services/auth-service/alembic/versions/001_initial_users.py | Users table migration |
+| services/auth-service/app/__init__.py | App init |
+| services/auth-service/app/main.py | FastAPI + gRPC entry point |
+| services/auth-service/app/config.py | Pydantic settings |
+| services/auth-service/app/database.py | SQLAlchemy async engine |
+| services/auth-service/app/domain/__init__.py | Domain layer |
+| services/auth-service/app/domain/entities.py | UserEntity dataclass |
+| services/auth-service/app/domain/repositories.py | Abstract repository |
+| services/auth-service/app/infrastructure/__init__.py | Infrastructure layer |
+| services/auth-service/app/infrastructure/models.py | SQLAlchemy User model |
+| services/auth-service/app/infrastructure/password.py | Django PBKDF2 compatible |
+| services/auth-service/app/infrastructure/repositories.py | SQLAlchemy repository |
+| services/auth-service/app/infrastructure/jwt_service.py | JWT + Redis blacklist |
+| services/auth-service/app/infrastructure/google_oauth.py | Google token verification |
+| services/auth-service/app/application/__init__.py | Application layer |
+| services/auth-service/app/application/use_cases/__init__.py | Use cases |
+| services/auth-service/app/application/use_cases/register.py | RegisterUserUseCase |
+| services/auth-service/app/application/use_cases/login.py | LoginUserUseCase |
+| services/auth-service/app/application/use_cases/google_login.py | GoogleLoginUseCase |
+| services/auth-service/app/application/use_cases/profile.py | Profile use cases (3) |
+| services/auth-service/app/application/use_cases/logout.py | LogoutUseCase |
+| services/auth-service/app/application/use_cases/token_refresh.py | TokenRefreshUseCase |
+| services/auth-service/app/presentation/__init__.py | Presentation layer |
+| services/auth-service/app/presentation/schemas.py | Pydantic request/response |
+| services/auth-service/app/presentation/dependencies.py | FastAPI DI |
+| services/auth-service/app/presentation/routes/__init__.py | Routes |
+| services/auth-service/app/presentation/routes/auth.py | Auth routes |
+| services/auth-service/app/presentation/routes/profile.py | Profile routes |
+| services/auth-service/app/presentation/routes/google.py | Google OAuth routes |
+| services/auth-service/app/presentation/routes/health.py | Health check |
+| services/auth-service/app/grpc/__init__.py | gRPC layer |
+| services/auth-service/app/grpc/server.py | gRPC server init |
+| services/auth-service/app/grpc/servicers/__init__.py | Servicers |
+| services/auth-service/app/grpc/servicers/auth_servicer.py | AuthService + UserService gRPC impl |
+
+**API Gateway (11 fayl):**
+| Fayl | Vazifa |
+|------|--------|
+| services/api-gateway/pyproject.toml | Dependencies |
+| services/api-gateway/Dockerfile | Docker image build |
+| services/api-gateway/app/__init__.py | App init |
+| services/api-gateway/app/main.py | FastAPI entry point |
+| services/api-gateway/app/config.py | Pydantic settings |
+| services/api-gateway/app/middleware/__init__.py | Middleware |
+| services/api-gateway/app/middleware/request_id.py | X-Request-ID propagation |
+| services/api-gateway/app/routes/__init__.py | Routes |
+| services/api-gateway/app/routes/auth.py | Auth routing → Auth Service |
+| services/api-gateway/app/routes/monolith.py | Catch-all proxy → Django |
+| services/api-gateway/app/routes/health.py | Aggregated health check |
+| services/api-gateway/app/services/__init__.py | Services |
+| services/api-gateway/app/services/proxy.py | HTTP reverse proxy |
+
+**Docker Swarm & Infrastructure (2 fayl):**
+| Fayl | Vazifa |
+|------|--------|
+| docker-stack.yml | Docker Swarm stack (10 services, overlay network) |
+| scripts/migrate_users.py | User data migration monolith → auth DB |
+
+**O'zgartirilgan mavjud fayllar (1 fayl):**
+| Fayl | O'zgarish |
+|------|-----------|
+| nginx/nginx.conf | /api/ → API Gateway (oldin Django ga to'g'ridan-to'g'ri) |
+
+### Jami statistika:
+
+| Metrika | Soni |
+|---------|------|
+| Yangi fayllar | ~52 |
+| O'zgartirilgan fayllar | 1 (nginx.conf) |
+| Yangi services | 2 (Auth Service, API Gateway) |
+| Yangi infra | 3 (RabbitMQ, auth-db, Docker Swarm) |
+| gRPC RPCs | 11 (7 Auth + 4 User) |
+| RabbitMQ events | 3 |
+| Auth Service use cases | 7 |
+| API Gateway routes | 3 (auth, monolith proxy, health) |
+
+### O'zgarmaydigan narsalar (Sprint 13.5 da):
+- **Frontend** — 0 o'zgarish (hali ham /api/v1/* ga so'rov yuboradi)
+- **Monolith auth kodi** — O'CHIRILMAYDI (fallback sifatida qoladi)
+- **Words/Games/AI/Review** — Monolith ichida, o'zgarishsiz
+- **Celery tasks** — O'zgarishsiz (keyingi sprintda RabbitMQ consumer qo'shiladi)
+
+### Keyingi qadamlar (Sprint 14 — Phase 2):
+1. Words Service extraction (eng katta, eng murakkab)
+2. Games Service extraction
+3. AI Service extraction (core → standalone)
+4. Notifications Service extraction
+5. User data shared cache (Redis)
+6. gRPC stubs generatsiyasi va to'liq integration testlar
+
+================================================================
+SPRINT 14 — Immersive 3D Language Learning Game (Phase 1: Foundation)
+================================================================
+
+### Sana: 2026-04-15
+### Maqsad: 3D muhitda NPC bilan suhbatlashish — STT, TTS, AI tahlil
+
+---
+
+### Nima qilindi:
+
+#### 1. Yangi Django App: `apps/immersive/`
+To'liq DDD-lite arxitektura:
+- `domain/` — entities (4 ta dataclass), repositories (2 ta ABC), services (scoring_service)
+- `application/use_cases/` — scenario, session, conversation (Start, Submit, SubmitVoice, Complete, Hint)
+- `infrastructure/models/` — ImmersiveScenario, NPCCharacter, ImmersiveSession, ConversationTurn
+- `infrastructure/repositories/` — DjangoScenarioRepository, DjangoSessionRepository
+- `infrastructure/services/` — GroqSTTService (Groq Whisper API integratsiya)
+- `presentation/` — views (8 ta endpoint), serializers, dependencies (DI factory funksiyalar), urls
+- `management/commands/seed_scenarios.py` — 4 ta boshlang'ich scenario (Office, Restaurant, Airport, Hospital)
+
+#### 2. Database Modellari (4 ta)
+| Model | Jadval | Asosiy Maydonlar |
+|-------|--------|------------------|
+| ImmersiveScenario | immersive_scenarios | name, location, difficulty, scene_config, target_vocabulary, max_turns, xp_reward |
+| NPCCharacter | npc_characters | scenario FK, name, role, personality, system_prompt, voice_config, initial_greeting |
+| ImmersiveSession | immersive_sessions | user FK, scenario FK, npc FK, status, score, turn_count, hints_used, fluency/accuracy/vocabulary/task scores |
+| ConversationTurn | conversation_turns | session FK, turn_number, role (npc/user), content, grammar_errors, vocabulary_feedback, scores |
+
+#### 3. Groq Whisper STT Integratsiya
+- `GroqSTTService` — `httpx` orqali `POST https://api.groq.com/openai/v1/audio/transcriptions`
+- Model: `whisper-large-v3-turbo`
+- Formatlar: mp3, mp4, mpeg, mpga, m4a, wav, webm (25MB max)
+- Mavjud `GROQ_API_KEY` dan foydalanadi
+
+#### 4. AI Promptlar (5 ta)
+| Prompt | Vazifa |
+|--------|--------|
+| IMMERSIVE_NPC_SYSTEM_PROMPT | NPC xulqi (scenario, role, CEFR daraja) |
+| IMMERSIVE_ANALYZE_RESPONSE_PROMPT | Grammatika/lug'at/relevantlik tahlili → JSON |
+| IMMERSIVE_HINT_PROMPT | 3 darajali hint + o'zbekcha tarjima |
+| IMMERSIVE_ERROR_CORRECTION_PROMPT | Batafsil xato tahlili + o'zbekcha tushuntirish |
+| IMMERSIVE_NPC_CONTINUE_PROMPT | NPC suhbatni davom ettirish |
+
+#### 5. API Endpoints (8 ta)
+| Method | Endpoint | Vazifa |
+|--------|----------|--------|
+| GET | /api/v1/immersive/scenarios/ | Scenariolar ro'yxati (filter: difficulty, location) |
+| GET | /api/v1/immersive/scenarios/{id}/ | Scenario detail + NPClar |
+| POST | /api/v1/immersive/sessions/start/ | Session boshlash |
+| POST | /api/v1/immersive/sessions/{id}/respond/ | Matn javob yuborish |
+| POST | /api/v1/immersive/sessions/{id}/respond-voice/ | Ovoz javob (multipart audio → STT → AI) |
+| POST | /api/v1/immersive/sessions/{id}/complete/ | Session tugatish |
+| GET | /api/v1/immersive/sessions/{id}/ | Session detail + turnlar |
+| GET | /api/v1/immersive/sessions/history/ | Foydalanuvchi session tarixi |
+| POST | /api/v1/immersive/sessions/{id}/hint/ | Hint so'rash (1-3 daraja) |
+
+#### 6. Frontend — React Three Fiber 3D Game
+**Yangi dependencies:** `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
+
+**Yangi fayllar:**
+- `src/features/immersive/ImmersivePage.tsx` — Scenario tanlash sahifasi (filter, grid, kartalar)
+- `src/features/immersive/ImmersiveSessionPage.tsx` — Asosiy o'yin: 3D sahna + suhbat paneli + voice recorder
+- `src/features/immersive/ImmersiveResultPage.tsx` — Natijalar: score breakdown, XP, badges
+- `src/features/immersive/components/scene/ImmersiveScene.tsx` — R3F Canvas: Office, Restaurant, Airport muhitlari
+- `src/features/immersive/hooks/useImmersiveSession.ts` — Session state + mutations (start, respond, respondVoice, hint, complete)
+- `src/features/immersive/hooks/useVoiceRecorder.ts` — MediaRecorder API hook (record, stop, cancel)
+- `src/features/immersive/hooks/useScenarios.ts` — React Query hook scenariolarni olish
+- `src/features/immersive/api/immersiveApi.ts` — API funksiyalari
+- `src/features/immersive/types/immersive.ts` — TypeScript turlar
+
+**UI Layout (ImmersiveSessionPage):**
+```
++-------------------------------------------------------+
+|  [Score: 75]  [Turn 3/8]  [Timer]  [Hints: 2/3]      |
++----------------------------+--------------------------+
+|    3D Scene (R3F Canvas)   |   Conversation Panel     |
+|    [NPC Model]             |   [NPC]: Hello...        |
+|    [Environment]           |   [You]: I would...      |
+|                            |   [Grammar Corrections]  |
++----------------------------+--------------------------+
+|  [Mic] [Text Input.........................] [Send]    |
+|  [Hint]                                               |
++-------------------------------------------------------+
+```
+
+**3D Sahnalar (procedural, drei primitivlar):**
+- Office: stol, stul, monitor, kitob javoni, deraza
+- Restaurant: dumaloq stol, sham, qizil devor
+- Airport: check-in counter, ekran, bagaj lentasi
+
+#### 7. O'zgartirilgan Mavjud Fayllar
+| Fayl | O'zgarish |
+|------|-----------|
+| config/settings/base.py | `apps.immersive.apps.ImmersiveConfig` INSTALLED_APPS ga qo'shildi |
+| config/urls.py | `api/v1/immersive/` URL ro'yxatdan o'tkazildi |
+| src/api/endpoints.ts | IMMERSIVE endpoint konstantlari qo'shildi |
+| src/routes/index.tsx | `/immersive` route va lazy import qo'shildi |
+| src/features/games/GamesPage.tsx | "Immersive 3D" game card birinchi o'ringa qo'shildi |
+
+### Statistika:
+| Metrika | Qiymat |
+|---------|--------|
+| Yangi backend fayllar | ~25 |
+| Yangi frontend fayllar | ~10 |
+| O'zgartirilgan fayllar | 5 |
+| Database modellari | 4 |
+| API endpoints | 9 |
+| Use cases | 7 (ListScenarios, GetDetail, Start, Submit, SubmitVoice, Complete, Hint) |
+| AI promptlar | 5 |
+| 3D sahnalar | 3 (office, restaurant, airport) + generic fallback |
+| Starter scenariolar | 4 (Job Interview, Restaurant, Airport, Hospital) |
+
+### Texnik Qarorlar:
+- **React Three Fiber** raw Three.js o'rniga — React-native deklarativ 3D integratsiya
+- **Procedural sahnalar** GLB modellar o'rniga (MVP) — keyinchalik GLTF modellar qo'shiladi
+- **Groq Whisper** (direct HTTP) — mavjud Groq SDK audio API qo'llab-quvvatlamaydi
+- **Alohida app** (`apps/immersive/`) mavjud `apps/words/` ga qo'shish o'rniga — bounded context ajratish
+
+### Keyingi qadamlar (Sprint 15 — Immersive Phase 2):
+1. TTS integratsiya — har bir NPC javobida audio generatsiya (gTTS)
+2. Ko'proq scenariolar — hospital, school, hotel, shop, bank, park, gym
+3. CEFR-level adaptation — NPC promptlarda daraja bo'yicha kalit so'zlar
+4. Hint score penalty — Level 1: -5%, Level 2: -10%, Level 3: -15%
+5. ErrorHighlight component — inline grammatika tuzatishlar UI
+6. Mobile responsive — 3D scene tepada, suhbat paneli pastda
+7. Session timeout logic
+
+### Keyingi sprintlar rejasi:
+- **Sprint 16** — PvP Battles (Django Channels + WebSocket, matchmaking, AI hakam)
+
+================================================================
+SPRINT 15 — IMMERSIVE 3D GAME PHASE 2 (Tugallandi: 2026-04-15)
+================================================================
+
+### Nima qilindi:
+
+#### Backend:
+1. **TTS audio persistence fix** — `save_npc_audio()` utility `session_use_cases.py` va `conversation_use_cases.py` ga ulandi. Endi NPC audio `media/audio/immersive/{session_id}/{turn}.mp3` ga saqlanadi va URL qaytaradi (raw bytes emas).
+2. **Session timeout enforcement** — `SubmitResponseUseCase` va `RequestHintUseCase` da `started_at + time_limit_seconds` tekshiruvi qo'shildi. Vaqt tugagan session avtomatik "timeout" statusiga o'tkaziladi.
+3. **6 yangi scenario** — school (A1), hotel (A2), shop (B1), bank (B1), park (A1), gym (A2). Jami 10 ta scenario + 10 NPC.
+
+#### Frontend:
+1. **AudioPlayer component + useAudioPlayer hook** — NPC audio playback (HTML5 Audio), play/pause, progress bar, duration, autoPlay. ARIA labellar bilan.
+2. **ErrorHighlight component** — Inline grammatika xato tuzatish (strikethrough + corrected, expandable explanation EN+UZ). framer-motion AnimatePresence bilan.
+3. **HintPanel component** — Progressive reveal, hint EN+UZ, score penalty warning, hints remaining badge. fadeInUp animatsiya.
+4. **ImmersiveSessionPage upgrade** — ErrorBoundary wrapping (3D va chat alohida), framer-motion animatsiyalar (slideInLeft/Right chat, bounceIn score, fadeInUp input), ARIA (role="log", aria-live, aria-label barcha buttonlarda), mobile toggle (3D scene collapse), skeleton loading.
+5. **ImmersivePage upgrade** — framer-motion pageTransition + staggerContainer + staggerItem + cardHover, card-shaped skeleton, ARIA filter labels, 10 ta location filter (shop, bank, park, gym qo'shildi).
+6. **ImmersiveResultPage upgrade** — Animated score counter (useMotionValue + animate), bounceIn + progressFill + staggerItem, ARIA progressbar, icons (Trophy, Clock, MessageCircle).
+7. **3D scenes upgrade** — 10 ta sahna (office, restaurant, airport, hospital, school, hotel, shop, bank, park, gym), shadows (Canvas shadows + castShadow/receiveShadow), roughness/metalness materials, NPC idle animation (useFrame sway), environment preset per location, NPC character component (head+neck+body+arms+name label).
+
+### Statistika:
+| Metrika | Qiymat |
+|---------|--------|
+| Yangi frontend fayllar | 4 (AudioPlayer, ErrorHighlight, HintPanel, useAudioPlayer) |
+| O'zgartirilgan backend fayllar | 3 (session_use_cases, conversation_use_cases, seed_scenarios) |
+| O'zgartirilgan frontend fayllar | 4 (ImmersivePage, ImmersiveSessionPage, ImmersiveResultPage, ImmersiveScene) |
+| 3D sahnalar | 3 → 10 (+7 yangi) |
+| Immersive scenariolar | 4 → 10 (+6 yangi) |
+| framer-motion animatsiyalar | 12+ (pageTransition, stagger, fadeInUp, slideIn, bounceIn, floatUp, scaleIn, progressFill, cardHover) |
+| ARIA atributlar | 20+ (role, aria-label, aria-live, aria-expanded, aria-controls, progressbar) |
+- **Sprint 17** — Analytics, gamification, polish (charts, badges, leaderboard, optimization)

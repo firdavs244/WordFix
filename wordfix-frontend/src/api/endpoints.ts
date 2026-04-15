@@ -116,6 +116,17 @@ const API_ENDPOINTS = {
     TODAY: '/challenges/today/',
     CLAIM: '/challenges/claim/',
   },
+  IMMERSIVE: {
+    SCENARIOS: '/immersive/scenarios/',
+    SCENARIO_DETAIL: (id: string) => `/immersive/scenarios/${id}/`,
+    SESSION_START: '/immersive/sessions/start/',
+    SESSION_RESPOND: (id: string) => `/immersive/sessions/${id}/respond/`,
+    SESSION_RESPOND_VOICE: (id: string) => `/immersive/sessions/${id}/respond-voice/`,
+    SESSION_COMPLETE: (id: string) => `/immersive/sessions/${id}/complete/`,
+    SESSION_DETAIL: (id: string) => `/immersive/sessions/${id}/`,
+    SESSION_HISTORY: '/immersive/sessions/history/',
+    SESSION_HINT: (id: string) => `/immersive/sessions/${id}/hint/`,
+  },
   SYSTEM: {
     HEALTH: '/system/health/detailed/',
     CONFIG: '/system/config/status/',

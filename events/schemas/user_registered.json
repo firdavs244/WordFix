@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UserRegistered",
+  "description": "Published when a new user registers via email or Google OAuth",
+  "type": "object",
+  "required": ["user_id", "email", "username"],
+  "properties": {
+    "user_id": { "type": "string", "format": "uuid" },
+    "email": { "type": "string", "format": "email" },
+    "username": { "type": "string" },
+    "full_name": { "type": "string", "default": "" },
+    "native_language": { "type": "string", "default": "uz" },
+    "learning_language": { "type": "string", "default": "en" },
+    "proficiency_level": { "type": "string", "default": "A1" },
+    "registered_via": { "type": "string", "enum": ["email", "google"] }
+  }
+}

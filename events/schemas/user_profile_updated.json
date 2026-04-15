@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UserProfileUpdated",
+  "description": "Published when user profile fields are updated",
+  "type": "object",
+  "required": ["user_id", "updated_fields"],
+  "properties": {
+    "user_id": { "type": "string", "format": "uuid" },
+    "updated_fields": {
+      "type": "object",
+      "properties": {
+        "full_name": { "type": "string" },
+        "native_language": { "type": "string" },
+        "learning_language": { "type": "string" },
+        "proficiency_level": { "type": "string" },
+        "daily_goal": { "type": "integer" },
+        "timezone": { "type": "string" }
+      }
+    }
+  }
+}

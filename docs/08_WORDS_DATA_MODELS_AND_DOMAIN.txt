@@ -1,0 +1,418 @@
+================================================================================
+              WORDS SAHIFASI - DATA MODELLARI VA DOMAIN LOGIC
+              Word Entity, ORM Model, SM-2 Algoritm, Enrichment
+================================================================================
+
+1. WORD ENTITY (Domain Layer - Pure Python)
+================================================================================
+
+Fayl: apps/words/domain/entities/word_entities.py
+Turi: @dataclass (mutable)
+
+@dataclass
+class WordEntity:
+    # Identifikatorlar
+    id: UUID                        # Unique ID (uuid4)
+    user_id: UUID                   # Foydalanuvchi ID
+
+    # Asosiy ma'lumotlar
+    original_word: str              # So'z (lowercase, stripped)
+    translation: str                # Tarjima (AI to'ldiradi)
+    pronunciation: str              # Talaffuz (AI to'ldiradi)
+    part_of_speech: str             # So'z turi: noun/verb/adjective/adverb/...
+    definition: str                 # Ta'rif (AI to'ldiradi)
+    example_sentence: str           # Misol jumla (AI to'ldiradi)
+    example_translation: str        # Misol tarjimasi (AI to'ldiradi)
+
+    # Bog'liq so'zlar (AI to'ldiradi)
+    synonyms: list[str]             # Sinonimlar
+    antonyms: list[str]             # Antonimlar
+    collocations: list[str]         # Kolokatsiyalar (so'z birikmalar)
+    word_family: list[str]          # So'z oilasi (teach → teacher, teaching...)
+
+    # Media
+    image_url: str                  # Rasm URL
+    audio_url: str                  # Audio URL (TTS orqali yaratiladi)
+
+    # Foydalanuvchi kiritgan
+    notes: str                      # Eslatmalar
+    mnemonic: str                   # Mnemonik (AI to'ldiradi)
+    usage_notes: str                # Ishlatish bo'yicha izohlar (AI to'ldiradi)
+
+    # Kategoriya
+    category_id: UUID | None        # Kategoriya ID (ixtiyoriy)
+    category: WordCategoryEntity | None  # Nested category object
+    tags: list[str]                 # Teglar
+
+    # Qiyinlik
+    difficulty_level: str           # "easy" | "medium" | "hard"
+
+    # AI Enrichment holati
+    is_enriched: bool               # Boyitilganmi?
+    enrichment_status: str          # "pending" | "enriching" | "enriched" | "failed"
+    enrichment_error: str           # Xato xabari (agar failed bo'lsa)
+    enriched_at: datetime | None    # Boyitilgan vaqt
+
+    # Review statistikasi
+    confidence_score: float         # Ishonch darajasi (0-100)
+    next_review_at: datetime | None # Keyingi review vaqti (SM-2)
+    review_count: int               # Jami review soni
+    correct_count: int              # To'g'ri javoblar
+    incorrect_count: int            # Noto'g'ri javoblar
+    last_reviewed_at: datetime | None # Oxirgi review vaqti
+    is_mastered: bool               # O'zlashtirilganmi? (confidence >= 95 va rep >= 5)
+
+    # SM-2 Spaced Repetition maydonlari
+    easiness_factor: float          # EF (default: 2.5, min: 1.3)
+    repetition_number: int          # Ketma-ket to'g'ri javoblar soni
+    interval_days: int              # Keyingi review'gacha kunlar
+
+    # Arxiv
+    is_archived: bool               # Arxivlanganmi?
+    archived_at: datetime | None    # Arxivlangan vaqt
+    is_active: bool                 # Faolmi?
+
+    # Timestamps
+    created_at: datetime | None
+    updated_at: datetime | None
+
+    # Hisoblangan property
+    @property
+    def accuracy_rate(self) -> float:
+        """Aniqlik darajasi: correct_count / review_count * 100"""
+        if self.review_count == 0:
+            return 0.0
+        return round((self.correct_count / self.review_count) * 100, 1)
+
+    def validate(self) -> None:
+        """Validatsiya: so'z bo'sh emas, difficulty to'g'ri, confidence 0-100"""
+
+
+2. WORD ORM MODEL (Infrastructure Layer - Django)
+================================================================================
+
+Fayl: apps/words/infrastructure/models/word_models.py
+Jadval: "words"
+
+class Word(AbstractBaseModel):
+    # AbstractBaseModel → id (UUIDField), created_at, updated_at, is_active
+
+    user = ForeignKey(AUTH_USER_MODEL, CASCADE, related_name="words", db_index=True)
+    original_word = CharField(max_length=100, db_index=True)
+    translation = CharField(max_length=200, blank=True, default="")
+    pronunciation = CharField(max_length=200, blank=True, default="")
+    part_of_speech = CharField(max_length=15, choices=POS_CHOICES, blank=True)
+    definition = TextField(blank=True, default="")
+    example_sentence = TextField(blank=True, default="")
+    example_translation = TextField(blank=True, default="")
+    synonyms = JSONField(default=list)
+    antonyms = JSONField(default=list)
+    collocations = JSONField(default=list)
+    word_family = JSONField(default=list)
+    image_url = URLField(blank=True, default="")
+    audio_url = URLField(blank=True, default="")
+    notes = TextField(blank=True, default="")
+    mnemonic = TextField(blank=True, default="")
+    usage_notes = TextField(blank=True, default="")
+    category = ForeignKey(WordCategory, SET_NULL, null=True, blank=True)
+    tags = JSONField(default=list)
+    difficulty_level = CharField(choices=["easy","medium","hard"], default="medium")
+    is_enriched = BooleanField(default=False)
+    enrichment_status = CharField(choices=[...], default="pending", db_index=True)
+    enrichment_error = TextField(blank=True, default="")
+    enriched_at = DateTimeField(null=True, blank=True)
+    confidence_score = FloatField(default=0, validators=[Min(0), Max(100)])
+    next_review_at = DateTimeField(null=True, blank=True)
+    review_count = PositiveIntegerField(default=0)
+    correct_count = PositiveIntegerField(default=0)
+    incorrect_count = PositiveIntegerField(default=0)
+    last_reviewed_at = DateTimeField(null=True, blank=True)
+    is_mastered = BooleanField(default=False)
+    easiness_factor = FloatField(default=2.5)
+    repetition_number = PositiveIntegerField(default=0)
+    interval_days = PositiveIntegerField(default=0)
+    is_archived = BooleanField(default=False, db_index=True)
+    archived_at = DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "words"
+        unique_together = ["user", "original_word"]  # Bir foydalanuvchi - bir so'z
+        ordering = ["-created_at"]                    # Yangi so'zlar birinchi
+        indexes = [
+            Index(fields=["user", "is_mastered"]),
+            Index(fields=["user", "confidence_score"]),
+            Index(fields=["user", "next_review_at"]),
+            Index(fields=["user", "category"]),
+            Index(fields=["user", "is_archived"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.original_word:
+            self.original_word = self.original_word.strip().lower()  # Auto-normalize
+        super().save(*args, **kwargs)
+
+
+3. WORD CATEGORY MODEL
+================================================================================
+
+class WordCategory(AbstractBaseModel):
+    user = ForeignKey(AUTH_USER_MODEL, CASCADE, related_name="word_categories")
+    name = CharField(max_length=50)
+    color = CharField(max_length=7, default="#6C5CE7")  # Hex color validator
+    icon = CharField(max_length=50, default="book")
+    words_count = PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "word_categories"
+        unique_together = ["user", "name"]
+        ordering = ["name"]
+
+
+4. WORD DISTRACTOR MODEL
+================================================================================
+
+class WordDistractor(AbstractBaseModel):
+    word = ForeignKey(Word, CASCADE, related_name="distractors")
+    distractors = JSONField(default=list)  # AI yaratgan noto'g'ri variantlar
+    language = CharField(max_length=10, default="uz")
+    generated_by = CharField(choices=["ai", "fallback"], default="ai")
+
+    class Meta:
+        db_table = "word_distractors"
+        unique_together = ["word", "language"]
+
+
+5. SM-2 SPACED REPETITION ALGORITM
+================================================================================
+
+Fayl: apps/words/domain/services/review_service.py
+Klass: SpacedRepetitionService
+
+SM-2 algoritmi - so'zlarni samarali takrorlash uchun ilmiy asoslangan tizim.
+Har bir review'dan keyin keyingi review vaqtini hisoblaydi.
+
+QUALITY SCALE (0-5):
+  0 = To'liq unutilgan (Complete blackout)
+  1 = Noto'g'ri, lekin javobni ko'rganda esladi
+  2 = Noto'g'ri, lekin javob oson tuyuldi
+  3 = To'g'ri, lekin katta qiyinchilik bilan
+  4 = To'g'ri, biroz ikkilanish bilan
+  5 = Mukammal javob
+
+ALGORITM ISHLASHI:
+
+def calculate_next_review(word_entity, quality):
+    ef = word_entity.easiness_factor    # Osonlik koeffitsienti (default 2.5)
+    rep = word_entity.repetition_number  # Ketma-ket to'g'ri javoblar
+    interval = word_entity.interval_days # Hozirgi interval
+
+    if quality >= 3:  # To'g'ri javob
+        if rep == 0:
+            interval = 1    # 1 kun
+        elif rep == 1:
+            interval = 6    # 6 kun
+        else:
+            interval = round(interval * ef)  # interval * EF
+        rep += 1
+    else:  # Noto'g'ri javob
+        rep = 0
+        interval = 1    # Qaytadan 1 kundan boshlash
+
+    # EF yangilash (minimum 1.3)
+    ef = ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    if ef < 1.3:
+        ef = 1.3
+
+    # Natijalar
+    word.easiness_factor = ef
+    word.repetition_number = rep
+    word.interval_days = interval
+    word.next_review_at = now + timedelta(days=interval)
+
+    # Confidence hisoblash
+    word.confidence_score = calculate_confidence(word)
+
+    # Mastered tekshirish
+    if confidence >= 95 and rep >= 5:
+        word.is_mastered = True
+
+CONFIDENCE HISOBLASH:
+    base = (correct_count / review_count) * 100
+    + recency_bonus (0-10): oxirgi reviewdan beri kunlar
+    + streak_bonus (0-20): repetition_number * 5
+    = min(base + recency + streak, 100.0)
+
+INTERVAL MISOLLARI:
+    quality=5, rep=0 → 1 kun
+    quality=5, rep=1 → 6 kun
+    quality=5, rep=2 → 6 * 2.6 = 16 kun
+    quality=5, rep=3 → 16 * 2.7 = 43 kun
+    quality=5, rep=4 → 43 * 2.8 = 120 kun
+    quality=2 (noto'g'ri) → 1 kun (qaytadan boshlash)
+
+
+6. COMBO SYSTEM (XP Multiplier)
+================================================================================
+
+Fayl: apps/words/domain/services/combo_service.py
+Klass: ComboService
+
+Ketma-ket to'g'ri javoblar uchun XP ko'paytiruvchi:
+
+    combo_count >= 3  → 1.5x XP
+    combo_count >= 5  → 2.0x XP
+    combo_count >= 10 → 3.0x XP
+    combo_count >= 20 → 5.0x XP
+
+
+7. AI ENRICHMENT JARAYONI
+================================================================================
+
+Fayl: apps/words/application/use_cases/enrichment.py
+Klass: EnrichWordUseCase
+
+So'z qo'shilganda avtomatik ravishda Celery task orqali AI boyitish boshlanadi.
+
+ENRICHMENT QADAMLARI:
+1. So'z ma'lumotlarini olish (word_repo.get_by_id)
+2. Foydalanuvchi tilini aniqlash (user_repo.get_user_language_info)
+3. AI provider mavjudligini tekshirish
+4. enrichment_status = "enriching" qilish
+5. AI prompt yaratish va generate_json() chaqirish
+6. WordEnrichmentDomainService.enrich_word() → mapping
+7. TTS audio yaratish (Google TTS)
+8. DB'ga yozish (enrichment_status = "enriched")
+9. Smart distractors yaratish (generate_distractors_task)
+
+AI PROMPT NATIJASI (JSON):
+{
+    "translation": "kitob",
+    "pronunciation": "/bʊk/",
+    "part_of_speech": "noun",
+    "definition": "A written or printed work...",
+    "example_sentence": "She keeps a book on her desk.",
+    "example_translation": "U stolida kitob saqlaydi.",
+    "synonyms": ["volume", "publication", "text"],
+    "antonyms": [],
+    "collocations": ["read a book", "write a book", "book review"],
+    "word_family": ["books", "bookish", "booklet", "bookworm"],
+    "difficulty_level": "easy",
+    "mnemonic": "'Book' sounds like 'buk' in Uzbek...",
+    "usage_notes": "Commonly used with 'read', 'write', and 'publish'..."
+}
+
+ENRICHMENT HOLATILARI:
+  pending    → Kutilmoqda (yangi qo'shilgan)
+  enriching  → Jarayonda (AI ishlayapti)
+  enriched   → Tayyor (muvaffaqiyatli)
+  failed     → Muvaffaqiyatsiz (xato yuz berdi, retry mumkin)
+
+RETRY MEXANIZMI:
+  - enrich_word_task: max_retries=3, default_retry_delay=60s
+  - Rate limit: 10 ta enrichment per daqiqa
+  - Muvaffaqiyatsiz bo'lsa: enrichment_status="failed", enrichment_error saqlash
+  - Manual retry: POST /api/v1/words/{id}/enrichment-retry/
+
+
+8. DAILY CHALLENGE TIZIMI
+================================================================================
+
+Fayl: apps/words/domain/services/combo_service.py
+Klass: DailyChallengeService
+
+Har kuni har bir foydalanuvchi uchun 3 darajali challenge'lar yaratiladi:
+
+TIER 1 (Oson):     50 XP bonus
+TIER 2 (O'rtacha): 100 XP bonus
+TIER 3 (Qiyin):    200 XP bonus
+
+Challenge turlari (7-9 tur):
+  - add_words: X ta so'z qo'shish
+  - review_words: X ta so'z review qilish
+  - perfect_reviews: X ta mukammal (quality=5) review
+  - accuracy_threshold: Y% aniqlikka erishish
+  - study_minutes: X daqiqa o'rganish
+  - master_word: X ta so'zni master qilish
+  - play_game: X ta o'yin o'ynash
+  - complete_test: X ta test yakunlash
+  - chat_practice: AI bilan chat qilish
+
+
+9. CONFUSING PAIRS TIZIMI
+================================================================================
+
+Review jarayonida tizim avtomatik ravishda "chalkash juftliklar"ni aniqlaydi.
+Masalan: "affect" va "effect", "their" va "there" kabilar.
+
+DetectConfusionUseCase:
+  - Agar foydalanuvchi bitta so'zda xato qilsa va to'g'ri javob boshqa so'zga o'xshasa
+  - ConfusingPair yaratiladi
+  - AI orqali amaliy mashq (drill) yaratish mumkin
+
+GenerateConfusionDrillUseCase:
+  - AI yordamida farqni tushuntiruvchi mashq yaratadi
+  - Misol jumlalar, ta'riflar, ishlatish farqlari
+
+
+10. FRONTEND WORD TYPE (TypeScript)
+================================================================================
+
+Fayl: src/types/word.ts
+
+interface Word {
+    id: string;                         // UUID
+    user_id: string;
+    original_word: string;
+    translation: string;
+    pronunciation: string;
+    part_of_speech: string;
+    definition: string;
+    example_sentence: string;
+    example_translation: string;
+    synonyms: string[];
+    antonyms: string[];
+    collocations: string[];
+    word_family: string[];
+    image_url: string;
+    audio_url: string;
+    notes: string;
+    category_id: string | null;
+    category: WordCategory | null;
+    tags: string[];
+    difficulty_level: DifficultyLevel;  // "easy" | "medium" | "hard"
+    is_enriched: boolean;
+    confidence_score: number;           // 0-100
+    next_review_at: string | null;      // ISO datetime
+    review_count: number;
+    correct_count: number;
+    incorrect_count: number;
+    last_reviewed_at: string | null;
+    is_mastered: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    accuracy_rate: number;
+    mnemonic: string;
+    usage_notes: string;
+    enrichment_status: EnrichmentStatus; // "pending"|"processing"|"enriched"|"failed"
+    enrichment_error: string;
+    enriched_at: string | null;
+    easiness_factor: number;            // SM-2 EF (default 2.5)
+    repetition_number: number;          // SM-2 repetition count
+    interval_days: number;              // SM-2 interval
+    is_archived: boolean;
+    archived_at: string | null;
+}
+
+interface WordStats {
+    total: number;
+    mastered: number;
+    learning: number;
+    new: number;
+    by_difficulty: { easy: number; medium: number; hard: number };
+    by_category: { name: string; color: string; icon: string; count: number }[];
+    average_confidence: number;
+}
+
+type DifficultyLevel = "easy" | "medium" | "hard";
+type EnrichmentStatus = "pending" | "processing" | "enriched" | "failed";

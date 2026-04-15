@@ -1,0 +1,333 @@
+================================================================================
+              WORDS SAHIFASI - FRONTEND KOMPONENTLAR BATAFSIL
+              React + TypeScript + Framer Motion + shadcn/ui
+================================================================================
+
+1. SAHIFA KOMPONENTI: WordsPage.tsx
+================================================================================
+
+Fayl: src/features/words/pages/WordsPage.tsx
+Hajmi: ~290 qator
+Lazy-loaded: Ha (React.lazy + Suspense)
+
+STATE'lar:
+  viewMode: 'grid' | 'list'              - Ko'rinish turi
+  searchQuery: string                     - Qidiruv matni
+  selectedDifficulty: DifficultyLevel|''  - Qiyinlik filtri
+  showAddModal: boolean                   - So'z qo'shish modali
+  page: number                            - Hozirgi sahifa
+  activeTab: 'active' | 'archived'        - Active/Archived tab
+  selectedWord: Word | null               - Tanlangan so'z (modal uchun)
+
+HOOKS:
+  useWords(filters)    → { data: wordsData, isLoading }
+  useWordStats()       → { data: statsData }
+  useDeleteWord()      → deleteWord.mutate(id)
+  useArchiveWord()     → archiveWord.mutate(id)
+  useEnrichAll()       → enrichAll.mutate()
+
+FILTERS OBJECT (useMemo bilan):
+  {
+    search: searchQuery || undefined,
+    difficulty_level: selectedDifficulty || undefined,
+    page: page,
+    page_size: 20,
+    ordering: '-created_at'
+  }
+
+UI TUZILISHI:
+  PageTransition (Framer Motion wrapper)
+  └── max-w-6xl space-y-6
+      ├── Header: "Word Bank" + stats text + [Add Word] button
+      ├── Tab Switcher: [Active] [Archived] (rounded-lg border, animated)
+      ├── Archived Tab → <ArchivedWordsSection />
+      └── Active Tab
+          ├── Stats Cards (grid 2-col → 4-col responsive)
+          ├── Search + Filters + View Toggle
+          ├── Loading Skeleton (6 cards)
+          ├── Empty State (icon + message + action button)
+          ├── Word Grid/List (motion.div variants)
+          │   └── Word Cards (har biri motion.div ichida)
+          ├── Pagination
+          └── [Enrich All Words] button
+      ├── <WordDetailModal /> (AnimatePresence)
+      └── <AddWordModal /> (AnimatePresence)
+
+
+2. WORD CARD KOMPONENTI (Grid ko'rinish)
+================================================================================
+
+Har bir so'z kartasi quyidagi elementlarni ko'rsatadi:
+
+┌─────────────────────────────────────────┐
+│ original_word    ✓ (is_mastered icon)   │
+│ translation                              │
+│ definition (2 qator, line-clamp-2)       │
+│ ██████████░░░░░░ confidence bar          │
+│ [Medium] [noun] [🔵 IT] [✨ enriched]   │
+│                         [📁] [🗑️] hover │
+└─────────────────────────────────────────┘
+
+Interaktivlik:
+  - Kartani bosish → WordDetailModal ochiladi
+  - Hover → Archive va Delete tugmalari ko'rinadi
+  - Tilt effect (Framer Motion cardHoverVariants)
+  - Difficulty color: Easy=green, Medium=yellow, Hard=red
+
+Confidence bar ranglari:
+  >= 80% → bg-success (yashil)
+  >= 50% → bg-warning (sariq)
+  < 50%  → bg-destructive (qizil)
+
+
+3. WORD DETAIL MODAL
+================================================================================
+
+Fayl: src/features/words/components/WordDetailModal.tsx
+Hajmi: 303 qator
+
+Overlay bilan modal, tanlangan so'zning to'liq ma'lumotlarini ko'rsatadi.
+
+TARKIBI:
+  ┌────────────────────────────────────────────────────┐
+  │ [X Close]                          [📁] [✨] [🗑️] │
+  │                                                     │
+  │ ORIGINAL_WORD        pronunciation                  │
+  │ translation                                         │
+  │                                                     │
+  │ Definition:                                         │
+  │ "Full definition text here..."                      │
+  │                                                     │
+  │ Example:                                            │
+  │ "Example sentence" → "Misol tarjimasi"              │
+  │                                                     │
+  │ Mnemonic: (agar mavjud)                             │
+  │ "Eslab qolish usuli..."                             │
+  │                                                     │
+  │ Usage Notes: (agar mavjud)                          │
+  │ "Ishlatish haqida izohlar..."                       │
+  │                                                     │
+  │ Related Words:                                      │
+  │ Synonyms: word1, word2, word3                       │
+  │ Antonyms: word4, word5                              │
+  │ Collocations: phrase1, phrase2                       │
+  │ Word Family: form1, form2, form3                    │
+  │                                                     │
+  │ Review Stats:                                       │
+  │ Confidence: ██████████░░ 75%                        │
+  │ Reviews: 12  |  Correct: 9  |  Accuracy: 75%       │
+  │ SM-2: EF=2.6  Rep=4  Interval=16 days              │
+  │ Next Review: 2026-03-15                             │
+  │                                                     │
+  │ [Medium] [noun] [🔵 IT] [✨ enriched]               │
+  └────────────────────────────────────────────────────┘
+
+ACTIONS:
+  - Archive/Unarchive toggle
+  - Enrich (AI boyitish boshlash)
+  - Delete (confirm bilan)
+  - ESC tugmasi yoki backdrop click → yopish
+
+
+4. ADD WORD MODAL VA FORM
+================================================================================
+
+AddWordModal.tsx:
+  - AnimatePresence bilan ochilish/yopilish
+  - ESC key listener + backdrop click handler
+  - AddWordForm ni o'z ichiga oladi
+
+AddWordForm.tsx:
+  - Formalar:
+    * original_word (required) - So'z
+    * translation - Tarjima
+    * definition - Ta'rif
+    * example_sentence - Misol
+    * difficulty_level - AddWordDifficultySelector (3 tugma)
+    * notes - Eslatmalar
+  - Submit → useCreateWord() mutation
+  - Success → modal yopiladi + toast notification
+
+AddWordDifficultySelector.tsx:
+  - 3 ta tugma: Beginner (easy) / Intermediate (medium) / Advanced (hard)
+  - Tanlangan tugma highlighted
+  - Har birining rangi va ikoni bor
+
+
+5. ENRICHMENT STATUS BADGE
+================================================================================
+
+Fayl: src/features/words/components/EnrichmentStatusBadge.tsx
+
+Status bo'yicha badge ko'rsatadi:
+  pending    → Sariq rang, soat ikoni
+  processing → Ko'k rang, spinning ikoni  
+  enriched   → Yashil rang, ✨ ikoni
+  failed     → Qizil rang, ⚠️ ikoni
+
+showLabel prop: true → "Enriched" matn ko'rsatiladi, false → faqat ikon
+
+
+6. ARCHIVE KOMPONENLAR
+================================================================================
+
+ArchiveButton.tsx:
+  - isArchived prop'ga qarab ikon va tooltip o'zgaradi
+  - Archive → 📁 ikoni (to'q)
+  - Unarchive → 📁 ikoni (chizilgan)
+
+ArchivedWordsSection.tsx:
+  - useArchivedWords() hook → paginated arxivlangan so'zlar
+  - Search qidiruv
+  - Grid ko'rinish
+  - Pagination  
+  - Bulk unarchive imkoniyati
+  - Har bir karta → onWordClick (WordDetailModal ochish)
+
+
+7. PAGINATION KOMPONENTI
+================================================================================
+
+Fayl: src/features/words/components/WordsPagination.tsx
+
+  - Smart pagination: 1 2 ... 5 [6] 7 ... 10
+  - Ellipsis logic (ko'p sahifalar uchun)
+  - Previous / Next tugmalari
+  - Disabled state (birinchi/oxirgi sahifada)
+
+
+8. ANIMATION VA TRANSITION'LAR
+================================================================================
+
+Framer Motion kutubxonasi keng ishlatiladi:
+
+PageTransition:
+  - Sahifa yuklanganda fade-in + slide-up
+  - initial={{ opacity: 0, y: 20 }}
+  - animate={{ opacity: 1, y: 0 }}
+
+listContainerVariants (so'zlar ro'yxati):
+  - Stagger children: har bir karta ketma-ket paydo bo'ladi
+  - Container: hidden → show
+
+listItemVariants (har bir karta):
+  - hidden: { opacity: 0, y: 20 }
+  - show: { opacity: 1, y: 0 }
+
+cardHoverVariants (karta ustiga kelganda):
+  - rest: { scale: 1 }
+  - hover: { scale: 1.02, y: -2 }
+  - tap: { scale: 0.98 }
+
+AnimatePresence:
+  - Modal ochilish/yopilish animatsiyasi
+  - Exit animatsiyasi (so'z o'chirilganda karta yo'qoladi)
+
+Segmented Control:
+  - layoutId orqali spring animation
+  - Tab o'tishda smooth slider effekti
+
+
+9. REACT QUERY HOOKS BATAFSIL
+================================================================================
+
+Fayl: src/features/words/hooks/useWords.ts
+
+QUERY KEY FACTORY:
+  wordKeys = {
+    all: ['words'],
+    lists: () => ['words', 'list'],
+    list: (filters) => ['words', 'list', filters],
+    details: () => ['words', 'detail'],
+    detail: (id) => ['words', 'detail', id],
+    stats: () => ['words', 'stats'],
+    review: () => ['words', 'review'],
+    categories: () => ['words', 'categories'],
+    archived: () => ['words', 'archived'],
+  }
+
+QUERY HOOKS:
+  ┌──────────────────┬──────────────────────────────────┬─────────────────────┐
+  │ Hook             │ API Call                         │ Query Key            │
+  ├──────────────────┼──────────────────────────────────┼─────────────────────┤
+  │ useWords         │ wordsApi.list(filters)           │ wordKeys.list(f)    │
+  │ useWord          │ wordsApi.getById(id)             │ wordKeys.detail(id) │
+  │ useWordStats     │ wordsApi.getStats()              │ wordKeys.stats()    │
+  │ useReviewWords   │ wordsApi.getReviewWords()        │ wordKeys.review()   │
+  │ useCategories    │ wordsApi.listCategories()        │ wordKeys.categories │
+  │ useArchivedWords │ wordsApi.getArchivedWords(params)│ wordKeys.archived() │
+  └──────────────────┴──────────────────────────────────┴─────────────────────┘
+
+MUTATION HOOKS (Cache Invalidation):
+  ┌────────────────────┬─────────────────────────────────────────────────────┐
+  │ Hook               │ Invalidates                                        │
+  ├────────────────────┼─────────────────────────────────────────────────────┤
+  │ useCreateWord      │ lists() + stats() + ['daily-challenges']           │
+  │ useUpdateWord      │ all (barcha word queries)                          │
+  │ useDeleteWord      │ lists() + stats()                                  │
+  │ useBulkCreateWords │ lists() + stats()                                  │
+  │ useCreateCategory  │ categories()                                       │
+  │ useDeleteCategory  │ categories() + lists()                             │
+  │ useArchiveWord     │ lists() + stats() + archived()                     │
+  │ useUnarchiveWord   │ lists() + stats() + archived()                     │
+  │ useBulkArchive     │ lists() + stats() + archived()                     │
+  │ useEnrichWord      │ all                                                │
+  │ useEnrichAll       │ all                                                │
+  └────────────────────┴─────────────────────────────────────────────────────┘
+
+TOAST NOTIFICATIONS (Sonner):
+  - Success: "Word added successfully!", "Word deleted.", "Enrichment started."
+  - Error: "Failed to add word.", "Failed to delete word.", etc.
+
+
+10. WORDS API CLIENT
+================================================================================
+
+Fayl: src/features/words/api/wordApi.ts
+
+19 metod:
+  CRUD:       list, getById, create, update, delete, bulkCreate
+  Stats:      getStats, getReviewWords
+  Categories: listCategories, createCategory, deleteCategory
+  Archive:    archiveWord, unarchiveWord, getArchivedWords, bulkArchiveWords
+  Enrichment: enrichWord, enrichAll
+
+Base URL: VITE_API_URL environment variable dan olinadi
+Prefix: Barcha endpointlar /words/ prefiksi bilan
+Auth: Axios interceptor orqali JWT token avtomatik qo'shiladi
+
+
+11. RESPONSIVE DESIGN
+================================================================================
+
+Tailwind CSS breakpoint'lar:
+
+Mobile (default):
+  - Stats: 2 ustunli grid
+  - Search va filters: vertical stack
+  - Word grid: 1 ustun
+
+sm: (640px+):
+  - Stats: 4 ustunli grid
+  - Header: flex-row (horizontal)
+  - Search va filters: horizontal row
+  - Word grid: 2 ustun
+
+lg: (1024px+):
+  - Word grid: 3 ustun
+
+Max width: max-w-6xl (1152px) - centered
+
+
+12. ACCESSIBILITY VA UX
+================================================================================
+
+- ESC tugmasi: modallarni yopadi
+- Backdrop click: modallarni yopadi
+- Confirm dialog: o'chirishdan oldin tasdiqlash
+- Loading skeleton: yuklanish paytida placeholder
+- Empty state: bo'sh holatda yo'riqnoma
+- Toast notifications: barcha amallar haqida bildirishnoma
+- Hover effects: kartalar ustiga kelganda ko'tarilish
+- Focus states: input'larda focus ring
+- Truncation: uzun matnlar uchun line-clamp va truncate

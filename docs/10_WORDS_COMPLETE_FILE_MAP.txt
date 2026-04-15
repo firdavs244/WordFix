@@ -1,0 +1,373 @@
+================================================================================
+              WORDS SAHIFASI - TO'LIQ FAYL XARITASI
+              Barcha fayllar va ularning o'zaro bog'lanishi
+================================================================================
+
+1. FRONTEND FAYLLAR (wordfix-frontend/)
+================================================================================
+
+SAHIFA:
+  src/features/words/pages/WordsPage.tsx
+    ├── imports: useWords, useDeleteWord, useWordStats, useArchiveWord, useEnrichAll
+    ├── imports: AddWordModal, WordDetailModal, EnrichmentStatusBadge, ArchiveButton
+    ├── imports: ArchivedWordsSection
+    ├── imports: Button, Card, CardContent, Input, Badge, Skeleton (shadcn/ui)
+    ├── imports: motion, AnimatePresence (framer-motion)
+    ├── imports: Lucide icons
+    └── exports: WordsPage (named export)
+
+KOMPONENTLAR:
+  src/features/words/components/
+    ├── AddWordModal.tsx              → AddWordForm, useCreateWord
+    ├── AddWordForm.tsx               → WordCreateData, useCreateWord
+    ├── AddWordDifficultySelector.tsx  → DifficultyLevel
+    ├── WordDetailModal.tsx           → Word type, useEnrichWord, useArchiveWord
+    ├── WordCard.tsx                  → Word, difficultyConfig, badges
+    ├── WordListItem.tsx              → Word (list view)
+    ├── WordCardBadges.tsx            → difficulty, POS, category badges
+    ├── WordsHeader.tsx               → word count + Add button
+    ├── WordsStatsBar.tsx             → WordStats
+    ├── WordsStatPill.tsx             → single stat pill
+    ├── WordsSegmentedControl.tsx     → active/archived tabs
+    ├── WordsViewToggle.tsx           → grid/list toggle
+    ├── WordsPagination.tsx           → pagination logic
+    ├── EnrichmentStatusBadge.tsx     → EnrichmentStatus badge
+    ├── ArchiveButton.tsx             → archive/unarchive toggle
+    └── ArchivedWordsSection.tsx      → useArchivedWords, grid, search
+
+API:
+  src/features/words/api/wordApi.ts
+    ├── imports: apiClient (from @/api/client)
+    ├── imports: Word, WordCreateData, etc. (from @/types)
+    └── exports: wordsApi object (19 methods)
+
+HOOKS:
+  src/features/words/hooks/useWords.ts
+    ├── imports: useQuery, useMutation, useQueryClient (@tanstack/react-query)
+    ├── imports: wordsApi (from ../api/wordApi)
+    ├── imports: WordCreateData, WordFilters, WordUpdateData (from @/types)
+    ├── imports: toast (from sonner)
+    ├── exports: wordKeys (query key factory)
+    └── exports: 17 hooks (6 queries + 11 mutations)
+
+TYPES:
+  src/types/word.ts
+    ├── imports: DifficultyLevel, EnrichmentStatus (from ./core)
+    └── exports: Word, WordCategory, WordCreateData, WordUpdateData,
+                 BulkWordCreateData, WordStats, WordFilters
+
+  src/types/core.ts
+    └── exports: DifficultyLevel, EnrichmentStatus, ReviewQuality,
+                 GameType, TestType, BadgeRarity, etc.
+
+ROUTING:
+  src/routes/index.tsx
+    ├── <Route path="/words" element={<WordsPage />} />
+    └── ProtectedRoute > RootLayout ichida
+
+API INFRATUZILMA:
+  src/api/client.ts
+    ├── Axios instance (baseURL: VITE_API_URL)
+    ├── JWT interceptor (Authorization header)
+    └── Token refresh interceptor (401 → refresh → retry)
+
+  src/api/endpoints.ts
+    └── API_ENDPOINTS.WORDS (19 endpoint constant)
+
+
+2. BACKEND FAYLLAR (wordfix-backend/)
+================================================================================
+
+CONFIG:
+  config/urls.py
+    └── path("api/v1/words/", include("apps.words.presentation.urls"))
+
+  config/celery.py
+    └── Celery app configuration + beat schedule
+
+APP REGISTRY:
+  apps/words/__init__.py
+  apps/words/apps.py                → WordsConfig
+  apps/words/models.py              → Proxy: from infrastructure.models import *
+
+DOMAIN LAYER:
+  apps/words/domain/
+    ├── __init__.py
+    ├── entities/
+    │   ├── __init__.py
+    │   ├── word_entities.py         → WordEntity, WordCategoryEntity
+    │   └── session_entities.py      → 15+ entity dataclasses
+    ├── value_objects.py             → WordText, Definition
+    ├── repositories/
+    │   ├── __init__.py
+    │   ├── word_repositories.py     → AbstractWordRepository (15 metod)
+    │   │                              AbstractWordCategoryRepository
+    │   └── session_repositories.py  → 11 abstract repositories
+    └── services/
+        ├── __init__.py
+        ├── review_service.py        → SpacedRepetitionService (SM-2)
+        │                              WordEnrichmentDomainService
+        │                              WordDomainService
+        └── combo_service.py         → ComboService, DailyChallengeService
+
+APPLICATION LAYER:
+  apps/words/application/
+    ├── __init__.py
+    └── use_cases/
+        ├── __init__.py
+        ├── word_crud.py             → Add, Get, GetDetail, Update, Delete,
+        │                              BulkAdd, GetStats, Search (8 use case)
+        ├── enrichment.py            → EnrichWordUseCase, BatchEnrichUseCase
+        ├── review.py                → GetReviewWords, StartSession, SubmitAnswer,
+        │                              CompleteSession, GetSummary (5 use case)
+        ├── analytics.py             → Overview, Weekly, Monthly, DifficultWords,
+        │                              WordProgress, StudyCalendar (6 use case)
+        ├── chat.py                  → StartChat, SendMessage (2 use case)
+        ├── confusing_pairs.py       → DetectConfusion, GetPairs, GetDetail,
+        │                              GenerateDrill (4 use case)
+        ├── daily_challenges.py      → GetChallenges, UpdateProgress, ClaimBonus
+        ├── smart_import.py          → AnalyzeText, CSV support (~890 qator)
+        ├── streak.py                → UpdateStreak
+        ├── word_archive.py          → Archive, Unarchive, GetArchived, BulkArchive
+        ├── games/
+        │   ├── speed_round.py
+        │   ├── word_match.py
+        │   ├── word_context.py
+        │   ├── story_builder.py
+        │   ├── listening.py
+        │   ├── synonym_antonym.py
+        │   ├── irregular_verbs.py
+        │   └── game_stats.py
+        └── testing/
+            ├── test_generation.py
+            └── test_session.py
+
+INFRASTRUCTURE LAYER:
+  apps/words/infrastructure/
+    ├── __init__.py
+    ├── models/
+    │   ├── __init__.py
+    │   ├── word_models.py           → Word, WordCategory, WordDistractor
+    │   ├── review_models.py         → ReviewSession, ReviewLog, DailyStreak, DailyActivity
+    │   ├── test_models.py           → TestSession, TestQuestion
+    │   ├── game_models.py           → GameSession, StoryRound, ListeningRound,
+    │   │                              SynonymAntonymRound, IrregularVerbRound
+    │   ├── chat_models.py           → ChatSession, ChatMessage
+    │   ├── confusing_models.py      → ConfusingPair
+    │   └── challenge_models.py      → DailyChallenge
+    ├── repositories/
+    │   ├── __init__.py
+    │   ├── word_repo.py             → DjangoWordRepository (400+ qator)
+    │   │                              DjangoWordCategoryRepository
+    │   ├── word_stats_repo.py       → WordStatsMixin
+    │   └── session_repos.py         → 11 Django repository implementatsiya
+    │       (DjangoReviewSessionRepository, DjangoReviewLogRepository,
+    │        DjangoStreakRepository, DjangoDailyActivityRepository,
+    │        DjangoTestSessionRepository, DjangoTestQuestionRepository,
+    │        DjangoGameSessionRepository, DjangoChatRepository,
+    │        DjangoConfusingPairRepository, DjangoDailyChallengeRepository,
+    │        DjangoWordDistractorRepository)
+    └── tasks.py                     → 8 Celery task
+        (enrich_word_task, batch_enrich_task, generate_audio_task,
+         generate_distractors_task, update_streaks_task,
+         cleanup_stale_sessions_task, generate_daily_challenges_task)
+
+PRESENTATION LAYER:
+  apps/words/presentation/
+    ├── __init__.py
+    ├── urls.py                      → /api/v1/words/ (19 pattern)
+    ├── review_urls.py               → /api/v1/review/ (10 pattern)
+    ├── testing_urls.py              → /api/v1/tests/ (5 pattern)
+    ├── game_urls.py                 → /api/v1/games/ (20 pattern)
+    ├── chat_urls.py                 → /api/v1/chat/ (5 pattern)
+    ├── analytics_urls.py            → /api/v1/analytics/ (6 pattern)
+    ├── challenge_urls.py            → /api/v1/challenges/ (2 pattern)
+    ├── confusing_urls.py            → /api/v1/words/confusing-pairs/ (5 pattern)
+    │
+    ├── views/
+    │   ├── __init__.py              → Re-exports all views
+    │   ├── word_views.py            → WordListCreateView, WordDetailView,
+    │   │                              WordBulkCreateView, WordStatsView,
+    │   │                              WordReviewView, WordCategoryListCreateView,
+    │   │                              WordCategoryDeleteView + XP/badge helpers
+    │   ├── review_views.py          → ReviewWordsView, ReviewSessionCreateView,
+    │   │                              SubmitAnswerView, CompleteSessionView,
+    │   │                              ReviewSummaryView, ReviewHistoryView,
+    │   │                              StreakView, DailyProgressView
+    │   ├── enrichment_views.py      → EnrichWordView, EnrichAllView,
+    │   │                              EnrichmentStatusView, EnrichmentRetryView
+    │   ├── import_views.py          → AnalyzeTextView, ImportAddWordsView,
+    │   │                              CSVValidateView, CSVImportView
+    │   ├── test_views.py            → TestGenerateView, TestSubmitAnswerView,
+    │   │                              TestCompleteView, TestHistoryView,
+    │   │                              TestSessionDetailView
+    │   ├── game_views.py            → 7 game × (start + submit + complete) (556 qator)
+    │   ├── chat_views.py            → ChatStartView, SendMessageView, EndView,
+    │   │                              ChatHistoryView, ChatSessionDetailView
+    │   ├── analytics_views.py       → 6 analytics views
+    │   ├── challenge_views.py       → DailyChallengesView, ClaimDailyBonusView
+    │   ├── confusing_views.py       → ConfusingPairsListView, DetailView, DrillView,
+    │   │                              ResolveView, CountView
+    │   └── archive_views.py         → ArchiveWordView, UnarchiveWordView,
+    │                                  ArchivedWordsListView, BulkArchiveView
+    │
+    ├── serializers/
+    │   ├── __init__.py              → Re-exports all serializers
+    │   ├── word_serializers.py      → WordCreate, WordUpdate, WordList, WordDetail,
+    │   │                              WordStats, BulkWordCreate, WordCategory
+    │   ├── review_serializers.py
+    │   ├── test_serializers.py
+    │   ├── game_serializers.py
+    │   ├── import_serializers.py
+    │   ├── chat_serializers.py
+    │   ├── archive_serializers.py
+    │   ├── confusing_serializers.py
+    │   └── challenge_serializers.py
+    │
+    └── dependencies/
+        ├── __init__.py              → Re-exports all dependency factories
+        ├── common_deps.py           → get_word_repository, get_category_repository,
+        │                              get_session_repository, get_log_repository,
+        │                              get_streak_repository, get_activity_repository,
+        │                              get_sr_service, get_user_repository,
+        │                              _get_ai_provider, _get_tts_provider,
+        │                              _get_enrich_task
+        ├── word_deps.py             → get_add_word_use_case, get_words_use_case,
+        │                              get_word_detail_use_case, get_update_word_use_case,
+        │                              get_delete_word_use_case, get_bulk_add_words_use_case,
+        │                              get_word_stats_use_case, get_search_words_use_case
+        ├── review_deps.py           → get_review_words_use_case, (+ 5 boshqa)
+        ├── enrichment_deps.py       → get_enrich_use_case, get_batch_enrich_use_case,
+        │                              get_enrich_word_task, get_batch_enrich_task,
+        │                              get_pending_enrichment_word_ids
+        ├── archive_deps.py          → get_archive_use_case, get_unarchive_use_case,
+        │                              get_archived_words_use_case, get_bulk_archive_use_case
+        └── ... (analytics, chat, confusing, challenge, game, test deps)
+
+CORE SERVICES:
+  core/interfaces/
+    ├── ai_provider.py               → AbstractAIProvider ABC + AIProviderError
+    └── tts_provider.py              → AbstractTTSProvider ABC
+
+  core/services/ai/
+    ├── ai_factory.py                → AIProviderFactory, FallbackAIProvider
+    ├── openai_provider.py           → OpenAIProvider
+    ├── groq_provider.py             → GroqProvider
+    ├── gemini_provider.py           → GeminiProvider
+    └── prompts.py                   → AI prompt templates, NATIVE_LANGUAGE_MAP
+
+  core/services/tts/
+    └── google_tts.py                → GoogleTTSProvider
+
+
+3. BOG'LANISH DIAGRAMMASI
+================================================================================
+
+Frontend sahifa yuklanishi:
+
+WordsPage.tsx
+    │
+    ├── useWords(filters) ──────────────→ wordApi.list() ──→ GET /api/v1/words/
+    │                                                             │
+    │                                                             ▼
+    │                                        WordListCreateView.get()
+    │                                             │
+    │                                        get_words_use_case()
+    │                                             │
+    │                                        GetWordsUseCase
+    │                                             │
+    │                                        DjangoWordRepository.get_all_by_user()
+    │                                             │
+    │                                        Word.objects.filter(...) (PostgreSQL)
+    │
+    ├── useWordStats() ─────────────────→ wordApi.getStats() ──→ GET /api/v1/words/stats/
+    │                                                                  │
+    │                                                                  ▼
+    │                                           WordStatsView.get()
+    │                                              │
+    │                                           GetWordStatsUseCase
+    │                                              │
+    │                                           DjangoWordRepository.get_stats()
+    │
+    └── [Add Word] bosish
+         │
+         ▼
+    AddWordModal → AddWordForm
+         │
+    useCreateWord() ────────────────→ wordApi.create() ──→ POST /api/v1/words/
+                                                                │
+                                                                ▼
+                                          WordListCreateView.post()
+                                              │
+                                          WordCreateSerializer.is_valid()
+                                              │
+                                          get_add_word_use_case()
+                                              │
+                                          AddWordUseCase.execute()
+                                              │
+                                          ├── DjangoWordRepository.create()
+                                          ├── enrich_word_task.delay() ──→ Celery
+                                          ├── _award_xp()               ──→ XP tizimi
+                                          ├── _increment_progress()      ──→ Progress
+                                          └── _check_badges()           ──→ Badge tizimi
+
+
+4. MIGRATSIYALAR
+================================================================================
+
+apps/words/migrations/ papkasida barcha Django migratsiyalar joylashgan.
+Har bir model o'zgarishi uchun alohida migratsiya fayli mavjud.
+
+Asosiy jadvallar:
+  - words (Word model)
+  - word_categories (WordCategory model)
+  - word_distractors (WordDistractor model)
+  - review_sessions
+  - review_logs
+  - daily_streaks
+  - daily_activities
+  - test_sessions
+  - test_questions
+  - game_sessions
+  - story_rounds
+  - listening_rounds
+  - synonym_antonym_rounds
+  - irregular_verb_rounds
+  - chat_sessions
+  - chat_messages
+  - confusing_pairs
+  - daily_challenges
+
+
+5. TEXNOLOGIYALAR JAMI
+================================================================================
+
+FRONTEND:
+  - React 18 + TypeScript
+  - Vite (build tool)
+  - React Router v6 (routing)
+  - TanStack React Query (server state)
+  - Axios (HTTP client)
+  - Framer Motion (animations)
+  - shadcn/ui (UI components)
+  - Tailwind CSS (styling)
+  - Lucide React (icons)
+  - Sonner (toast notifications)
+  - Zustand (client state - auth store)
+
+BACKEND:
+  - Python 3.11+
+  - Django 5.x
+  - Django REST Framework
+  - Celery + Redis (async tasks)
+  - PostgreSQL (database)
+  - drf-spectacular (API documentation)
+  - OpenAI / Groq / Gemini (AI providers)
+  - gTTS (Text-to-Speech)
+  - Django Cache (Redis)
+
+INFRASTRUCTURE:
+  - Docker + Docker Compose
+  - Nginx (reverse proxy)
+  - Redis (cache + Celery broker)
+  - PostgreSQL

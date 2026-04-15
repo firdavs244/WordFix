@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/part-of: wordfix
+    app.kubernetes.io/component: backend
+data:
+  AUTH_SERVICE_GRPC: "auth-service:50051"
+  MONOLITH_URL: "http://web:8000"
+  JWT_ALGORITHM: "HS256"
+  HTTP_PORT: "8080"
+  DEBUG: "False"

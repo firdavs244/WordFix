@@ -1,0 +1,388 @@
+"""
+Seed initial immersive scenarios and NPC characters.
+
+Usage:
+    python manage.py seed_scenarios
+"""
+
+from django.core.management.base import BaseCommand
+
+from apps.immersive.infrastructure.models import ImmersiveScenario, NPCCharacter
+
+
+SCENARIOS = [
+    {
+        "name": "Job Interview at Tech Company",
+        "name_uz": "IT kompaniyada ish suhbati",
+        "description": "You are a job candidate arriving for a software developer interview at a tech company. You need to introduce yourself, discuss your experience, and ask questions about the role.",
+        "description_uz": "Siz IT kompaniyaga dasturchi bo'lib ishga kirish uchun suhbatga keldingiz. O'zingizni tanishtiring, tajribangiz haqida gapiring va lavozim haqida savollar bering.",
+        "location": "office",
+        "difficulty": "B1",
+        "scene_config": {
+            "environment": "office",
+            "camera_position": [0, 2, 5],
+            "ambient_light": 0.6,
+            "objects": ["desk", "chair", "computer", "bookshelf", "window"],
+        },
+        "target_vocabulary": ["interview", "experience", "qualifications", "team", "responsibilities"],
+        "expected_phrases": [
+            "Good morning, my name is...",
+            "I have experience in...",
+            "Could you tell me more about the role?",
+            "What does a typical day look like?",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 600,
+        "xp_reward": 50,
+        "order": 1,
+        "npc": {
+            "name": "Sarah Chen",
+            "role": "HR Manager",
+            "role_uz": "HR menejeri",
+            "personality": "Professional, friendly, asks clear structured questions. Encourages candidates warmly.",
+            "avatar_config": {"model": "hr_manager", "hair": "dark", "outfit": "business"},
+            "initial_greeting": "Good morning! Welcome to TechVision. I'm Sarah Chen, the HR Manager. Please have a seat. How are you today?",
+            "system_prompt": "You are Sarah Chen, an HR Manager conducting a job interview. Ask the candidate about their background, experience, skills, and why they want to join. Be professional but warm. Ask one question at a time.",
+            "voice_config": {"language": "en", "speed": 1.0},
+        },
+    },
+    {
+        "name": "Ordering Food at a Restaurant",
+        "name_uz": "Restoranda ovqat buyurtma qilish",
+        "description": "You are at a restaurant and need to order food. Read the menu, ask about specials, make your order, and handle any dietary requirements.",
+        "description_uz": "Siz restoranda ovqat buyurtma qilmoqchisiz. Menyuni o'qing, maxsus taomlar haqida so'rang va buyurtma bering.",
+        "location": "restaurant",
+        "difficulty": "A2",
+        "scene_config": {
+            "environment": "restaurant",
+            "camera_position": [0, 1.5, 4],
+            "ambient_light": 0.4,
+            "objects": ["table", "chair", "menu", "candle", "window"],
+        },
+        "target_vocabulary": ["menu", "order", "appetizer", "main course", "dessert", "drink", "bill"],
+        "expected_phrases": [
+            "Can I see the menu, please?",
+            "I would like to order...",
+            "What do you recommend?",
+            "Could I have the bill, please?",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 480,
+        "xp_reward": 40,
+        "order": 2,
+        "npc": {
+            "name": "Marco",
+            "role": "Waiter",
+            "role_uz": "Ofitsiant",
+            "personality": "Polite, attentive, knows the menu well. Speaks clearly and suggests popular dishes.",
+            "avatar_config": {"model": "waiter", "hair": "brown", "outfit": "restaurant_uniform"},
+            "initial_greeting": "Good evening! Welcome to Bella Italia. My name is Marco, and I'll be your waiter tonight. Would you like to start with something to drink?",
+            "system_prompt": "You are Marco, a friendly waiter at an Italian restaurant. Help the customer order food. Describe dishes when asked. Be polite and attentive. Use simple English appropriate for A2 level.",
+            "voice_config": {"language": "en", "speed": 0.9},
+        },
+    },
+    {
+        "name": "Checking In at the Airport",
+        "name_uz": "Aeroportda ro'yxatdan o'tish",
+        "description": "You are at the airport check-in counter. You need to check in for your flight, handle luggage, and get your boarding pass.",
+        "description_uz": "Siz aeroportda ro'yxatdan o'tish stoli oldida turibsiz. Reysga ro'yxatdan o'ting, bagajingizni topshiring va boarding pass oling.",
+        "location": "airport",
+        "difficulty": "A2",
+        "scene_config": {
+            "environment": "airport",
+            "camera_position": [0, 2, 5],
+            "ambient_light": 0.7,
+            "objects": ["counter", "screen", "luggage_belt", "passport_scanner"],
+        },
+        "target_vocabulary": ["passport", "boarding pass", "luggage", "gate", "flight", "seat", "window"],
+        "expected_phrases": [
+            "I'd like to check in for my flight.",
+            "Here is my passport.",
+            "Can I have a window seat, please?",
+            "How many bags can I check?",
+        ],
+        "max_turns": 6,
+        "time_limit_seconds": 480,
+        "xp_reward": 40,
+        "order": 3,
+        "npc": {
+            "name": "Emily",
+            "role": "Check-in Agent",
+            "role_uz": "Ro'yxatga olish agenti",
+            "personality": "Efficient, helpful, clear instructions. Professional airline staff.",
+            "avatar_config": {"model": "airline_agent", "hair": "blonde", "outfit": "airline_uniform"},
+            "initial_greeting": "Hello! Welcome to the check-in counter. May I see your passport and booking confirmation, please?",
+            "system_prompt": "You are Emily, an airline check-in agent. Help the passenger check in for their flight. Ask for documents, confirm seat preference, handle luggage. Be efficient and clear. Use simple English for A2.",
+            "voice_config": {"language": "en", "speed": 0.9},
+        },
+    },
+    {
+        "name": "Doctor's Appointment",
+        "name_uz": "Shifokorga murojaat",
+        "description": "You are visiting a doctor because you don't feel well. Describe your symptoms, answer the doctor's questions, and understand the treatment plan.",
+        "description_uz": "Siz o'zingizni yomon his qilyapsiz va shifokorga keldingiz. Simptomlaringizni tasvirlab bering, shifokor savollariga javob bering va davolash rejasini tushunib oling.",
+        "location": "hospital",
+        "difficulty": "B1",
+        "scene_config": {
+            "environment": "hospital",
+            "camera_position": [0, 1.8, 4],
+            "ambient_light": 0.7,
+            "objects": ["examination_table", "desk", "medical_chart", "stethoscope"],
+        },
+        "target_vocabulary": ["symptoms", "headache", "fever", "prescription", "medicine", "appointment", "rest"],
+        "expected_phrases": [
+            "I've been feeling...",
+            "It started about...",
+            "How often should I take the medicine?",
+            "Do I need to come back?",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 600,
+        "xp_reward": 50,
+        "order": 4,
+        "npc": {
+            "name": "Dr. James Wilson",
+            "role": "General Practitioner",
+            "role_uz": "Umumiy amaliyot shifokori",
+            "personality": "Calm, reassuring, asks detailed medical questions. Patient and thorough.",
+            "avatar_config": {"model": "doctor", "hair": "gray", "outfit": "white_coat"},
+            "initial_greeting": "Hello, please come in and take a seat. I'm Dr. Wilson. What brings you in today?",
+            "system_prompt": "You are Dr. Wilson, a general practitioner. Ask about the patient's symptoms, duration, severity. Give a diagnosis and treatment plan. Be calm and reassuring. Ask one question at a time.",
+            "voice_config": {"language": "en", "speed": 0.95},
+        },
+    },
+    # ──── Sprint 15: New scenarios ────
+    {
+        "name": "First Day at School",
+        "name_uz": "Maktabda birinchi kun",
+        "description": "You are a new student arriving at school. Meet your teacher, introduce yourself to the class, and learn about your schedule.",
+        "description_uz": "Siz yangi o'quvchi sifatida maktabga keldingiz. O'qituvchingiz bilan tanishing, sinfga o'zingizni tanishtiring va dars jadvalingiz haqida bilib oling.",
+        "location": "school",
+        "difficulty": "A1",
+        "scene_config": {
+            "environment": "school",
+            "camera_position": [0, 1.6, 4],
+            "ambient_light": 0.7,
+            "objects": ["desk", "whiteboard", "books", "clock", "backpack"],
+        },
+        "target_vocabulary": ["classroom", "teacher", "schedule", "subject", "homework", "break"],
+        "expected_phrases": [
+            "Hello, my name is...",
+            "Nice to meet you.",
+            "What time does the class start?",
+            "Where is the library?",
+        ],
+        "max_turns": 6,
+        "time_limit_seconds": 420,
+        "xp_reward": 30,
+        "order": 5,
+        "npc": {
+            "name": "Ms. Johnson",
+            "role": "Teacher",
+            "role_uz": "O'qituvchi",
+            "personality": "Warm, encouraging, speaks slowly and clearly. Uses simple words and repeats key phrases.",
+            "avatar_config": {"model": "teacher", "hair": "auburn", "outfit": "casual_professional"},
+            "initial_greeting": "Welcome to our class! I'm Ms. Johnson, your English teacher. Come in! What's your name?",
+            "system_prompt": "You are Ms. Johnson, a friendly English teacher welcoming a new student. Help them with introductions, finding their classroom, and understanding the schedule. Use very simple English for A1 level. Speak slowly and repeat important words.",
+            "voice_config": {"language": "en", "speed": 0.85},
+        },
+    },
+    {
+        "name": "Checking Into a Hotel",
+        "name_uz": "Mehmonxonaga joylashish",
+        "description": "You are arriving at a hotel for your vacation. Check in, ask about amenities, request extra towels, and get directions to your room.",
+        "description_uz": "Siz ta'tilga mehmonxonaga keldingiz. Ro'yxatdan o'ting, qulayliklar haqida so'rang va xonangizga yo'l so'rang.",
+        "location": "hotel",
+        "difficulty": "A2",
+        "scene_config": {
+            "environment": "hotel",
+            "camera_position": [0, 1.8, 5],
+            "ambient_light": 0.5,
+            "objects": ["reception_desk", "key_rack", "bell", "luggage_cart", "plant"],
+        },
+        "target_vocabulary": ["reservation", "room", "key", "breakfast", "checkout", "floor", "elevator"],
+        "expected_phrases": [
+            "I have a reservation under...",
+            "Is breakfast included?",
+            "Could I get extra towels?",
+            "What time is checkout?",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 480,
+        "xp_reward": 40,
+        "order": 6,
+        "npc": {
+            "name": "Alex",
+            "role": "Hotel Receptionist",
+            "role_uz": "Mehmonxona resepsiyonisti",
+            "personality": "Welcoming, efficient, attentive to guest needs. Provides clear information about hotel facilities.",
+            "avatar_config": {"model": "receptionist", "hair": "black", "outfit": "hotel_uniform"},
+            "initial_greeting": "Good afternoon! Welcome to Grand Hotel. Do you have a reservation with us?",
+            "system_prompt": "You are Alex, a hotel receptionist. Help the guest check in, explain hotel amenities (pool, gym, restaurant, Wi-Fi), handle room requests. Be welcoming and helpful. Use clear English for A2 level.",
+            "voice_config": {"language": "en", "speed": 0.9},
+        },
+    },
+    {
+        "name": "Shopping for Clothes",
+        "name_uz": "Kiyim-kechak do'konida xarid",
+        "description": "You are at a clothing store looking for an outfit. Browse items, ask about sizes and prices, try things on, and make a purchase.",
+        "description_uz": "Siz kiyim do'konida xarid qilmoqdasiz. O'lchamlar va narxlar haqida so'rang, kiyimlarni kiyib ko'ring va sotib oling.",
+        "location": "shop",
+        "difficulty": "B1",
+        "scene_config": {
+            "environment": "shop",
+            "camera_position": [0, 1.8, 4],
+            "ambient_light": 0.6,
+            "objects": ["clothing_rack", "mirror", "counter", "mannequin", "fitting_room"],
+        },
+        "target_vocabulary": ["size", "color", "fitting room", "discount", "receipt", "price", "style"],
+        "expected_phrases": [
+            "Do you have this in a medium?",
+            "Can I try this on?",
+            "How much does this cost?",
+            "I'll take it.",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 480,
+        "xp_reward": 45,
+        "order": 7,
+        "npc": {
+            "name": "David",
+            "role": "Shop Assistant",
+            "role_uz": "Do'kon yordamchisi",
+            "personality": "Helpful, fashion-savvy, suggests combinations. Gives honest opinions about what looks good.",
+            "avatar_config": {"model": "shop_assistant", "hair": "blonde", "outfit": "casual_trendy"},
+            "initial_greeting": "Hi there! Welcome to Urban Style. Are you looking for anything in particular today?",
+            "system_prompt": "You are David, a helpful shop assistant at a clothing store. Help the customer find clothes, suggest sizes and colors, give opinions on style, handle payment. Be friendly and helpful. Use B1-level English.",
+            "voice_config": {"language": "en", "speed": 1.0},
+        },
+    },
+    {
+        "name": "Opening a Bank Account",
+        "name_uz": "Bankda hisob ochish",
+        "description": "You are at a bank to open a new account. Discuss account types, provide documents, and understand banking services.",
+        "description_uz": "Siz bankda yangi hisob ochmoqchisiz. Hisob turlari haqida gaplashing, hujjatlarni taqdim eting va bank xizmatlari haqida bilib oling.",
+        "location": "bank",
+        "difficulty": "B1",
+        "scene_config": {
+            "environment": "bank",
+            "camera_position": [0, 1.8, 4],
+            "ambient_light": 0.6,
+            "objects": ["desk", "computer", "document_tray", "partition", "nameplate"],
+        },
+        "target_vocabulary": ["account", "savings", "deposit", "transfer", "interest", "statement", "PIN"],
+        "expected_phrases": [
+            "I'd like to open a savings account.",
+            "What documents do I need?",
+            "What is the interest rate?",
+            "Can I set up online banking?",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 600,
+        "xp_reward": 50,
+        "order": 8,
+        "npc": {
+            "name": "Maria",
+            "role": "Bank Advisor",
+            "role_uz": "Bank maslahatchisi",
+            "personality": "Professional, patient, explains financial terms clearly. Ensures the customer understands everything.",
+            "avatar_config": {"model": "banker", "hair": "dark", "outfit": "business_formal"},
+            "initial_greeting": "Hello, welcome to City Bank. I'm Maria, a personal banking advisor. How can I assist you today?",
+            "system_prompt": "You are Maria, a bank advisor helping a customer open an account. Explain different account types (savings, checking), required documents (ID, proof of address), fees, and online banking. Be professional and patient. Use B1-level English with clear explanations of financial terms.",
+            "voice_config": {"language": "en", "speed": 0.95},
+        },
+    },
+    {
+        "name": "A Walk in the Park",
+        "name_uz": "Parkda sayr",
+        "description": "You meet a friendly jogger in the park. Have a casual conversation about the weather, hobbies, and get directions to nearby places.",
+        "description_uz": "Siz parkda yuguruvchi bilan tanishasiz. Ob-havo, xobbiylar haqida suhbatlashing va yaqin joylarga yo'l so'rang.",
+        "location": "park",
+        "difficulty": "A1",
+        "scene_config": {
+            "environment": "park",
+            "camera_position": [0, 1.6, 5],
+            "ambient_light": 0.8,
+            "objects": ["bench", "tree", "path", "fountain", "lamp_post"],
+        },
+        "target_vocabulary": ["weather", "sunny", "walk", "hobby", "direction", "near"],
+        "expected_phrases": [
+            "Hello! Nice day, isn't it?",
+            "I like to...",
+            "Where is the...?",
+            "Thank you! Have a nice day.",
+        ],
+        "max_turns": 6,
+        "time_limit_seconds": 360,
+        "xp_reward": 25,
+        "order": 9,
+        "npc": {
+            "name": "Tom",
+            "role": "Jogger",
+            "role_uz": "Yuguruvchi",
+            "personality": "Casual, upbeat, loves talking about sports and outdoors. Uses simple everyday language.",
+            "avatar_config": {"model": "jogger", "hair": "brown", "outfit": "sportswear"},
+            "initial_greeting": "Hey! Beautiful morning, right? I love running here. Are you new around here?",
+            "system_prompt": "You are Tom, a friendly jogger in the park. Chat casually about the weather, hobbies, and nearby places. Be relaxed and upbeat. Use very simple A1-level English. Keep sentences short.",
+            "voice_config": {"language": "en", "speed": 0.9},
+        },
+    },
+    {
+        "name": "Joining a Fitness Class",
+        "name_uz": "Fitnes mashg'ulotiga yozilish",
+        "description": "You are at a gym to join a fitness class. Discuss available classes, membership options, and learn exercise vocabulary.",
+        "description_uz": "Siz sport zaliga fitnes mashg'ulotiga yozilmoqchisiz. Mavjud darslar, a'zolik variantlari va mashqlar haqida bilib oling.",
+        "location": "gym",
+        "difficulty": "A2",
+        "scene_config": {
+            "environment": "gym",
+            "camera_position": [0, 1.8, 5],
+            "ambient_light": 0.7,
+            "objects": ["treadmill", "weights", "yoga_mat", "mirror", "water_cooler"],
+        },
+        "target_vocabulary": ["exercise", "workout", "stretch", "warm up", "membership", "schedule"],
+        "expected_phrases": [
+            "What classes do you offer?",
+            "How much is the membership?",
+            "I'd like to try yoga.",
+            "When is the next class?",
+        ],
+        "max_turns": 8,
+        "time_limit_seconds": 480,
+        "xp_reward": 40,
+        "order": 10,
+        "npc": {
+            "name": "Lisa",
+            "role": "Fitness Trainer",
+            "role_uz": "Fitnes trener",
+            "personality": "Energetic, motivating, explains exercises clearly. Enthusiastic about helping beginners.",
+            "avatar_config": {"model": "trainer", "hair": "ponytail", "outfit": "gym_attire"},
+            "initial_greeting": "Hey! Welcome to FitLife Gym! I'm Lisa, one of the trainers. Are you thinking about joining our gym?",
+            "system_prompt": "You are Lisa, an enthusiastic fitness trainer at a gym. Help the visitor learn about classes (yoga, spinning, boxing, HIIT), membership plans, and schedules. Demonstrate exercise vocabulary. Be energetic and encouraging. Use A2-level English.",
+            "voice_config": {"language": "en", "speed": 1.0},
+        },
+    },
+]
+
+
+class Command(BaseCommand):
+    help = "Seed initial immersive scenarios and NPC characters."
+
+    def handle(self, *args, **options):
+        created_count = 0
+        for data in SCENARIOS:
+            npc_data = data.pop("npc")
+
+            scenario, created = ImmersiveScenario.objects.get_or_create(
+                name=data["name"],
+                defaults=data,
+            )
+
+            if created:
+                NPCCharacter.objects.create(scenario=scenario, **npc_data)
+                created_count += 1
+                self.stdout.write(self.style.SUCCESS(f"  Created: {scenario.name}"))
+            else:
+                self.stdout.write(f"  Exists: {scenario.name}")
+
+        self.stdout.write(self.style.SUCCESS(f"\nDone! {created_count} new scenarios created."))

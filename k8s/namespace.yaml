@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wordfix
+  labels:
+    app.kubernetes.io/part-of: wordfix
+    app.kubernetes.io/managed-by: kubectl

@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package auth.v1;
+
+// ── Auth Service ────────────────────────────────────────
+
+service AuthService {
+  rpc Register (RegisterRequest) returns (AuthResponse);
+  rpc Login (LoginRequest) returns (AuthResponse);
+  rpc GoogleLogin (GoogleLoginRequest) returns (GoogleAuthResponse);
+  rpc Logout (LogoutRequest) returns (GenericResponse);
+  rpc RefreshToken (RefreshTokenRequest) returns (TokenResponse);
+  rpc ChangePassword (ChangePasswordRequest) returns (GenericResponse);
+  rpc GetProviders (Empty) returns (ProvidersResponse);
+}
+
+service UserService {
+  rpc GetProfile (UserIdRequest) returns (UserProfileResponse);
+  rpc UpdateProfile (UpdateProfileRequest) returns (UserProfileResponse);
+  rpc GetUserById (UserIdRequest) returns (UserProfileResponse);
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+// ── Common ──────────────────────────────────────────────
+
+message Empty {}
+
+// ── Auth Requests ───────────────────────────────────────
+
+message RegisterRequest {
+  string email = 1;
+  string username = 2;
+  string password = 3;
+  string password_confirm = 4;
+  string full_name = 5;
+  string native_language = 6;
+  string learning_language = 7;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message GoogleLoginRequest {
+  string access_token = 1;
+  string id_token = 2;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string old_password = 2;
+  string new_password = 3;
+  string new_password_confirm = 4;
+}
+
+// ── User Requests ───────────────────────────────────────
+
+message UserIdRequest {
+  string user_id = 1;
+}
+
+message UpdateProfileRequest {
+  string user_id = 1;
+  optional string full_name = 2;
+  optional string native_language = 3;
+  optional string learning_language = 4;
+  optional string proficiency_level = 5;
+  optional int32 daily_goal = 6;
+  optional string timezone = 7;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+// ── Auth Responses ──────────────────────────────────────
+
+message TokenPair {
+  string access = 1;
+  string refresh = 2;
+}
+
+message UserProfile {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string full_name = 4;
+  string avatar = 5;
+  string native_language = 6;
+  string learning_language = 7;
+  string proficiency_level = 8;
+  int32 daily_goal = 9;
+  string timezone = 10;
+  bool is_premium = 11;
+  bool is_premium_active = 12;
+  bool has_completed_onboarding = 13;
+  string date_joined = 14;
+  string last_login = 15;
+}
+
+message AuthResponse {
+  bool success = 1;
+  UserProfile user = 2;
+  TokenPair tokens = 3;
+  string message = 4;
+}
+
+message GoogleAuthResponse {
+  bool success = 1;
+  UserProfile user = 2;
+  TokenPair tokens = 3;
+  bool is_new_user = 4;
+  string message = 5;
+}
+
+message TokenResponse {
+  bool success = 1;
+  string access = 2;
+  string message = 3;
+}
+
+message GenericResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ── User Responses ──────────────────────────────────────
+
+message UserProfileResponse {
+  bool success = 1;
+  UserProfile user = 2;
+  string message = 3;
+}
+
+message ProvidersResponse {
+  bool success = 1;
+  bool google_enabled = 2;
+  string message = 3;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string email = 3;
+}

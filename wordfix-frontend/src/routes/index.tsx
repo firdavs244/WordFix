@@ -95,6 +95,7 @@ const LearningProfilePage = lazy(() =>
     default: m.LearningProfilePage,
   })),
 );
+const ImmersivePage = lazy(() => import('@/features/immersive/ImmersivePage'));
 const SystemStatusPage = lazy(() =>
   import('@/features/system/pages/SystemStatusPage').then((m) => ({
     default: m.SystemStatusPage,
@@ -197,6 +198,7 @@ export function AppRoutes() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/confusing-pairs" element={<ConfusingPairsPage />} />
           <Route path="/learning-profile" element={<LearningProfilePage />} />
+          <Route path="/immersive" element={<ImmersivePage />} />
           <Route path="/system" element={<SystemStatusPage />} />
         </Route>
 

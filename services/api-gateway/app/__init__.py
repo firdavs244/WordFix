@@ -1,0 +1,1 @@
+"""WordFix API Gateway."""

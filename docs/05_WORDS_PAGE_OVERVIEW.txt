@@ -1,0 +1,158 @@
+================================================================================
+              WORDS SAHIFASI - UMUMIY KO'RINISH (OVERVIEW)
+              http://localhost:5173/words
+================================================================================
+
+1. SAHIFA HAQIDA
+================================================================================
+Words sahifasi - bu WordFix ilovasining markaziy sahifasi bo'lib, foydalanuvchi
+o'z lug'at bazasini (Word Bank) boshqaradi. Bu yerda so'zlar qo'shiladi,
+tahrirlanadi, o'chiriladi, arxivlanadi va AI orqali boyitiladi (enrichment).
+
+URL: http://localhost:5173/words
+Route: /words → WordsPage component (lazy-loaded)
+Himoyalangan: Ha (ProtectedRoute - faqat autentifikatsiya qilingan foydalanuvchilar)
+Layout: RootLayout ichida (sidebar + header bilan)
+
+
+2. SAHIFA KOMPONENTLARI
+================================================================================
+
+┌─────────────────────────────────────────────────────────────┐
+│  HEADER                                                      │
+│  "Word Bank" sarlavhasi + "X words · Y mastered" subtext    │
+│  [+ Add Word] tugmasi                                        │
+├─────────────────────────────────────────────────────────────┤
+│  TAB SWITCHER: [Active] [Archived]                           │
+├─────────────────────────────────────────────────────────────┤
+│  STATS CARDS (agar so'zlar mavjud bo'lsa):                   │
+│  [Total: X] [Mastered: X] [Learning: X] [New: X]            │
+├─────────────────────────────────────────────────────────────┤
+│  SEARCH & FILTERS:                                           │
+│  [🔍 Search words...] [Easy] [Medium] [Hard] [Grid|List]    │
+├─────────────────────────────────────────────────────────────┤
+│  WORD CARDS (Grid yoki List ko'rinishda):                    │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐                     │
+│  │ word 1   │ │ word 2   │ │ word 3   │                     │
+│  │ tarjima  │ │ tarjima  │ │ tarjima  │                     │
+│  │ ta'rif   │ │ ta'rif   │ │ ta'rif   │                     │
+│  │ ██████░░ │ │ ████░░░░ │ │ ██░░░░░░ │  (confidence bar)  │
+│  │ [badge]  │ │ [badge]  │ │ [badge]  │                     │
+│  └──────────┘ └──────────┘ └──────────┘                     │
+├─────────────────────────────────────────────────────────────┤
+│  PAGINATION: [Previous] Page X of Y [Next]                   │
+├─────────────────────────────────────────────────────────────┤
+│  [✨ Enrich All Words] tugmasi                               │
+└─────────────────────────────────────────────────────────────┘
+
+
+3. ASOSIY FUNKSIYALAR
+================================================================================
+
+3.1 So'z qo'shish (Add Word)
+    - "Add Word" tugmasi → AddWordModal ochiladi
+    - AddWordForm: original_word, translation, definition, example, difficulty, notes
+    - Saqlanganda: POST /api/v1/words/ → auto-enrichment trigger → XP + badge check
+
+3.2 So'zlarni ko'rish (List Words)
+    - GET /api/v1/words/?page=X&page_size=20&ordering=-created_at
+    - Grid (3 ustun) yoki List ko'rinishda
+    - Har bir karta: so'z, tarjima, ta'rif, confidence bar, badges
+
+3.3 Qidirish va Filtrlash
+    - Search: so'z yoki tarjima bo'yicha qidirish
+    - Difficulty filter: Easy / Medium / Hard
+    - Sahifalash: 20 so'z per page
+
+3.4 So'z tafsilotlari (Word Detail Modal)
+    - Kartani bosganda WordDetailModal ochiladi (303 qatorli component)
+    - Ko'rsatiladi: definition, example, mnemonic, usage_notes,
+      synonyms, antonyms, collocations, word_family,
+      review stats, confidence bar, SM-2 info
+    - Actions: Archive, Enrich, Delete
+
+3.5 So'zni o'chirish (Delete)
+    - Confirm dialog → DELETE /api/v1/words/{id}/
+    - Cache invalidation, stats yangilanish
+
+3.6 So'zni arxivlash (Archive)
+    - POST /api/v1/words/{id}/archive/ → so'z arxivga o'tadi
+    - Arxiv tabi: ArchivedWordsSection (undo imkoniyati bilan)
+
+3.7 AI Enrichment
+    - Yakka: POST /api/v1/words/{id}/enrich/
+    - Hammasi: POST /api/v1/words/enrich-all/
+    - Celery task orqali asinxron ishlaydi
+    - AI to'ldiradi: tarjima, ta'rif, misol, mnemonik, synonyms, antonyms...
+
+3.8 Archived Tab
+    - ArchivedWordsSection: arxivlangan so'zlar ro'yxati
+    - Search, grid, pagination, bulk unarchive
+
+
+4. STATE MANAGEMENT
+================================================================================
+
+React Query (TanStack Query) ishlatiladi:
+- Query Keys factory pattern: wordKeys.all, wordKeys.list(filters), wordKeys.stats()
+- Mutations: create/update/delete/archive/enrich → automatic cache invalidation
+- Toast notifications: sonner kutubxonasi orqali success/error xabarlar
+
+
+5. UI TEXNOLOGIYALAR
+================================================================================
+
+- React 18 + TypeScript
+- Framer Motion: AnimatePresence, motion.div, spring animations, tilt effects
+- shadcn/ui: Button, Card, Input, Badge, Skeleton
+- Tailwind CSS: responsive design (sm: md: lg: breakpoints)
+- Lucide Icons: BookOpen, Grid3X3, List, Plus, Search, Trash2, Archive, Sparkles
+- Sonner: toast notifications
+
+
+6. SAHIFA HOLATLARI
+================================================================================
+
+- Loading: 6 ta Skeleton kartalar grid'da
+- Empty (so'z yo'q): EmptyState component + "Add Your First Word" tugmasi  
+- Empty (qidiruv): "No words found" + "Try a different search term"
+- Data: Grid/List + Pagination
+- Modals: AddWordModal, WordDetailModal (AnimatePresence bilan)
+
+
+7. FAYLLAR RO'YXATI (Frontend)
+================================================================================
+
+Sahifa:
+  src/features/words/pages/WordsPage.tsx          - Asosiy sahifa (~290 qator)
+
+Komponentlar:
+  src/features/words/components/AddWordModal.tsx           - So'z qo'shish modali
+  src/features/words/components/AddWordForm.tsx             - So'z qo'shish formasi
+  src/features/words/components/AddWordDifficultySelector.tsx - Qiyinlik tanlash
+  src/features/words/components/WordDetailModal.tsx         - So'z tafsilotlari (303 qator)
+  src/features/words/components/WordCard.tsx                - Grid karta
+  src/features/words/components/WordListItem.tsx            - List qator
+  src/features/words/components/WordCardBadges.tsx          - Difficulty/POS/Category badges
+  src/features/words/components/WordsHeader.tsx             - Sahifa header
+  src/features/words/components/WordsStatsBar.tsx           - Statistika bar
+  src/features/words/components/WordsStatPill.tsx           - Yakka stat pill
+  src/features/words/components/WordsSegmentedControl.tsx   - Tab control
+  src/features/words/components/WordsViewToggle.tsx         - Grid/List toggle
+  src/features/words/components/WordsPagination.tsx         - Sahifalash
+  src/features/words/components/EnrichmentStatusBadge.tsx   - Enrichment holati badge
+  src/features/words/components/ArchiveButton.tsx           - Arxiv tugmasi
+  src/features/words/components/ArchivedWordsSection.tsx    - Arxivlangan bo'lim
+
+API:
+  src/features/words/api/wordApi.ts               - Axios API client (19 metod)
+
+Hooks:
+  src/features/words/hooks/useWords.ts            - 17 React Query hooks
+
+Types:
+  src/types/word.ts                                - Word, WordCategory, WordStats, etc.
+  src/types/core.ts                                - DifficultyLevel, EnrichmentStatus, etc.
+
+Routing:
+  src/routes/index.tsx                             - /words → WordsPage

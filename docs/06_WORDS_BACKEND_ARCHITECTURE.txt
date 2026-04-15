@@ -1,0 +1,290 @@
+================================================================================
+              WORDS SAHIFASI - BACKEND ARXITEKTURASI (CLEAN ARCHITECTURE)
+              Django REST Framework + Celery + AI Providers
+================================================================================
+
+1. ARXITEKTURA UMUMIY KO'RINISHI
+================================================================================
+
+WordFix backend Clean Architecture (Hexagonal Architecture) asosida qurilgan.
+Har bir feature (words, users) 4 qatlamga bo'lingan:
+
+┌────────────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                              │
+│  (Views, Serializers, URLs, Dependencies)                         │
+│  HTTP request → Serializer validation → Use Case chaqirish        │
+├────────────────────────────────────────────────────────────────────┤
+│                    APPLICATION LAYER                               │
+│  (Use Cases / Business Logic)                                     │
+│  Use Case = bitta biznes operatsiya (SRP)                        │
+│  Repository interfeyslari orqali ishlaydi                        │
+├────────────────────────────────────────────────────────────────────┤
+│                    DOMAIN LAYER                                    │
+│  (Entities, Value Objects, Domain Services, Repository Interfaces)│
+│  Pure Python - Django'ga bog'liq EMAS                            │
+│  SM-2 algoritm, Enrichment mapping, Combo system                 │
+├────────────────────────────────────────────────────────────────────┤
+│                    INFRASTRUCTURE LAYER                            │
+│  (Django ORM Models, Repository Implementations, Celery Tasks)    │
+│  Domain interfeyslari konkret implementatsiyasi                   │
+└────────────────────────────────────────────────────────────────────┘
+
+Dependency Injection: Presentation → Dependencies → Use Cases + Repositories
+  - Har bir use case constructor injection orqali repository/service oladi
+  - Factory pattern: get_add_word_use_case(), get_words_use_case() va hokazo
+
+
+2. PAPKA TUZILISHI
+================================================================================
+
+wordfix-backend/apps/words/
+│
+├── __init__.py
+├── apps.py                     # Django AppConfig
+├── models.py                   # Proxy → infrastructure/models (Django discovery)
+│
+├── domain/                     # DOMEN QATLAMI (Pure Python)
+│   ├── entities/
+│   │   ├── word_entities.py    # WordEntity (50+ maydon), WordCategoryEntity
+│   │   └── session_entities.py # 15+ entity: ReviewSession, DailyStreak, Game, Chat...
+│   ├── value_objects.py        # WordText, Definition (frozen dataclass + validation)
+│   ├── repositories/
+│   │   ├── word_repositories.py    # AbstractWordRepository (15 metod)
+│   │   └── session_repositories.py # 11 abstract repository
+│   └── services/
+│       ├── review_service.py   # SpacedRepetitionService (SM-2), WordEnrichmentDomainService
+│       └── combo_service.py    # ComboService (XP multiplier), DailyChallengeService
+│
+├── application/                # APPLICATION QATLAMI (Use Cases)
+│   └── use_cases/
+│       ├── word_crud.py        # AddWordUseCase, GetWordsUseCase, Update, Delete, Bulk, Stats, Search
+│       ├── enrichment.py       # EnrichWordUseCase, BatchEnrichUseCase
+│       ├── review.py           # GetReviewWords, StartSession, SubmitAnswer, Complete, Summary
+│       ├── analytics.py        # Overview, Weekly, Monthly, DifficultWords, Calendar
+│       ├── chat.py             # StartChat, SendMessage
+│       ├── confusing_pairs.py  # DetectConfusion, GetPairs, GenerateDrill
+│       ├── daily_challenges.py # GetChallenges, UpdateProgress, ClaimBonus
+│       ├── smart_import.py     # AnalyzeText (AI 2-stage pipeline), CSV import (~890 qator)
+│       ├── streak.py           # UpdateStreak (streak freeze support)
+│       ├── word_archive.py     # Archive, Unarchive, GetArchived, BulkArchive
+│       ├── games/              # 8 game modules
+│       │   ├── speed_round.py
+│       │   ├── word_match.py
+│       │   ├── word_context.py
+│       │   ├── story_builder.py
+│       │   ├── listening.py
+│       │   ├── synonym_antonym.py
+│       │   ├── irregular_verbs.py
+│       │   └── game_stats.py
+│       └── testing/            # Test generation, session management
+│           ├── test_generation.py
+│           └── test_session.py
+│
+├── infrastructure/             # INFRATUZILMA QATLAMI (Django ORM)
+│   ├── models/
+│   │   ├── word_models.py      # Word (30+ maydon, 5 index), WordCategory, WordDistractor
+│   │   ├── review_models.py    # ReviewSession, ReviewLog, DailyStreak, DailyActivity
+│   │   ├── test_models.py      # TestSession, TestQuestion
+│   │   ├── game_models.py      # GameSession + 4 game-specific round modellari
+│   │   ├── chat_models.py      # ChatSession, ChatMessage
+│   │   ├── confusing_models.py # ConfusingPair
+│   │   └── challenge_models.py # DailyChallenge
+│   ├── repositories/
+│   │   ├── word_repo.py        # DjangoWordRepository (400+ qator), DjangoWordCategoryRepository
+│   │   ├── session_repos.py    # Barcha 11 session repository implementatsiyasi
+│   │   └── word_stats_repo.py  # WordStatsMixin (stats aggregation)
+│   └── tasks.py                # Celery tasks (8 task)
+│
+└── presentation/               # PREZENTATSIYA QATLAMI (REST API)
+    ├── urls.py                 # /api/v1/words/ - 19 pattern
+    ├── review_urls.py          # /api/v1/review/ - 10 pattern
+    ├── testing_urls.py         # /api/v1/tests/ - 5 pattern
+    ├── game_urls.py            # /api/v1/games/ - 20 pattern
+    ├── chat_urls.py            # /api/v1/chat/ - 5 pattern
+    ├── analytics_urls.py       # /api/v1/analytics/ - 6 pattern
+    ├── challenge_urls.py       # /api/v1/challenges/ - 2 pattern
+    ├── confusing_urls.py       # /api/v1/words/confusing-pairs/ - 5 pattern
+    ├── views/
+    │   ├── word_views.py       # CRUD + Stats + Categories + XP/Badge helpers
+    │   ├── review_views.py     # Review session lifecycle
+    │   ├── enrichment_views.py # AI enrichment endpoints
+    │   ├── import_views.py     # Text/CSV import
+    │   ├── test_views.py       # Test management
+    │   ├── game_views.py       # 7 game type (556 qator)
+    │   ├── chat_views.py       # Chat session management
+    │   ├── analytics_views.py  # Analytics data
+    │   ├── challenge_views.py  # Daily challenges
+    │   ├── confusing_views.py  # Confusing pairs
+    │   └── archive_views.py    # Archive management
+    ├── serializers/
+    │   ├── word_serializers.py     # WordCreate, WordUpdate, WordList, WordDetail, WordStats, Bulk
+    │   ├── review_serializers.py
+    │   ├── test_serializers.py
+    │   ├── game_serializers.py
+    │   ├── import_serializers.py
+    │   ├── chat_serializers.py
+    │   ├── archive_serializers.py
+    │   ├── confusing_serializers.py
+    │   └── challenge_serializers.py
+    └── dependencies/
+        ├── common_deps.py      # Repository factories, AI/TTS providers
+        ├── word_deps.py        # 8 word CRUD use case factories
+        ├── review_deps.py      # 6 review use case factories
+        ├── enrichment_deps.py  # Enrich/batch enrich factories
+        ├── archive_deps.py     # 4 archive use case factories
+        └── ... (boshqa dep modules)
+
+
+3. DEPENDENCY INJECTION PATTERN
+================================================================================
+
+Presentation layer'dagi har bir view use case'ni dependency factory orqali oladi.
+Bu Clean Architecture'ning asosiy prinsipi - dependency inversion.
+
+Misol: So'z qo'shish oqimi
+
+# dependencies/word_deps.py
+def get_add_word_use_case():
+    repo = get_word_repository()         # → DjangoWordRepository()
+    enrich_task = _get_enrich_task()     # → enrich_word_task.delay callable
+    return AddWordUseCase(
+        repository=repo,
+        enrich_task=enrich_task,
+        enrichment_enabled=True,
+    )
+
+# views/word_views.py
+class WordListCreateView(APIView):
+    def post(self, request):
+        serializer = WordCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        use_case = get_add_word_use_case()  # ← DI bu yerda
+        word = use_case.execute(user_id=request.user.id, data=serializer.validated_data)
+        ...
+
+# application/use_cases/word_crud.py
+class AddWordUseCase:
+    def __init__(self, repository, enrich_task=None, enrichment_enabled=True):
+        self.repository = repository  # AbstractWordRepository interfeysi
+        ...
+    def execute(self, user_id, data):
+        word = self.repository.create(user_id=user_id, **data)
+        if self.enrichment_enabled and self.enrich_task:
+            self.enrich_task(str(word.id), str(user_id))  # Celery'ga jo'natish
+        return word
+
+
+4. CORE SERVICES (AI va TTS)
+================================================================================
+
+wordfix-backend/core/
+├── interfaces/
+│   ├── ai_provider.py          # AbstractAIProvider ABC
+│   │   - generate_text(prompt) → str
+│   │   - generate_json(prompt) → dict
+│   │   - generate_chat(messages) → str
+│   │   - is_available() → bool
+│   │   - get_provider_name() → str
+│   └── tts_provider.py         # AbstractTTSProvider ABC
+│       - generate_audio(text) → bytes
+│       - get_provider_name() → str
+│
+└── services/
+    ├── ai/
+    │   ├── ai_factory.py       # AIProviderFactory + FallbackAIProvider
+    │   ├── openai_provider.py  # OpenAI GPT integration
+    │   ├── groq_provider.py    # Groq (LLaMA) integration
+    │   ├── gemini_provider.py  # Google Gemini integration
+    │   └── prompts.py          # AI prompt templates + NATIVE_LANGUAGE_MAP
+    └── tts/
+        └── google_tts.py       # Google TTS (gTTS) integration
+
+AI Provider tanlash: AIProviderFactory → birinchi mavjud provider
+Fallback zanjiri: OpenAI → Groq → Gemini → FallbackAIProvider (mock)
+
+Enrichment AI prompti:
+  - Foydalanuvchining ona tili (Uzbek/Russian/etc)
+  - Proficiency level (A1-C2)
+  - So'z
+  - JSON formatida javob: translation, definition, example, synonyms, antonyms,
+    collocations, word_family, mnemonic, usage_notes, pronunciation, part_of_speech
+
+
+5. URL ROUTING (config/urls.py)
+================================================================================
+
+config/urls.py da barcha URL'lar ro'yxatga olingan:
+
+path("api/v1/words/",                include("apps.words.presentation.urls"))
+path("api/v1/words/confusing-pairs/", include("apps.words.presentation.confusing_urls"))
+path("api/v1/review/",               include("apps.words.presentation.review_urls"))
+path("api/v1/tests/",                include("apps.words.presentation.testing_urls"))
+path("api/v1/games/",                include("apps.words.presentation.game_urls"))
+path("api/v1/chat/",                 include("apps.words.presentation.chat_urls"))
+path("api/v1/analytics/",            include("apps.words.presentation.analytics_urls"))
+path("api/v1/challenges/",           include("apps.words.presentation.challenge_urls"))
+
+Hammasi bitta words app ichida, lekin turli URL prefikslari bilan ajratilgan.
+
+
+6. CELERY TASKS (Asinxron vazifalar)
+================================================================================
+
+Fayl: apps/words/infrastructure/tasks.py
+
+┌────────────────────────────────┬──────────────────────────────────────────────┐
+│ Task nomi                      │ Vazifasi                                     │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ enrich_word_task               │ Bitta so'zni AI bilan boyitish               │
+│                                │ max_retries=3, rate_limit=10/min             │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ batch_enrich_task              │ Bir nechta so'zni batch boyitish             │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ generate_audio_task            │ TTS audio yaratish (Google TTS)              │
+│                                │ rate_limit=20/min                            │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ generate_distractors_task      │ Smart distractors yaratish (test uchun)      │
+│                                │ max_retries=2                                │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ update_streaks_task            │ Streak'larni tekshirish va reset qilish      │
+│                                │ Celery Beat: KUNLIK                          │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ cleanup_stale_sessions_task    │ 2+ soat ochiq turgan sessionlarni yopish     │
+│                                │ Celery Beat: HAR SOAT                        │
+├────────────────────────────────┼──────────────────────────────────────────────┤
+│ generate_daily_challenges_task │ Barcha foydalanuvchilar uchun kunlik         │
+│                                │ challenge'lar yaratish. Kunlik 00:01         │
+└────────────────────────────────┴──────────────────────────────────────────────┘
+
+
+7. DATABASE MODELS XULOSA
+================================================================================
+
+Words app'da jami 12+ Django model mavjud:
+
+ASOSIY:
+  - Word (30+ maydon, 5 DB index, unique_together=[user, original_word])
+  - WordCategory (user, name, color, icon)
+  - WordDistractor (cached AI-generated distractors)
+
+REVIEW:
+  - ReviewSession (types: review/quick/focus/learn/mixed)
+  - ReviewLog (har bir review answer)
+  - DailyStreak (OneToOneField → User)
+  - DailyActivity (unique_together=[user, date])
+
+TEST:
+  - TestSession
+  - TestQuestion (6 question types)
+
+GAME:
+  - GameSession (7 game types)
+  - StoryRound, ListeningRound, SynonymAntonymRound, IrregularVerbRound
+
+CHAT:
+  - ChatSession (M2M words_practiced)
+  - ChatMessage
+
+BOSHQA:
+  - ConfusingPair (unique_together=[user, word_1, word_2])
+  - DailyChallenge (unique_together=[user, date])

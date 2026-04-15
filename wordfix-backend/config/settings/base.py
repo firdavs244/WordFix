@@ -60,6 +60,7 @@ LOCAL_APPS = [
     "apps.common",
     "apps.users.apps.UsersConfig",
     "apps.words.apps.WordsConfig",
+    "apps.immersive.apps.ImmersiveConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
