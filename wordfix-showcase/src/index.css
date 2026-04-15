@@ -24,7 +24,11 @@
 body {
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -45,34 +49,72 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--color-border-glass);
   border-radius: 16px;
+  padding: 24px;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-accent-blue), var(--color-accent-purple), var(--color-accent-pink));
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-blue),
+    var(--color-accent-purple),
+    var(--color-accent-pink)
+  );
   -webkit-background-clip: text;
-  -webkit-text-filter: transparent;
+  -webkit-text-fill-color: transparent;
   background-clip: text;
   color: transparent;
 }
 
 .glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 60px rgba(59, 130, 246, 0.1);
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.3),
+    0 0 60px rgba(59, 130, 246, 0.1);
 }
 .glow-purple {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 60px rgba(139, 92, 246, 0.1);
+  box-shadow:
+    0 0 20px rgba(139, 92, 246, 0.3),
+    0 0 60px rgba(139, 92, 246, 0.1);
 }
 .glow-emerald {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 60px rgba(16, 185, 129, 0.1);
+  box-shadow:
+    0 0 20px rgba(16, 185, 129, 0.3),
+    0 0 60px rgba(16, 185, 129, 0.1);
+}
+
+/* Section spacing */
+section {
+  scroll-margin-top: 60px;
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 @keyframes dash-flow {
-  to { stroke-dashoffset: -20; }
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* Tree view styles */
+.tree-line {
+  border-left: 1px dashed rgba(99, 102, 241, 0.3);
+}
+
+.tree-item:hover {
+  background: rgba(99, 102, 241, 0.06);
 }
