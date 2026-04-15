@@ -6,7 +6,7 @@ import {
 import { staggerItem } from '@/lib/motion';
 import type { Challenge } from '@/features/challenges/types';
 
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   review_words: BookOpen, add_words: Plus, perfect_review: Star,
   play_game: Gamepad2, complete_test: ClipboardCheck, combo_streak: Flame,
   chat_practice: MessageSquare, master_word: Trophy,

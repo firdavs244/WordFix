@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { NotificationType } from '@/types/core';
 
-const iconMap: Record<NotificationType, React.ElementType> = {
+const iconMap: Record<NotificationType, React.ComponentType<{ className?: string }>> = {
   review_reminder: BookOpen,
   streak_warning: Flame,
   badge_earned: Trophy,
