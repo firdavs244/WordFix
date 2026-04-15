@@ -15,6 +15,8 @@ type Phase = 'welcome' | 'questions' | 'result';
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const fetchProfile = useAuthStore((s) => s.fetchProfile);
+  const user = useAuthStore((s) => s.user);
+  const markOnboardingCompleted = useAuthStore((s) => s.markOnboardingCompleted);
   const [phase, setPhase] = useState<Phase>('welcome');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Map<string, string>>(new Map());
@@ -30,6 +32,12 @@ export default function OnboardingPage() {
   const total = list?.length || 0;
   const isLast = currentIndex === total - 1;
 
+  useEffect(() => {
+    if (user?.has_completed_onboarding) {
+      navigate('/', { replace: true });
+    }
+  }, [user?.has_completed_onboarding, navigate]);
+
   const handleNext = useCallback(() => {
     if (!current || !selected) return;
     const next = new Map(answers);
@@ -40,10 +48,15 @@ export default function OnboardingPage() {
 
     const payload: OnboardingAnswer[] = Array.from(next.entries()).map(([question_id, answer]) => ({ question_id, answer }));
     submitMutation.mutate(payload, {
-      onSuccess: async (data) => { setResult(data.data); setPhase('result'); await fetchProfile().catch(() => {}); },
+      onSuccess: async (data) => {
+        markOnboardingCompleted();
+        setResult(data.data);
+        setPhase('result');
+        await fetchProfile().catch(() => {});
+      },
       onError: () => { toast.error('Failed to submit answers.'); },
     });
-  }, [current, selected, answers, isLast, submitMutation, fetchProfile]);
+  }, [current, selected, answers, isLast, submitMutation, fetchProfile, markOnboardingCompleted]);
 
   useEffect(() => {
     if (phase !== 'questions') return;
@@ -55,6 +68,7 @@ export default function OnboardingPage() {
   const handleSkip = () => {
     skipMutation.mutate(undefined, {
       onSuccess: async () => {
+        markOnboardingCompleted();
         await fetchProfile().catch(() => {});
         navigate('/', { replace: true });
       },
@@ -70,10 +84,21 @@ export default function OnboardingPage() {
           {phase === 'welcome' && (
             <OnboardingWelcome key="w" onStart={() => setPhase('questions')} onSkip={handleSkip} isLoading={loading} totalQuestions={total} />
           )}
-          {phase === 'questions' && !current && (
+          {phase === 'questions' && loading && !current && (
             <div className="flex flex-col items-center justify-center gap-4 py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <p className="text-sm text-muted-foreground">Loading questions...</p>
+            </div>
+          )}
+          {phase === 'questions' && !loading && total === 0 && (
+            <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+              <p className="text-sm text-muted-foreground">Questions are not available right now.</p>
+              <button
+                onClick={handleSkip}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+              >
+                Continue with default level
+              </button>
             </div>
           )}
           {phase === 'questions' && current && (

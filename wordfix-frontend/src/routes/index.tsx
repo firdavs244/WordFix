@@ -113,10 +113,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  // Allow both first-time and retake users
+  if (user?.has_completed_onboarding) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 

@@ -17,6 +17,7 @@ interface AuthState {
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   initialize: () => Promise<void>;
+  markOnboardingCompleted: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -90,5 +91,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
     await get().fetchProfile();
+  },
+
+  markOnboardingCompleted: () => {
+    const currentUser = get().user;
+    if (!currentUser) return;
+    set({ user: { ...currentUser, has_completed_onboarding: true } });
   },
 }));
