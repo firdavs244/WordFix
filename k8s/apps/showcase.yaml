@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: showcase
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: showcase
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: wordfix
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: showcase
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30081
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: showcase
+  namespace: wordfix
+  labels:
+    app.kubernetes.io/name: showcase
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: wordfix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: showcase
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: showcase
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: wordfix
+    spec:
+      containers:
+        - name: showcase
+          image: wordfix/showcase:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 25m
+            limits:
+              memory: 64Mi
+              cpu: 100m
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 30
