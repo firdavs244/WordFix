@@ -42,7 +42,7 @@ spec:
       containers:
         - name: nginx
           image: wordfix/frontend:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           resources:

@@ -34,7 +34,7 @@ spec:
       containers:
         - name: celery-beat
           image: wordfix/monolith:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command:
             - celery
             - -A

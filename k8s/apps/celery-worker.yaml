@@ -27,7 +27,7 @@ spec:
       containers:
         - name: celery-worker
           image: wordfix/monolith:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency=2"]
           envFrom:
             - configMapRef:

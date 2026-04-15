@@ -83,6 +83,7 @@ spec:
               command: ["rabbitmq-diagnostics", "-q", "check_running"]
             failureThreshold: 30
             periodSeconds: 10
+            timeoutSeconds: 15
   volumeClaimTemplates:
     - metadata:
         name: data

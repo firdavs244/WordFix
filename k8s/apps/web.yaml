@@ -45,7 +45,7 @@ spec:
         # 2. Run Django migrations
         - name: migrate
           image: wordfix/monolith:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command: ["python", "manage.py", "migrate", "--noinput"]
           envFrom:
             - configMapRef:
@@ -57,7 +57,7 @@ spec:
         # 3. Collect static files
         - name: collectstatic
           image: wordfix/monolith:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command: ["python", "manage.py", "collectstatic", "--noinput"]
           envFrom:
             - configMapRef:
@@ -69,7 +69,7 @@ spec:
       containers:
         - name: web
           image: wordfix/monolith:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command:
             - gunicorn
             - config.wsgi:application
