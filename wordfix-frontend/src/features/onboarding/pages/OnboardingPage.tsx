@@ -40,7 +40,7 @@ export default function OnboardingPage() {
 
     const payload: OnboardingAnswer[] = Array.from(next.entries()).map(([question_id, answer]) => ({ question_id, answer }));
     submitMutation.mutate(payload, {
-      onSuccess: (data) => { setResult(data.data); setPhase('result'); fetchProfile().catch(() => {}); },
+      onSuccess: async (data) => { setResult(data.data); setPhase('result'); await fetchProfile().catch(() => {}); },
       onError: () => { toast.error('Failed to submit answers.'); },
     });
   }, [current, selected, answers, isLast, submitMutation, fetchProfile]);
@@ -54,7 +54,10 @@ export default function OnboardingPage() {
 
   const handleSkip = () => {
     skipMutation.mutate(undefined, {
-      onSuccess: () => { fetchProfile().catch(() => {}); navigate('/', { replace: true }); },
+      onSuccess: async () => {
+        await fetchProfile().catch(() => {});
+        navigate('/', { replace: true });
+      },
       onError: () => { toast.error('Failed to skip onboarding.'); },
     });
   };
@@ -66,6 +69,12 @@ export default function OnboardingPage() {
         <AnimatePresence mode="wait">
           {phase === 'welcome' && (
             <OnboardingWelcome key="w" onStart={() => setPhase('questions')} onSkip={handleSkip} isLoading={loading} totalQuestions={total} />
+          )}
+          {phase === 'questions' && !current && (
+            <div className="flex flex-col items-center justify-center gap-4 py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Loading questions...</p>
+            </div>
           )}
           {phase === 'questions' && current && (
             <OnboardingQuestionScreen
