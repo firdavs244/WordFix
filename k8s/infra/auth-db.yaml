@@ -40,10 +40,6 @@ spec:
         app.kubernetes.io/component: database
         app.kubernetes.io/part-of: wordfix
     spec:
-      securityContext:
-        runAsUser: 70
-        runAsGroup: 70
-        fsGroup: 70
       terminationGracePeriodSeconds: 60
       containers:
         - name: postgres

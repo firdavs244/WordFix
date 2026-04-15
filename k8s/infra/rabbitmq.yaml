@@ -45,10 +45,6 @@ spec:
         app.kubernetes.io/component: queue
         app.kubernetes.io/part-of: wordfix
     spec:
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
-        fsGroup: 999
       terminationGracePeriodSeconds: 60
       containers:
         - name: rabbitmq

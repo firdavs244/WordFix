@@ -43,11 +43,6 @@ spec:
         app.kubernetes.io/component: backend
         app.kubernetes.io/part-of: wordfix
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       terminationGracePeriodSeconds: 60
       topologySpreadConstraints:
         - maxSkew: 1
@@ -127,11 +122,6 @@ spec:
             limits:
               memory: 512Mi
               cpu: 1000m
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: false
           volumeMounts:
             - name: media
               mountPath: /app/media

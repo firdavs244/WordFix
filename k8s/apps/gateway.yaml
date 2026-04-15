@@ -43,10 +43,6 @@ spec:
         app.kubernetes.io/component: backend
         app.kubernetes.io/part-of: wordfix
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
       terminationGracePeriodSeconds: 30
       topologySpreadConstraints:
         - maxSkew: 1
@@ -88,11 +84,6 @@ spec:
             limits:
               memory: 256Mi
               cpu: 500m
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: true
           startupProbe:
             httpGet:
               path: /api/v1/health/

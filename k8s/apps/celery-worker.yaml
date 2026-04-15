@@ -21,11 +21,6 @@ spec:
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: wordfix
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       terminationGracePeriodSeconds: 120
       initContainers:
         - name: wait-for-web
@@ -54,11 +49,6 @@ spec:
             limits:
               memory: 512Mi
               cpu: 1000m
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: false
           volumeMounts:
             - name: media
               mountPath: /app/media

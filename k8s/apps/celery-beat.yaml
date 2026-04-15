@@ -24,11 +24,6 @@ spec:
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: wordfix
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       terminationGracePeriodSeconds: 30
       initContainers:
         - name: wait-for-web
@@ -65,11 +60,6 @@ spec:
             limits:
               memory: 256Mi
               cpu: 250m
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: false
           livenessProbe:
             exec:
               command: ["sh", "-c", "celery -A config inspect ping --timeout 10 2>/dev/null | grep -q pong"]
