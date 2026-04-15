@@ -10,38 +10,58 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   Database, HardDrive, MessageSquare, Container, Globe, Box, Brain, Sparkles,
 };
 
-const categoryColors: Record<string, string> = {
-  Frontend: 'var(--color-accent-blue)',
-  Backend: 'var(--color-accent-purple)',
-  "Ma'lumotlar bazasi": 'var(--color-accent-emerald)',
-  Infratuzilma: 'var(--color-accent-amber)',
-  "Sun'iy intellekt": 'var(--color-accent-pink)',
+const categoryBadge: Record<string, string> = {
+  Frontend: 'badge-blue',
+  Backend: 'badge-purple',
+  "Ma'lumotlar bazasi": 'badge-emerald',
+  Infratuzilma: 'badge-amber',
+  "Sun'iy intellekt": 'badge-pink',
+};
+
+const categoryColor: Record<string, string> = {
+  Frontend: '#3b82f6',
+  Backend: '#8b5cf6',
+  "Ma'lumotlar bazasi": '#10b981',
+  Infratuzilma: '#f59e0b',
+  "Sun'iy intellekt": '#ec4899',
 };
 
 export default function TechStack() {
   return (
-    <section id="tech-stack" className="py-28 px-6 bg-[var(--color-bg-secondary)]">
-      <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="max-w-6xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-center mb-5">
+    <section id="tech-stack" className="py-24 px-6 bg-[var(--color-bg-secondary)]">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="max-w-6xl mx-auto"
+      >
+        <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
           <span className="gradient-text">Texnologiya Steki</span>
         </h2>
-        <p className="text-center text-[var(--color-text-secondary)] mb-14 max-w-2xl mx-auto text-base leading-relaxed">
+        <p className="text-center text-[var(--color-text-secondary)] mb-12 max-w-2xl mx-auto text-base leading-relaxed">
           Kengayuvchanlik, dasturchi tajribasi va ishlab chiqarishga tayyorlik uchun tanlangan zamonaviy texnologiyalar.
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {techStack.map((tech, i) => {
             const Icon = iconMap[tech.icon];
-            const color = categoryColors[tech.category] || 'var(--color-accent-blue)';
+            const color = categoryColor[tech.category] || '#3b82f6';
+            const badge = categoryBadge[tech.category] || 'badge-blue';
             return (
               <motion.div
-                key={tech.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }} whileHover={{ scale: 1.05, y: -4 }}
-                className="glass-card flex flex-col items-center gap-4 cursor-default"
+                key={tech.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.04 }}
+                whileHover={{ scale: 1.04, y: -3 }}
+                className="glass-card-compact flex flex-col items-center gap-3 cursor-default text-center"
               >
-                {Icon && <Icon size={30} className="opacity-80" style={{ color }} />}
+                {Icon && <Icon size={26} style={{ color }} />}
                 <span className="text-sm font-semibold text-[var(--color-text-primary)]">{tech.name}</span>
-                <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: `${color}20`, color }}>{tech.category}</span>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${badge}`}>
+                  {tech.category}
+                </span>
               </motion.div>
             );
           })}

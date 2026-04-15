@@ -33,12 +33,12 @@ export default function Architecture() {
   const hoveredNode = services.find((s) => s.id === hovered);
 
   return (
-    <section id="architecture" className="py-28 px-6">
+    <section id="architecture" className="py-24 px-6">
       <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="max-w-6xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-center mb-5">
+        <h2 className="text-3xl md:text-5xl font-bold text-center mb-4">
           <span className="gradient-text">Tizim Arxitekturasi</span>
         </h2>
-        <p className="text-center text-[var(--color-text-secondary)] mb-14 max-w-2xl mx-auto text-base leading-relaxed">
+        <p className="text-center text-[var(--color-text-secondary)] mb-12 max-w-2xl mx-auto text-base leading-relaxed">
           11 ta o'zaro bog'langan servis — mikroservis arxitektura, alohida autentifikatsiya,
           API Gateway pattern va asinxron vazifalar ishlashi.
         </p>
