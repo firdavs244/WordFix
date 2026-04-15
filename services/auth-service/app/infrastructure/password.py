@@ -7,6 +7,7 @@ This module can verify and create passwords in this exact format.
 
 import base64
 import hashlib
+import hmac
 import os
 
 # Django 5.x default iterations (2024+)
@@ -53,6 +54,6 @@ def check_password(raw_password: str, encoded: str) -> bool:
         computed_hash = base64.b64encode(dk).decode("ascii")
 
         # Constant-time comparison
-        return hashlib.compare_digest(computed_hash, stored_hash)
+        return hmac.compare_digest(computed_hash, stored_hash)
     except (ValueError, TypeError):
         return False
