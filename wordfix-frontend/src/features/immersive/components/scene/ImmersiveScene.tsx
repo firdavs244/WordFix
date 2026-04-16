@@ -6,6 +6,7 @@
 import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Text, Box, Plane, Sphere, Cylinder } from '@react-three/drei';
+import { PCFShadowMap } from 'three';
 import type { SceneConfig } from '../../types/immersive';
 import type { Group } from 'three';
 
@@ -23,12 +24,14 @@ function NPCCharacter({ name, position, bodyColor = '#4a69bd', labelColor = '#33
   labelColor?: string;
 }) {
   const groupRef = useRef<Group>(null);
+  const elapsed = useRef(0);
 
   // Gentle idle sway
-  useFrame(({ clock }) => {
+  useFrame((_, delta) => {
+    elapsed.current += delta;
     if (groupRef.current) {
-      groupRef.current.rotation.y = Math.sin(clock.elapsedTime * 0.5) * 0.05;
-      groupRef.current.position.y = position[1] + Math.sin(clock.elapsedTime * 1.2) * 0.015;
+      groupRef.current.rotation.y = Math.sin(elapsed.current * 0.5) * 0.05;
+      groupRef.current.position.y = position[1] + Math.sin(elapsed.current * 1.2) * 0.015;
     }
   });
 
@@ -456,7 +459,7 @@ export default function ImmersiveScene({ environment, sceneConfig, npcName }: Pr
 
   return (
     <Canvas
-      shadows
+      shadows={{ type: PCFShadowMap }}
       camera={{ position: cameraPos, fov: 60 }}
       className="h-full w-full"
       gl={{ antialias: true }}
